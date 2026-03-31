@@ -151,7 +151,18 @@
     .detail-item .di-value.loss{color:#c62828}
     .detail-commentary{background:#fffde7;border:1px solid #fff176;border-radius:8px;padding:12px 14px;font-size:0.85rem;color:#555;line-height:1.6}
     .detail-rec-badge{display:inline-block;padding:5px 14px;border-radius:6px;font-size:0.88rem;font-weight:700}
+
+    /* AUTOCOMPLETE DROPDOWN */
+    .sym-wrap{position:relative}
+    .sym-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #1565c0;border-top:none;border-radius:0 0 8px 8px;z-index:999;max-height:260px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+    .sym-item{padding:9px 13px;cursor:pointer;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #f0f4f8}
+    .sym-item:last-child{border-bottom:none}
+    .sym-item:hover,.sym-item.active{background:#eef4ff}
+    .sym-item .si-ticker{font-weight:700;font-size:0.88rem;color:#1565c0}
+    .sym-item .si-name{font-size:0.78rem;color:#666}
   </style>
+<!-- SheetJS for Excel support -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -253,38 +264,36 @@
     <div class="add-panel">
       <h2>Add a Stock Manually</h2>
       <div class="form-row">
-        <div class="form-group">
-          <label>NSE/BSE Symbol *</label>
-          <input type="text" id="fSym" placeholder="e.g. HDFCBANK, INFY, TCS" oninput="this.value=this.value.toUpperCase()"/>
-          <span class="form-hint">Use NSE symbol (capital letters). For BSE-only stocks use numeric code.</span>
+        <div class="form-group sym-wrap">
+          <label>Stock Symbol *</label>
+          <input type="text" id="fSym" placeholder="Type symbol or company name…"
+            oninput="this.value=this.value.toUpperCase();showSymbolSuggestions(this.value)"
+            onkeydown="handleSymbolKeydown(event)" autocomplete="off"/>
+          <div id="symDropdown" class="sym-dropdown" style="display:none"></div>
+          <span class="form-hint">Type NSE symbol or company name — select from list to auto-fill.</span>
         </div>
         <div class="form-group">
           <label>Company Name *</label>
-          <input type="text" id="fName" placeholder="e.g. HDFC Bank Limited"/>
-        </div>
-        <div class="form-group">
-          <label>Industry</label>
-          <input type="text" id="fIndustry" placeholder="e.g. Banking Services"/>
+          <input type="text" id="fName" placeholder="Auto-filled when symbol selected"/>
         </div>
         <div class="form-group">
           <label>Avg Purchase Price ₹ *</label>
           <input type="number" id="fCost" placeholder="e.g. 1500.50" step="0.01" min="0"/>
         </div>
         <div class="form-group">
-          <label>Quantity (shares) *</label>
-          <input type="number" id="fQty" placeholder="e.g. 10" step="1" min="1"/>
+          <label>Quantity <span style="font-weight:400;color:#999">(default: 1)</span></label>
+          <input type="number" id="fQty" placeholder="1" step="1" min="1"/>
         </div>
       </div>
       <button class="btn-add" id="addBtn" onclick="addStock()">+ Add to Portfolio</button>
 
       <!-- CSV UPLOAD -->
       <div class="csv-section">
-        <h3>📂 Or Upload a CSV File</h3>
+        <h3>📂 Or Upload a CSV / Excel File</h3>
         <div class="csv-info">
-          Just 3 columns — company name and price are fetched automatically from NSE/BSE:<br/>
-          <code>Symbol, AvgCost, Quantity</code><br/>
-          Example rows: <code>HDFCBANK, 1800, 10</code> &nbsp;·&nbsp; <code>INFY, 1500</code> (Qty defaults to 1 if blank)<br/>
-          First row can be a header — it's skipped automatically. Symbols are validated live.
+          Supports <strong>CSV</strong> and <strong>Excel (.xlsx)</strong> — first sheet is used automatically.<br/>
+          CSV format: <code>Symbol, AvgCost, Quantity</code> &nbsp;·&nbsp; Example: <code>HDFCBANK, 1800, 10</code><br/>
+          Excel: any sheet with Symbol, AvgCost, Qty columns — header row skipped automatically.
         </div>
         <div style="margin-bottom:12px">
           <button onclick="downloadCsvTemplate()" style="background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer">
@@ -292,8 +301,8 @@
           </button>
         </div>
         <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()" ondragover="csvDragOver(event)" ondragleave="csvDragLeave(event)" ondrop="csvDrop(event)">
-          <input type="file" id="csvFile" accept=".csv,.txt" onchange="handleCsvFile(this.files[0])"/>
-          📄 Click to select CSV file, or drag &amp; drop here
+          <input type="file" id="csvFile" accept=".csv,.txt,.xlsx,.xls" onchange="handleCsvFile(this.files[0])"/>
+          📄 Click to select CSV or Excel file, or drag &amp; drop here
         </div>
         <div class="csv-status" id="csvStatus"></div>
       </div>
@@ -406,6 +415,237 @@ const firebaseConfig = {
   appId: "1:144829364145:web:ef183ff4e3035dac272f90"
 };
 const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── NSE STOCK MASTER LIST (symbol → name, industry) ──────────────────────
+// Used as autocomplete source alongside live marketData
+const NSE_STOCKS = {
+  'ADANIPORTS':{'n':'Adani Ports & SEZ Ltd','i':'Transport Infrastructure'},
+  'ADANIGREEN':{'n':'Adani Green Energy Ltd','i':'Electrical Utilities & IPPs'},
+  'ADANIENT':{'n':'Adani Enterprises Ltd','i':'Diversified Industrials'},
+  'ADANIPOWER':{'n':'Adani Power Ltd','i':'Electrical Utilities & IPPs'},
+  'AEGISLOG':{'n':'Aegis Logistics Ltd','i':'Oil & Gas Equipment & Services'},
+  'ALOKINDS':{'n':'Alok Industries Ltd','i':'Textiles & Apparel'},
+  'AMARAJABAT':{'n':'Amara Raja Energy & Mobility Ltd','i':'Auto Parts & Equipment'},
+  'APOLLOHOSP':{'n':'Apollo Hospitals Enterprise Ltd','i':'Healthcare Facilities & Services'},
+  'APOLLOTYRE':{'n':'Apollo Tyres Ltd','i':'Auto Parts & Equipment'},
+  'ARVIND':{'n':'Arvind Ltd','i':'Textiles & Apparel'},
+  'ASHOKLEY':{'n':'Ashok Leyland Ltd','i':'Commercial Vehicles'},
+  'ASIANPAINT':{'n':'Asian Paints Ltd','i':'Specialty Chemicals'},
+  'AUROPHARMA':{'n':'Aurobindo Pharma Ltd','i':'Pharmaceuticals'},
+  'AXISBANK':{'n':'Axis Bank Ltd','i':'Banking Services'},
+  'BAJAJ-AUTO':{'n':'Bajaj Auto Ltd','i':'Two & Three Wheelers'},
+  'BAJAJFINSV':{'n':'Bajaj Finserv Ltd','i':'Diversified Financial Services'},
+  'BAJAJHIND':{'n':'Bajaj Hindusthan Sugar Ltd','i':'Food & Tobacco'},
+  'BAJFINANCE':{'n':'Bajaj Finance Ltd','i':'Consumer Finance'},
+  'BALKRISIND':{'n':'Balkrishna Industries Ltd','i':'Auto Parts & Equipment'},
+  'BANDHANBNK':{'n':'Bandhan Bank Ltd','i':'Banking Services'},
+  'BANKBARODA':{'n':'Bank of Baroda','i':'Banking Services'},
+  'BANKINDIA':{'n':'Bank of India','i':'Banking Services'},
+  'BERGEPAINT':{'n':'Berger Paints India Ltd','i':'Specialty Chemicals'},
+  'BHARTIARTL':{'n':'Bharti Airtel Ltd','i':'Telecom Services'},
+  'BHEL':{'n':'Bharat Heavy Electricals Ltd','i':'Industrial Machinery'},
+  'BIKAJI':{'n':'Bikaji Foods International Ltd','i':'Food & Tobacco'},
+  'BIOCON':{'n':'Biocon Ltd','i':'Biotechnology & Medical Research'},
+  'BPCL':{'n':'Bharat Petroleum Corporation Ltd','i':'Oil & Gas Refining & Marketing'},
+  'BRITANNIA':{'n':'Britannia Industries Ltd','i':'Food & Tobacco'},
+  'CANBK':{'n':'Canara Bank','i':'Banking Services'},
+  'CASTROLIND':{'n':'Castrol India Ltd','i':'Oil & Gas Refining & Marketing'},
+  'CIPLA':{'n':'Cipla Ltd','i':'Pharmaceuticals'},
+  'COALINDIA':{'n':'Coal India Ltd','i':'Coal & Consumable Fuels'},
+  'COCHINSHIP':{'n':'Cochin Shipyard Ltd','i':'Transportation & Logistics'},
+  'COLPAL':{'n':'Colgate-Palmolive (India) Ltd','i':'Personal Products'},
+  'COROMANDEL':{'n':'Coromandel International Ltd','i':'Agricultural Chemicals'},
+  'CUMMINSIND':{'n':'Cummins India Ltd','i':'Industrial Machinery'},
+  'DABUR':{'n':'Dabur India Ltd','i':'Personal Products'},
+  'DAMCAPITAL':{'n':'Dam Capital Advisors Ltd','i':'Capital Markets'},
+  'DCMSHRIRAM':{'n':'DCM Shriram Ltd','i':'Diversified Industrials'},
+  'DCW':{'n':'DCW Ltd','i':'Specialty Chemicals'},
+  'DEEPAKNTR':{'n':'Deepak Nitrite Ltd','i':'Specialty Chemicals'},
+  'DLF':{'n':'DLF Ltd','i':'Real Estate'},
+  'DREAMFOLKS':{'n':'Dreamfolks Services Ltd','i':'Commercial Services'},
+  'DRREDDY':{'n':'Dr Reddy\'s Laboratories Ltd','i':'Pharmaceuticals'},
+  'DWARKESH':{'n':'Dwarikesh Sugar Industries Ltd','i':'Food & Tobacco'},
+  'EKC':{'n':'Everest Kanto Cylinder Ltd','i':'Industrial Machinery'},
+  'EIHOTEL':{'n':'EIH Ltd','i':'Hotels & Entertainment Services'},
+  'EMAMILTD':{'n':'Emami Ltd','i':'Personal Products'},
+  'ETERNAL':{'n':'Eternal Ltd','i':'E-Commerce & IT Services'},
+  'FEDERALBNK':{'n':'Federal Bank Ltd','i':'Banking Services'},
+  'FORTIS':{'n':'Fortis Healthcare Ltd','i':'Healthcare Facilities & Services'},
+  'FRETAIL':{'n':'Future Retail Ltd','i':'Retail'},
+  'GAIL':{'n':'GAIL (India) Ltd','i':'Gas Utilities'},
+  'GESHIP':{'n':'Great Eastern Shipping Co Ltd','i':'Transportation & Logistics'},
+  'GMRAIRPORT':{'n':'GMR Airports Infrastructure Ltd','i':'Transport Infrastructure'},
+  'GODREJCP':{'n':'Godrej Consumer Products Ltd','i':'Personal Products'},
+  'GODREJPROP':{'n':'Godrej Properties Ltd','i':'Real Estate'},
+  'GRANULES':{'n':'Granules India Ltd','i':'Pharmaceuticals'},
+  'GRASIM':{'n':'Grasim Industries Ltd','i':'Diversified Industrials'},
+  'HAL':{'n':'Hindustan Aeronautics Ltd','i':'Aerospace & Defence'},
+  'HAVELLS':{'n':'Havells India Ltd','i':'Electrical Equipment'},
+  'HCLTECH':{'n':'HCL Technologies Ltd','i':'IT Services & Consulting'},
+  'HDFCBANK':{'n':'HDFC Bank Ltd','i':'Banking Services'},
+  'HDFCLIFE':{'n':'HDFC Life Insurance Co Ltd','i':'Insurance'},
+  'HEROMOTOCO':{'n':'Hero MotoCorp Ltd','i':'Two & Three Wheelers'},
+  'HINDMOTORS':{'n':'Hindustan Motors Ltd','i':'Automobiles'},
+  'HINDUNILVR':{'n':'Hindustan Unilever Ltd','i':'Personal Products'},
+  'HINDALCO':{'n':'Hindalco Industries Ltd','i':'Aluminum'},
+  'HINDPETRO':{'n':'Hindustan Petroleum Corporation Ltd','i':'Oil & Gas Refining & Marketing'},
+  'HYUNDAI':{'n':'Hyundai Motor India Ltd','i':'Automobiles'},
+  'ICICIBANK':{'n':'ICICI Bank Ltd','i':'Banking Services'},
+  'ICICIGI':{'n':'ICICI Lombard General Insurance Co Ltd','i':'Insurance'},
+  'ICICIPRULI':{'n':'ICICI Prudential Life Insurance Co Ltd','i':'Insurance'},
+  'IDEA':{'n':'Vodafone Idea Ltd','i':'Telecom Services'},
+  'IDFCFIRSTB':{'n':'IDFC First Bank Ltd','i':'Banking Services'},
+  'IEX':{'n':'Indian Energy Exchange Ltd','i':'Energy Trading'},
+  'INDHOTEL':{'n':'The Indian Hotels Co Ltd','i':'Hotels & Entertainment Services'},
+  'INDIGO':{'n':'InterGlobe Aviation Ltd','i':'Airlines'},
+  'INDUSINDBK':{'n':'IndusInd Bank Ltd','i':'Banking Services'},
+  'INFY':{'n':'Infosys Ltd','i':'IT Services & Consulting'},
+  'IOC':{'n':'Indian Oil Corporation Ltd','i':'Oil & Gas Refining & Marketing'},
+  'IRCTC':{'n':'Indian Railway Catering & Tourism Corp Ltd','i':'Transport Infrastructure'},
+  'ITC':{'n':'ITC Ltd','i':'Diversified Industrials'},
+  'ITCHOTELS':{'n':'ITC Hotels Ltd','i':'Hotels & Entertainment Services'},
+  'JAMNAAUTO':{'n':'Jamna Auto Industries Ltd','i':'Auto Parts & Equipment'},
+  'JETAIRWAYS':{'n':'Jet Airways (India) Ltd','i':'Airlines'},
+  'JIOFIN':{'n':'Jio Financial Services Ltd','i':'Diversified Financial Services'},
+  'JPPOWER':{'n':'Jaiprakash Power Ventures Ltd','i':'Electrical Utilities & IPPs'},
+  'JSWSTEEL':{'n':'JSW Steel Ltd','i':'Steel'},
+  'JUSTDIAL':{'n':'Just Dial Ltd','i':'Internet & E-Commerce'},
+  'KOTAKBANK':{'n':'Kotak Mahindra Bank Ltd','i':'Banking Services'},
+  'KPIL':{'n':'Kalpataru Projects International Ltd','i':'Construction & Engineering'},
+  'LEMONTREE':{'n':'Lemon Tree Hotels Ltd','i':'Hotels & Entertainment Services'},
+  'LICI':{'n':'Life Insurance Corporation of India','i':'Insurance'},
+  'LT':{'n':'Larsen & Toubro Ltd','i':'Construction & Engineering'},
+  'LTFOODS':{'n':'LT Foods Ltd','i':'Food & Tobacco'},
+  'LTIM':{'n':'LTIMindtree Ltd','i':'IT Services & Consulting'},
+  'LUPIN':{'n':'Lupin Ltd','i':'Pharmaceuticals'},
+  'M&M':{'n':'Mahindra & Mahindra Ltd','i':'Automobiles'},
+  'MARUTI':{'n':'Maruti Suzuki India Ltd','i':'Automobiles'},
+  'MAXHEALTH':{'n':'Max Healthcare Institute Ltd','i':'Healthcare Facilities & Services'},
+  'MAZDOCK':{'n':'Mazagon Dock Shipbuilders Ltd','i':'Aerospace & Defence'},
+  'MID150BEES':{'n':'Mirae Asset Nifty Midcap 150 ETF','i':'ETF'},
+  'MOIL':{'n':'MOIL Ltd','i':'Mining & Metals'},
+  'MSTCLTD':{'n':'MSTC Ltd','i':'Commercial Services'},
+  'MUKTAARTS':{'n':'Mukta Arts Ltd','i':'Media & Entertainment'},
+  'NAUKRI':{'n':'Info Edge (India) Ltd','i':'Internet & E-Commerce'},
+  'NDTV':{'n':'New Delhi Television Ltd','i':'Media & Entertainment'},
+  'NESTLEIND':{'n':'Nestle India Ltd','i':'Food & Tobacco'},
+  'NSLNISP':{'n':'NMDC Steel Ltd','i':'Steel'},
+  'NTPC':{'n':'NTPC Ltd','i':'Electrical Utilities & IPPs'},
+  'NYKAA':{'n':'FSN E-Commerce Ventures Ltd','i':'E-Commerce & IT Services'},
+  'ONGC':{'n':'Oil & Natural Gas Corporation Ltd','i':'Oil & Gas Exploration & Production'},
+  'PAYTM':{'n':'One97 Communications Ltd','i':'Fintech'},
+  'PERSISTENT':{'n':'Persistent Systems Ltd','i':'IT Services & Consulting'},
+  'PETRONET':{'n':'Petronet LNG Ltd','i':'Gas Utilities'},
+  'PFC':{'n':'Power Finance Corporation Ltd','i':'Diversified Financial Services'},
+  'PIDILITIND':{'n':'Pidilite Industries Ltd','i':'Specialty Chemicals'},
+  'PNCINFRA':{'n':'PNC Infratech Ltd','i':'Construction & Engineering'},
+  'PNB':{'n':'Punjab National Bank','i':'Banking Services'},
+  'POLYCAB':{'n':'Polycab India Ltd','i':'Electrical Equipment'},
+  'POONAWALLA':{'n':'Poonawalla Fincorp Ltd','i':'Consumer Finance'},
+  'PRAJIND':{'n':'Praj Industries Ltd','i':'Industrial Machinery'},
+  'PVRINOX':{'n':'PVR INOX Ltd','i':'Hotels & Entertainment Services'},
+  'RAJESHEXPO':{'n':'Rajesh Exports Ltd','i':'Jewelry & Watches'},
+  'RCOM':{'n':'Reliance Communications Ltd','i':'Telecom Services'},
+  'REC':{'n':'REC Ltd','i':'Diversified Financial Services'},
+  'RELIANCE':{'n':'Reliance Industries Ltd','i':'Oil & Gas Refining & Marketing'},
+  'RELIGARE':{'n':'Religare Enterprises Ltd','i':'Diversified Financial Services'},
+  'RENUKA':{'n':'Shree Renuka Sugars Ltd','i':'Food & Tobacco'},
+  'RPOWER':{'n':'Reliance Power Ltd','i':'Electrical Utilities & IPPs'},
+  'SAIL':{'n':'Steel Authority of India Ltd','i':'Steel'},
+  'SBICARD':{'n':'SBI Cards & Payment Services Ltd','i':'Consumer Finance'},
+  'SBILIFE':{'n':'SBI Life Insurance Co Ltd','i':'Insurance'},
+  'SBISILVER':{'n':'SBI Silver ETF','i':'ETF'},
+  'SBIN':{'n':'State Bank of India','i':'Banking Services'},
+  'SHREECEM':{'n':'Shree Cement Ltd','i':'Construction Materials'},
+  'SIEMENS':{'n':'Siemens Ltd','i':'Industrial Conglomerates'},
+  'SONACOMS':{'n':'Sona BLW Precision Forgings Ltd','i':'Auto Parts & Equipment'},
+  'SPICEJET':{'n':'SpiceJet Ltd','i':'Airlines'},
+  'SUNPHARMA':{'n':'Sun Pharmaceutical Industries Ltd','i':'Pharmaceuticals'},
+  'SUNTV':{'n':'Sun TV Network Ltd','i':'Media & Entertainment'},
+  'TATACONSUM':{'n':'Tata Consumer Products Ltd','i':'Food & Tobacco'},
+  'TATAMOTORS':{'n':'Tata Motors Ltd','i':'Automobiles'},
+  'TATAPOWER':{'n':'Tata Power Company Ltd','i':'Electrical Utilities & IPPs'},
+  'TATASTEEL':{'n':'Tata Steel Ltd','i':'Steel'},
+  'TATATECH':{'n':'Tata Technologies Ltd','i':'IT Services & Consulting'},
+  'TCS':{'n':'Tata Consultancy Services Ltd','i':'IT Services & Consulting'},
+  'TECHM':{'n':'Tech Mahindra Ltd','i':'IT Services & Consulting'},
+  'TITAN':{'n':'Titan Company Ltd','i':'Jewelry & Watches'},
+  'TORNTPHARM':{'n':'Torrent Pharmaceuticals Ltd','i':'Pharmaceuticals'},
+  'TORNTPOWER':{'n':'Torrent Power Ltd','i':'Electrical Utilities & IPPs'},
+  'TRIDENT':{'n':'Trident Ltd','i':'Textiles & Apparel'},
+  'TRENT':{'n':'Trent Ltd','i':'Retail'},
+  'UFBL':{'n':'United Foodbrands Ltd','i':'Hotels & Entertainment Services'},
+  'ULTRACEMCO':{'n':'UltraTech Cement Ltd','i':'Construction Materials'},
+  'UNIONBANK':{'n':'Union Bank of India','i':'Banking Services'},
+  'UPL':{'n':'UPL Ltd','i':'Agricultural Chemicals'},
+  'VBL':{'n':'Varun Beverages Ltd','i':'Beverages'},
+  'VEDL':{'n':'Vedanta Ltd','i':'Diversified Metals & Mining'},
+  'WIPRO':{'n':'Wipro Ltd','i':'IT Services & Consulting'},
+  'YESBANK':{'n':'Yes Bank Ltd','i':'Banking Services'},
+  'ZOMATO':{'n':'Zomato Ltd','i':'Internet & E-Commerce'},
+  'ZYDUSLIFE':{'n':'Zydus Lifesciences Ltd','i':'Pharmaceuticals'},
+};
+
+// ── SYMBOL AUTOCOMPLETE ───────────────────────────────────────────────────
+let acHighlight = -1;
+
+function getStockSuggestions(query) {
+  if (!query || query.length < 1) return [];
+  const q = query.toUpperCase();
+  const qLow = query.toLowerCase();
+  // Merge marketData + NSE_STOCKS
+  const combined = {};
+  Object.keys(NSE_STOCKS).forEach(sym => { combined[sym] = {name: NSE_STOCKS[sym].n, industry: NSE_STOCKS[sym].i}; });
+  Object.keys(marketData).forEach(sym => {
+    const md = marketData[sym];
+    if (md && md.name) combined[sym] = {name: md.name, industry: md.industry || (combined[sym]||{}).industry || ''};
+  });
+  const symMatch = [], nameMatch = [];
+  Object.entries(combined).forEach(([sym, info]) => {
+    if (sym.startsWith(q)) symMatch.push({sym, ...info});
+    else if (info.name.toLowerCase().includes(qLow)) nameMatch.push({sym, ...info});
+  });
+  symMatch.sort((a,b) => a.sym.localeCompare(b.sym));
+  nameMatch.sort((a,b) => a.sym.localeCompare(b.sym));
+  return [...symMatch, ...nameMatch].slice(0, 9);
+}
+
+function showSymbolSuggestions(query) {
+  acHighlight = -1;
+  const dd = document.getElementById('symDropdown');
+  const suggestions = getStockSuggestions(query);
+  if (!suggestions.length || !query) { dd.style.display = 'none'; return; }
+  dd.innerHTML = suggestions.map((s, i) =>
+    `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
+      <span class="si-ticker">${s.sym}</span>
+      <span class="si-name">${s.name}</span>
+    </div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function selectSymbol(sym, name, industry) {
+  document.getElementById('fSym').value = sym;
+  document.getElementById('fName').value = name;
+  document.getElementById('symDropdown').style.display = 'none';
+}
+
+function handleSymbolKeydown(e) {
+  const dd = document.getElementById('symDropdown');
+  const items = dd.querySelectorAll('.sym-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); acHighlight = Math.min(acHighlight+1, items.length-1); updateAcHighlight(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acHighlight = Math.max(acHighlight-1, 0); updateAcHighlight(items); }
+  else if (e.key === 'Enter' && acHighlight >= 0) { e.preventDefault(); items[acHighlight].dispatchEvent(new MouseEvent('mousedown')); }
+  else if (e.key === 'Escape') { dd.style.display = 'none'; acHighlight = -1; }
+}
+function updateAcHighlight(items) {
+  items.forEach((el,i) => el.classList.toggle('active', i === acHighlight));
+  if (acHighlight >= 0) items[acHighlight].scrollIntoView({block:'nearest'});
+}
+// Close dropdown when clicking outside
+document.addEventListener('click', e => { if (!e.target.closest('.sym-wrap')) document.getElementById('symDropdown').style.display = 'none'; });
 // ──────────────────────────────────────────────────────────────────────────
 
 firebase.initializeApp(firebaseConfig);
@@ -816,9 +1056,13 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function addStock() {
   const sym  = document.getElementById('fSym').value.trim().toUpperCase();
   const name = document.getElementById('fName').value.trim();
-  const ind  = document.getElementById('fIndustry').value.trim();
   const cost = parseFloat(document.getElementById('fCost').value);
-  const qty  = parseInt(document.getElementById('fQty').value);
+  const qtyRaw = document.getElementById('fQty').value.trim();
+  const qty  = qtyRaw === '' ? 1 : parseInt(qtyRaw);  // default to 1 if blank
+  // Auto-fill industry from stock list if available
+  const mdEntry = marketData[sym];
+  const nseEntry = NSE_STOCKS[sym];
+  const ind = (mdEntry && mdEntry.industry) || (nseEntry && nseEntry.i) || '';
   if (!sym)         { showToast('Please enter a symbol.','error'); return; }
   if (!name)        { showToast('Please enter company name.','error'); return; }
   if (isNaN(cost) || cost <= 0) { showToast('Enter a valid average cost.','error'); return; }
@@ -839,7 +1083,8 @@ async function addStock() {
 }
 
 function clearAddForm() {
-  ['fSym','fName','fIndustry','fCost','fQty'].forEach(id => document.getElementById(id).value = '');
+  ['fSym','fName','fCost','fQty'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('symDropdown').style.display = 'none';
 }
 
 // ── DELETE STOCK ───────────────────────────────────────────────────────────
@@ -860,9 +1105,25 @@ function csvDrop(e) { e.preventDefault(); document.getElementById('csvDrop').cla
 
 function handleCsvFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => parseCsv(e.target.result);
-  reader.readAsText(file);
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    // Parse Excel using SheetJS
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        setCsvStatus('Excel file read — processing…', 'info');
+        parseCsv(csv);
+      } catch(err) { setCsvStatus('Could not read Excel file. Please check the format.','error'); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => parseCsv(e.target.result);
+    reader.readAsText(file);
+  }
 }
 
 async function parseCsv(text) {
