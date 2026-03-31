@@ -834,15 +834,20 @@ function handleCsvFile(file) {
 }
 
 async function parseCsv(text) {
+  // Normalise: strip BOM, convert all line-ending styles to \n
+  text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = text.split('\n').map(l => l.trim()).filter(l => l);
   if (!lines.length) { setCsvStatus('Empty file.', 'error'); return; }
 
-  // Parse rows — new format: Symbol, AvgCost, Quantity
+  // Auto-detect delimiter (comma vs semicolon)
+  const delim = lines[0].includes(';') ? ';' : ',';
+
+  // Parse rows — format: Symbol, AvgCost, Quantity
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+    const cols = lines[i].split(delim).map(c => c.trim().replace(/^["']|["']$/g, ''));
     if (!cols[0]) continue;
-    const sym  = cols[0].toUpperCase();
+    const sym  = cols[0].replace(/^\uFEFF/, '').toUpperCase(); // strip BOM from first col too
     // Skip header row (first row where col[1] is not a number)
     if (i === 0 && isNaN(parseFloat(cols[1]))) continue;
     const cost = parseFloat(cols[1]);
@@ -852,39 +857,39 @@ async function parseCsv(text) {
   }
 
   if (!rows.length) {
-    setCsvStatus('No valid rows found. Expected format: Symbol, AvgCost, Quantity', 'error');
+    setCsvStatus('No valid rows found. Check format: Symbol, AvgCost, Quantity (comma-separated, no empty rows)', 'error');
     return;
   }
 
-  // Validate symbols + fetch names from Yahoo Finance
-  setCsvStatus(`🔍 Validating ${rows.length} symbol${rows.length > 1 ? 's' : ''} with NSE/BSE…`, 'info');
-  const validRows = [], invalidSyms = [];
+  // Validate symbols with Yahoo Finance — unrecognised symbols are imported without a live price
+  setCsvStatus(`🔍 Verifying ${rows.length} symbol${rows.length > 1 ? 's' : ''} with Yahoo Finance…`, 'info');
+  const validRows = [], unverifiedSyms = [];
   let checked = 0;
 
-  for (let i = 0; i < rows.length; i += 3) {
-    const batch = rows.slice(i, i + 3);
+  for (let i = 0; i < rows.length; i += 5) {
+    const batch = rows.slice(i, i + 5);
     await Promise.all(batch.map(async row => {
-      setCsvStatus(`🔍 Validating ${++checked}/${rows.length}: ${row.symbol}…`, 'info');
+      const n = ++checked;
+      setCsvStatus(`🔍 Checking ${n}/${rows.length}: ${row.symbol}…`, 'info');
       const info = await fetchYahooInfo(row.symbol);
       if (info.valid) {
         row.name = info.name;
         row.currentPrice = info.price;
         validRows.push(row);
       } else {
-        invalidSyms.push(row.symbol);
+        // Still import — just flag as unverified so user knows
+        row.name = row.symbol;
+        row.currentPrice = null;
+        unverifiedSyms.push(row.symbol);
+        validRows.push(row);
       }
     }));
-    if (i + 3 < rows.length) await delay(300);
+    if (i + 5 < rows.length) await delay(200);
   }
 
-  if (!validRows.length) {
-    setCsvStatus(`❌ No valid NSE/BSE symbols found. Invalid: ${invalidSyms.join(', ')}`, 'error');
-    return;
-  }
-
-  if (invalidSyms.length) {
-    setCsvStatus(`⚠ Skipping invalid symbols: ${invalidSyms.join(', ')} — importing ${validRows.length} valid stocks…`, 'error');
-    await delay(2500);
+  if (unverifiedSyms.length) {
+    setCsvStatus(`⚠ ${unverifiedSyms.length} symbol(s) not found on Yahoo Finance (imported without price): ${unverifiedSyms.slice(0,8).join(', ')}${unverifiedSyms.length>8?'…':''} — importing all ${validRows.length} stocks…`, 'error');
+    await delay(2000);
   }
 
   // Import valid rows to Firestore
@@ -906,8 +911,8 @@ async function parseCsv(text) {
   }
 
   renderTable(); updateStats(); populateIndustryFilter();
-  const summary = invalidSyms.length
-    ? `✅ ${added} imported · ⚠ ${invalidSyms.length} skipped (${invalidSyms.join(', ')})`
+  const summary = unverifiedSyms.length
+    ? `✅ ${added} imported · ⚠ ${unverifiedSyms.length} without live price (use Refresh Prices to fetch)`
     : `✅ ${added} stocks imported successfully!`;
   setCsvStatus(summary, 'success');
   showToast(`✅ ${added} stocks imported from CSV`, 'success');
