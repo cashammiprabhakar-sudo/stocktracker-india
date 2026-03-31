@@ -825,52 +825,10 @@ const YAHOO_OVERRIDES = {
 };
 function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
 
-// ── PRICE FETCHING (price only — used as fallback) ────────────────────────
-async function fetchYahooPrice(sym) {
-  const ysym = toYahoo(sym);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  try {
-    const r = await fetch(proxy, {signal: AbortSignal.timeout(10000)});
-    if (!r.ok) return null;
-    const d = await r.json();
-    const parsed = JSON.parse(d.contents || '{}');
-    return parsed?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
-  } catch(e) { return null; }
-}
-
-// ── FULL FUNDAMENTALS FETCH (P/E, industry, recs, 52-week change) ──────────
-async function fetchYahooFull(sym) {
-  const ysym = toYahoo(sym);
-  const modules = 'defaultKeyStatistics,financialData,summaryProfile,recommendationTrend';
-  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ysym}?modules=${modules}&formatted=false`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  try {
-    const r = await fetch(proxy, {signal: AbortSignal.timeout(15000)});
-    if (!r.ok) return null;
-    const d = await r.json();
-    const parsed = JSON.parse(d.contents || '{}');
-    const result = parsed?.quoteSummary?.result?.[0];
-    if (!result) return null;
-    const ks = result.defaultKeyStatistics || {};
-    const fd = result.financialData || {};
-    const sp = result.summaryProfile || {};
-    const rt = (result.recommendationTrend || {}).trend || [];
-    const pe = ks.trailingPE?.raw ?? ks.trailingPE ?? null;
-    const industry = sp.industry || null;
-    const recKey = fd.recommendationKey || null;
-    const change52w = ks['52WeekChange']?.raw ?? ks.fiftyTwoWeekChange?.raw ?? null;
-    const targetPrice = fd.targetMeanPrice?.raw ?? fd.targetMeanPrice ?? null;
-    const currentPrice = fd.currentPrice?.raw ?? fd.currentPrice ?? null;
-    let buyRecs = null, sellRecs = null;
-    if (rt.length > 0) {
-      buyRecs = (rt[0].strongBuy || 0) + (rt[0].buy || 0);
-      sellRecs = (rt[0].strongSell || 0) + (rt[0].sell || 0);
-    }
-    return { price: currentPrice, pe, industry, recommendation: recKey,
-             change52w, targetPrice, buyRecs, sellRecs };
-  } catch(e) { return null; }
-}
+// ── NOTE: Client-side Yahoo Finance API calls are CORS-blocked from this domain.
+// All market data is served from market_data.json, generated server-side by
+// the GitHub Actions Python script (scripts/fetch_market_data.py) twice daily.
+// The Refresh button force-reloads market_data.json to pick up the latest run.
 
 // ── SIGNAL DERIVATION ──────────────────────────────────────────────────────
 function deriveSignal(recKey) {
@@ -975,7 +933,8 @@ async function loadPortfolio() {
     updateStats();
     populateIndustryFilter();
     await loadMarketData(); // enrich with market_data.json (P/E, industry, signal, commentary)
-    checkAutoRefresh(); // auto-refresh every 12h
+    showPendingBanner();   // show amber notice for any stocks not yet in market_data.json
+    checkAutoRefresh();    // auto-refresh every 12h
   } catch(e) { showToast('Error loading portfolio.','error'); }
   hideOverlay();
 }
@@ -1056,7 +1015,10 @@ function renderTable() {
     const valueDisp = value != null ? '₹'+fmt(value) : '<span style="color:#bbb">—</span>';
     const pnlDisp = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
     const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">—</span>';
-    const peDisp = s.pe != null ? s.pe.toFixed(2) : '—';
+    const hasMd = !!(marketData[s.symbol]?.available);
+    const isPending = !hasMd && s.currentPrice == null && !s.pe && !s.signal;
+    const pendingBadge = isPending ? '<span style="font-size:0.72rem;background:#fff8e1;color:#e65100;border:1px solid #ffe082;border-radius:4px;padding:2px 6px;white-space:nowrap">⏳ Pending</span>' : '';
+    const peDisp = s.pe != null ? s.pe.toFixed(2) : (isPending ? '⏳' : '—');
     const chg = s.change12w;
     const chgDisp = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
     const signalClass = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
@@ -1069,7 +1031,7 @@ function renderTable() {
       <td class="num">₹${fmt(s.avgCost)}</td>
       <td class="num">${s.qty}</td>
       <td class="num">₹${fmt(invested)}</td>
-      <td class="num ${s.priceLoading?'price-loading':''}">${priceDisp}</td>
+      <td class="num ${s.priceLoading?'price-loading':''}">${priceDisp}${pendingBadge}</td>
       <td class="num">${valueDisp}</td>
       <td class="num ${pnlClass}">${pnlDisp}</td>
       <td class="num ${pnlClass}">${pnlPctDisp}</td>
@@ -1077,7 +1039,7 @@ function renderTable() {
       <td class="num">${chgDisp}</td>
       <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
       <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
-      <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'—'}</td>
+      <td class="${signalClass}" style="font-size:0.78rem">${isPending ? '⏳' : s.signal||'—'}</td>
       <td><span class="${recClass}">${s.recommendation||'—'}</span></td>
       <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${s.reason||'—'}</td>
       <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
@@ -1209,62 +1171,21 @@ function updateStats() {
   }
 }
 
-// ── REFRESH PRICES (full fundamentals: price + P/E + industry + recs + signal + commentary) ──
+// ── REFRESH ─────────────────────────────────────────────────────────────────
+// Reloads market_data.json (generated server-side by GitHub Actions twice daily).
+// All stock data — prices, P/E, industry, signal, commentary — comes from this file.
+// Client-side Yahoo Finance API calls are CORS-blocked from this domain and are not used.
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '⏳ Fetching data…';
-  let done = 0;
-  const total = stocks.length;
-  document.getElementById('refreshNote').textContent = `0 / ${total}`;
+  btn.disabled = true; btn.textContent = '⏳ Loading market data…';
+  document.getElementById('refreshNote').textContent = 'Fetching latest data…';
 
-  // Fetch in batches of 3 — full quoteSummary is heavier than price-only
-  for (let i = 0; i < stocks.length; i += 3) {
-    const batch = stocks.slice(i, i + 3);
-    await Promise.all(batch.map(async s => {
-      s.priceLoading = true;
-      // Try full fundamentals (price + P/E + industry + recs + 52w)
-      const full = await fetchYahooFull(s.symbol);
-      if (full) {
-        if (full.price        != null) s.currentPrice   = full.price;
-        if (full.pe           != null) s.pe             = full.pe;
-        if (full.industry          )   s.industry       = full.industry;
-        if (full.recommendation    )   s.recommendation = full.recommendation;
-        if (full.change52w    != null) s.change12w      = full.change52w;
-        if (full.targetPrice  != null) s.targetPrice    = full.targetPrice;
-        if (full.buyRecs      != null) s.buyRecs        = full.buyRecs;
-        if (full.sellRecs     != null) s.sellRecs       = full.sellRecs;
-        s.signal = deriveSignal(full.recommendation) || s.signal || null;
-        // Generate commentary using fresh data
-        const commentary = generateCommentary(
-          s.name, full.industry || s.industry, full.recommendation, full.pe, full.change52w);
-        if (commentary) s.reason = commentary;
-      } else {
-        // Fallback: price-only via v8/chart
-        const price = await fetchYahooPrice(s.symbol);
-        if (price !== null) s.currentPrice = price;
-      }
-      // If still missing signal/commentary, try to fill from marketData (market_data.json)
-      const md = marketData[s.symbol];
-      if (md && md.available) {
-        if (!s.signal      && md.signal)       s.signal       = md.signal;
-        if (!s.reason      && md.commentary)   s.reason       = md.commentary;
-        if (s.pe == null   && md.pe != null)   s.pe           = md.pe;
-        if (!s.industry    && md.industry)     s.industry     = md.industry;
-        if (!s.recommendation && md.recommendation) s.recommendation = md.recommendation;
-        if (s.change12w == null && md.change52w != null) s.change12w = md.change52w;
-      }
-      s.priceLoading = false;
-      done++;
-      document.getElementById('refreshNote').textContent = `${done} / ${total}`;
-      renderTable();
-    }));
-    if (i + 3 < stocks.length) await delay(400);
-  }
+  // Force-reload market_data.json with cache-busting to pick up latest GitHub Actions run
+  await loadMarketData();
 
-  // Save ALL enriched fields to Firestore so they persist across sessions
+  // Save enriched data to Firestore so it persists across sessions and devices
   btn.textContent = '⏳ Saving to cloud…';
-  // Process in chunks of 400 to stay under Firestore batch limit
   for (let i = 0; i < stocks.length; i += 400) {
     const batchWrite = db.batch();
     stocks.slice(i, i + 400).forEach(s => {
@@ -1284,11 +1205,8 @@ async function refreshPrices() {
           db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
       }
     });
-    try { await batchWrite.commit(); } catch(e) { console.log('Batch save error:', e); }
+    try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
   }
-
-  // Also reload market_data.json to pick up any fresh GitHub Actions run
-  await loadMarketData();
 
   // Save refresh timestamp
   try {
@@ -1299,13 +1217,41 @@ async function refreshPrices() {
 
   updateStats();
   renderTable();
-  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
+  showPendingBanner();
+  btn.disabled = false; btn.textContent = '\ud83d\udd04 Refresh Prices';
   const now = new Date();
+  const enriched = stocks.filter(s => s.currentPrice != null).length;
+  const pending = stocks.length - enriched;
   document.getElementById('refreshNote').textContent =
-    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~12h`;
-  showToast(`✅ All data refreshed for ${done} stocks`, 'success');
+    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${enriched}/${stocks.length} stocks enriched`;
+  if (pending > 0) {
+    showToast(`\u2705 ${enriched} stocks updated \u00b7 \u23f3 ${pending} stock${pending>1?'s':''} queued for next scheduled run`, 'success');
+  } else {
+    showToast(`\u2705 All ${enriched} stocks updated`, 'success');
+  }
 }
 
+// ── PENDING BANNER ──────────────────────────────────────────────────────────
+function showPendingBanner() {
+  const pendingStocks = stocks.filter(s => !marketData[s.symbol]?.available);
+  let banner = document.getElementById('pendingBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'pendingBanner';
+    banner.style.cssText = 'background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:0.84rem;color:#5d4037;display:flex;align-items:flex-start;gap:10px';
+    const tableWrap = document.querySelector('.table-wrap');
+    tableWrap.parentNode.insertBefore(banner, tableWrap);
+  }
+  if (pendingStocks.length === 0) { banner.style.display = 'none'; return; }
+  const names = pendingStocks.map(s => '<strong>' + s.symbol + '</strong>').join(', ');
+  banner.style.display = 'flex';
+  banner.innerHTML = '<span style="font-size:1.3rem;margin-top:1px">\u23f3</span>'
+    + '<span>' + names + ' — awaiting first data from the scheduled refresh.'
+    + ' The system updates automatically at <strong>6:30 AM & 12:30 PM IST on weekdays</strong>.'
+    + ' For immediate data: go to your <a href="https://github.com/cashammiprabhakar-sudo/stocktracker-india/actions"'
+    + ' target="_blank" style="color:#1565c0;font-weight:600">GitHub Actions</a> page and click'
+    + ' <strong>Refresh Market Data → Run workflow</strong>.</span>';
+}
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── DOWNLOAD CSV TEMPLATE ──────────────────────────────────────────────────
