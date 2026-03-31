@@ -773,7 +773,7 @@ const YAHOO_OVERRIDES = {
 };
 function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
 
-// ── PRICE FETCHING ────────────────────────────────────────────────────────
+// ── PRICE FETCHING (price only — used as fallback) ────────────────────────
 async function fetchYahooPrice(sym) {
   const ysym = toYahoo(sym);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
@@ -785,6 +785,107 @@ async function fetchYahooPrice(sym) {
     const parsed = JSON.parse(d.contents || '{}');
     return parsed?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
   } catch(e) { return null; }
+}
+
+// ── FULL FUNDAMENTALS FETCH (P/E, industry, recs, 52-week change) ──────────
+async function fetchYahooFull(sym) {
+  const ysym = toYahoo(sym);
+  const modules = 'defaultKeyStatistics,financialData,summaryProfile,recommendationTrend';
+  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ysym}?modules=${modules}&formatted=false`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  try {
+    const r = await fetch(proxy, {signal: AbortSignal.timeout(15000)});
+    if (!r.ok) return null;
+    const d = await r.json();
+    const parsed = JSON.parse(d.contents || '{}');
+    const result = parsed?.quoteSummary?.result?.[0];
+    if (!result) return null;
+    const ks = result.defaultKeyStatistics || {};
+    const fd = result.financialData || {};
+    const sp = result.summaryProfile || {};
+    const rt = (result.recommendationTrend || {}).trend || [];
+    const pe = ks.trailingPE?.raw ?? ks.trailingPE ?? null;
+    const industry = sp.industry || null;
+    const recKey = fd.recommendationKey || null;
+    const change52w = ks['52WeekChange']?.raw ?? ks.fiftyTwoWeekChange?.raw ?? null;
+    const targetPrice = fd.targetMeanPrice?.raw ?? fd.targetMeanPrice ?? null;
+    const currentPrice = fd.currentPrice?.raw ?? fd.currentPrice ?? null;
+    let buyRecs = null, sellRecs = null;
+    if (rt.length > 0) {
+      buyRecs = (rt[0].strongBuy || 0) + (rt[0].buy || 0);
+      sellRecs = (rt[0].strongSell || 0) + (rt[0].sell || 0);
+    }
+    return { price: currentPrice, pe, industry, recommendation: recKey,
+             change52w, targetPrice, buyRecs, sellRecs };
+  } catch(e) { return null; }
+}
+
+// ── SIGNAL DERIVATION ──────────────────────────────────────────────────────
+function deriveSignal(recKey) {
+  if (!recKey) return null;
+  const k = recKey.toLowerCase();
+  if (k === 'buy' || k === 'strong_buy')       return '📈 BUY';
+  if (k === 'sell' || k === 'underperform')    return '📉 SELL';
+  if (k === 'hold' || k === 'neutral')         return '⏸ HOLD';
+  return null;
+}
+
+// ── COMMENTARY GENERATOR ───────────────────────────────────────────────────
+function generateCommentary(name, industry, rec, pe, change52w) {
+  if (!name) return '';
+  const ind = (industry || '').toLowerCase();
+  const chg = change52w != null ? Math.round(change52w * 100) : null;
+  const chgStr = chg != null
+    ? (chg >= 0 ? `up ${chg}% over the past year` : `down ${Math.abs(chg)}% over the past year`)
+    : 'with mixed performance recently';
+  // Industry-specific context (Iran war / AI themes)
+  let context = '';
+  if (ind.includes('oil') || ind.includes('gas') || ind.includes('petroleum') || (ind.includes('energy') && !ind.includes('solar'))) {
+    context = `Iran war fears and Middle East tensions have driven crude oil volatility, creating both risk and opportunity for ${name}. `;
+  } else if (ind.includes('software') || ind.includes('it service') || ind.includes('information tech') || ind.includes('technology')) {
+    context = `AI-driven productivity gains are reshaping the IT landscape, and ${name} is navigating this shift with evolving deal structures. `;
+  } else if (ind.includes('bank') || ind.includes('financ') || ind.includes('nbfc') || ind.includes('insurance') || ind.includes('capital market')) {
+    context = `Rising geopolitical risk from Iran tensions has kept Indian financials cautious, though domestic credit growth remains resilient for ${name}. `;
+  } else if (ind.includes('pharma') || ind.includes('drug') || ind.includes('health') || ind.includes('biotech')) {
+    context = `Global supply chain realignments post-Iran sanctions are shifting raw material costs, impacting margins for ${name}. `;
+  } else if (ind.includes('metal') || ind.includes('steel') || ind.includes('alum') || ind.includes('copper') || ind.includes('mining')) {
+    context = `Iran-linked sanctions have disrupted global commodity flows, adding freight cost pressure for ${name} despite strong domestic demand. `;
+  } else if (ind.includes('auto') || ind.includes('vehicle') || ind.includes('tyre')) {
+    context = `AI-powered in-vehicle technology and EV transition are the key growth levers for ${name} in an increasingly competitive market. `;
+  } else if (ind.includes('cement') || ind.includes('construct') || ind.includes('infra') || ind.includes('real estate')) {
+    context = `Infrastructure push from India's budget and AI-enabled project management are tailwinds for ${name}. `;
+  } else if (ind.includes('fmcg') || ind.includes('consumer') || ind.includes('food') || ind.includes('bever') || ind.includes('tobacco')) {
+    context = `Urban consumption patterns are evolving with AI-led personalisation, while rural demand recovery supports volume growth for ${name}. `;
+  } else if (ind.includes('telecom') || ind.includes('communication')) {
+    context = `5G rollout and AI-driven network efficiencies are transforming the telecom economics for ${name}. `;
+  } else if (ind.includes('power') || ind.includes('electric') || ind.includes('utility') || ind.includes('solar') || ind.includes('renewable')) {
+    context = `Energy security concerns from Iran war risk and India's renewable push create a complex but opportunity-rich backdrop for ${name}. `;
+  } else if (ind.includes('textile') || ind.includes('apparel') || ind.includes('fashion')) {
+    context = `Global trade disruptions from Middle East tensions have impacted freight routes, though India's textile export momentum continues for ${name}. `;
+  } else if (ind.includes('chemical') || ind.includes('fertiliser') || ind.includes('agrochemi')) {
+    context = `Iran-linked sanctions and AI-optimised supply chains are reshaping cost structures across the chemicals sector, directly affecting ${name}. `;
+  } else {
+    context = `Macro headwinds from geopolitical tensions and the AI transformation wave create a nuanced picture for ${name}. `;
+  }
+  // Recommendation-based outlook
+  let outlook = '';
+  if (rec === 'buy' || rec === 'strong_buy') {
+    outlook = `With a Buy consensus and stock ${chgStr}, analysts see continued upside potential. Strong fundamentals support this constructive view.`;
+  } else if (rec === 'sell' || rec === 'underperform') {
+    outlook = `Analysts flag near-term caution with a Sell rating despite stock moving ${chgStr}. Watch for earnings triggers before re-entering.`;
+  } else if (rec === 'hold' || rec === 'neutral') {
+    outlook = `The Hold rating reflects balanced risk-reward after the stock moved ${chgStr}. Await clarity on next quarter earnings.`;
+  } else {
+    outlook = `The stock has moved ${chgStr}. Monitor sector catalysts for directional triggers.`;
+  }
+  // P/E note
+  let peNote = '';
+  if (pe != null && pe > 0) {
+    if (pe > 50)      peNote = ` Valuations appear stretched at ${pe.toFixed(1)}x P/E — growth must justify the premium.`;
+    else if (pe > 25) peNote = ` At ${pe.toFixed(1)}x P/E, the stock is reasonably priced for its growth profile.`;
+    else              peNote = ` Attractive valuation at ${pe.toFixed(1)}x P/E leaves room for re-rating.`;
+  }
+  return context + outlook + peNote;
 }
 
 // ── AUTH GUARD ─────────────────────────────────────────────────────────────
@@ -1055,44 +1156,88 @@ function updateStats() {
   }
 }
 
-// ── REFRESH PRICES ─────────────────────────────────────────────────────────
+// ── REFRESH PRICES (full fundamentals: price + P/E + industry + recs + signal + commentary) ──
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '⏳ Fetching prices…';
+  btn.disabled = true; btn.textContent = '⏳ Fetching data…';
   let done = 0;
-  document.getElementById('refreshNote').textContent = `0 / ${stocks.length}`;
+  const total = stocks.length;
+  document.getElementById('refreshNote').textContent = `0 / ${total}`;
 
-  // Fetch in batches of 5 to avoid rate limiting
-  for (let i = 0; i < stocks.length; i += 5) {
-    const batch = stocks.slice(i, i + 5);
+  // Fetch in batches of 3 — full quoteSummary is heavier than price-only
+  for (let i = 0; i < stocks.length; i += 3) {
+    const batch = stocks.slice(i, i + 3);
     await Promise.all(batch.map(async s => {
       s.priceLoading = true;
-      const price = await fetchYahooPrice(s.symbol);
+      // Try full fundamentals (price + P/E + industry + recs + 52w)
+      const full = await fetchYahooFull(s.symbol);
+      if (full) {
+        if (full.price        != null) s.currentPrice   = full.price;
+        if (full.pe           != null) s.pe             = full.pe;
+        if (full.industry          )   s.industry       = full.industry;
+        if (full.recommendation    )   s.recommendation = full.recommendation;
+        if (full.change52w    != null) s.change12w      = full.change52w;
+        if (full.targetPrice  != null) s.targetPrice    = full.targetPrice;
+        if (full.buyRecs      != null) s.buyRecs        = full.buyRecs;
+        if (full.sellRecs     != null) s.sellRecs       = full.sellRecs;
+        s.signal = deriveSignal(full.recommendation) || s.signal || null;
+        // Generate commentary using fresh data
+        const commentary = generateCommentary(
+          s.name, full.industry || s.industry, full.recommendation, full.pe, full.change52w);
+        if (commentary) s.reason = commentary;
+      } else {
+        // Fallback: price-only via v8/chart
+        const price = await fetchYahooPrice(s.symbol);
+        if (price !== null) s.currentPrice = price;
+      }
+      // If still missing signal/commentary, try to fill from marketData (market_data.json)
+      const md = marketData[s.symbol];
+      if (md && md.available) {
+        if (!s.signal      && md.signal)       s.signal       = md.signal;
+        if (!s.reason      && md.commentary)   s.reason       = md.commentary;
+        if (s.pe == null   && md.pe != null)   s.pe           = md.pe;
+        if (!s.industry    && md.industry)     s.industry     = md.industry;
+        if (!s.recommendation && md.recommendation) s.recommendation = md.recommendation;
+        if (s.change12w == null && md.change52w != null) s.change12w = md.change52w;
+      }
       s.priceLoading = false;
-      if (price !== null) s.currentPrice = price;
       done++;
-      document.getElementById('refreshNote').textContent = `${done} / ${stocks.length}`;
+      document.getElementById('refreshNote').textContent = `${done} / ${total}`;
       renderTable();
     }));
-    // Small delay between batches
-    if (i + 5 < stocks.length) await delay(300);
+    if (i + 3 < stocks.length) await delay(400);
   }
 
-  // Save updated prices to Firestore
-  const batchWrite = db.batch();
-  stocks.forEach(s => {
-    if (s.currentPrice != null) {
-      batchWrite.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
-        { currentPrice: s.currentPrice, priceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    }
-  });
-  try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
+  // Save ALL enriched fields to Firestore so they persist across sessions
+  btn.textContent = '⏳ Saving to cloud…';
+  // Process in chunks of 400 to stay under Firestore batch limit
+  for (let i = 0; i < stocks.length; i += 400) {
+    const batchWrite = db.batch();
+    stocks.slice(i, i + 400).forEach(s => {
+      const upd = {};
+      if (s.currentPrice != null) { upd.currentPrice = s.currentPrice; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+      if (s.pe           != null) upd.pe             = s.pe;
+      if (s.industry         )    upd.industry       = s.industry;
+      if (s.recommendation   )    upd.recommendation = s.recommendation;
+      if (s.change12w   != null)  upd.change12w      = s.change12w;
+      if (s.targetPrice != null)  upd.targetPrice    = s.targetPrice;
+      if (s.buyRecs     != null)  upd.buyRecs        = s.buyRecs;
+      if (s.sellRecs    != null)  upd.sellRecs       = s.sellRecs;
+      if (s.signal          )     upd.signal         = s.signal;
+      if (s.reason          )     upd.reason         = s.reason;
+      if (Object.keys(upd).length > 0) {
+        batchWrite.update(
+          db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
+      }
+    });
+    try { await batchWrite.commit(); } catch(e) { console.log('Batch save error:', e); }
+  }
 
-  // Re-load market data to refresh P/E, industry, signal, commentary after price update
+  // Also reload market_data.json to pick up any fresh GitHub Actions run
   await loadMarketData();
 
-  // Save refresh timestamp to Firestore so auto-refresh timer resets
+  // Save refresh timestamp
   try {
     await db.collection('portfolios').doc(currentUser.uid)
       .collection('meta').doc('refresh')
@@ -1105,7 +1250,7 @@ async function refreshPrices() {
   const now = new Date();
   document.getElementById('refreshNote').textContent =
     `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~12h`;
-  showToast(`✅ Prices updated for ${done} stocks`,'success');
+  showToast(`✅ All data refreshed for ${done} stocks`, 'success');
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
