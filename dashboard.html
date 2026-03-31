@@ -187,7 +187,7 @@
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
-          🔄 Refresh Prices
+          🔄 Refresh All Data
         </button>
       </div>
       <!-- FILTER BAR -->
@@ -227,7 +227,7 @@
               <th class="num sortable" onclick="sortBy('pnl')">P&amp;L ₹ <span class="sort-arrow" id="sort-pnl">⇅</span></th>
               <th class="num sortable" onclick="sortBy('pnlPct')">P&amp;L % <span class="sort-arrow" id="sort-pnlPct">⇅</span></th>
               <th class="num sortable" onclick="sortBy('pe')">P/E <span class="sort-arrow" id="sort-pe">⇅</span></th>
-              <th class="num sortable" onclick="sortBy('change12w')">12w Chg% <span class="sort-arrow" id="sort-change12w">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('change12w')">52w Chg% <span class="sort-arrow" id="sort-change12w">⇅</span></th>
               <th class="num">Buy Recs</th>
               <th class="num">Sell Recs</th>
               <th class="sortable" onclick="sortBy('signal')">Signal <span class="sort-arrow" id="sort-signal">⇅</span></th>
@@ -329,7 +329,7 @@
           <div class="detail-item"><div class="di-label">Current Value</div><div class="di-value" id="dc-value">—</div></div>
           <div class="detail-item"><div class="di-label">P&L ₹</div><div class="di-value" id="dc-pnl">—</div></div>
           <div class="detail-item"><div class="di-label">P&L %</div><div class="di-value" id="dc-pnlPct">—</div></div>
-          <div class="detail-item"><div class="di-label">12-Week Change</div><div class="di-value" id="dc-chg12w">—</div></div>
+          <div class="detail-item"><div class="di-label">52-Week Change</div><div class="di-value" id="dc-chg12w">—</div></div>
         </div>
       </div>
       <div class="detail-section">
@@ -430,43 +430,72 @@ const YAHOO_OVERRIDES = {
   'NAUKRI':'NAUKRI.NS','JIOFIN':'JIOFIN.NS','ETERNAL':'ETERNAL.NS'
 };
 
-// ── MULTI-PROXY FETCH (corsproxy.io first → allorigins.win fallback) ──────
-async function fetchYahooRaw(ysym) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=1d`;
-  // 1st attempt: corsproxy.io — returns raw JSON directly
+// ── CORE PROXY FETCH (dual proxy, auto-detects response format) ──────────
+async function proxyFetch(url) {
+  // 1st: corsproxy.io — returns raw JSON body
   try {
     const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`,
-      { signal: AbortSignal.timeout(9000) });
-    if (r.ok) {
-      const j = await r.json();
-      const price = j?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (price) return j;
-    }
-  } catch(e) { /* fall through */ }
-  // 2nd attempt: allorigins.win — wraps JSON in {contents: "..."}
+      { signal: AbortSignal.timeout(12000) });
+    if (r.ok) { const j = await r.json(); if (j && !j.status) return j; }
+  } catch(e) {}
+  // 2nd: allorigins.win — wraps body in {contents:"..."}
   try {
     const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-      { signal: AbortSignal.timeout(9000) });
-    if (r.ok) {
-      const d = await r.json();
-      if (d.contents) return JSON.parse(d.contents);
-    }
-  } catch(e) { /* fall through */ }
+      { signal: AbortSignal.timeout(12000) });
+    if (r.ok) { const d = await r.json(); if (d.contents) return JSON.parse(d.contents); }
+  } catch(e) {}
   return null;
 }
 
-// ── PRICE FETCHING ────────────────────────────────────────────────────────
+// ── V7 BATCH QUOTE — up to 50 symbols per call ───────────────────────────
+async function fetchBatchQuotes(yahooSyms) {
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSyms.join(','))}`;
+  const j = await proxyFetch(url);
+  return j?.quoteResponse?.result || [];
+}
+
+// ── V10 QUOTESUMMARY — per symbol, full fundamentals + analyst counts ─────
+async function fetchQuoteSummary(ysym) {
+  const mods = 'recommendationTrend,defaultKeyStatistics,summaryDetail,assetProfile';
+  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ysym}?modules=${mods}`;
+  const j = await proxyFetch(url);
+  return j?.quoteSummary?.result?.[0] || null;
+}
+
+// ── LEGACY SINGLE-SYMBOL FETCH (used by CSV validation) ──────────────────
+async function fetchYahooRaw(ysym) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=1d`;
+  return proxyFetch(url);
+}
 async function fetchYahooPrice(sym) {
-  // Try override first, then .NS, then .BO
-  const candidates = YAHOO_OVERRIDES[sym]
-    ? [YAHOO_OVERRIDES[sym]]
-    : [sym + '.NS', sym + '.BO'];
+  const candidates = YAHOO_OVERRIDES[sym] ? [YAHOO_OVERRIDES[sym]] : [sym+'.NS', sym+'.BO'];
   for (const ysym of candidates) {
     const j = await fetchYahooRaw(ysym);
     const price = j?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if (price) return price;
   }
   return null;
+}
+
+// ── SIGNAL + RECOMMENDATION HELPERS ──────────────────────────────────────
+function recKeyToLabel(key) {
+  const k = (key||'').toLowerCase();
+  if (k === 'strong_buy' || k === 'buy') return 'BUY';
+  if (k === 'hold' || k === 'neutral') return 'HOLD';
+  if (k === 'underperform' || k === 'sell' || k === 'strong_sell') return 'SELL';
+  return null;
+}
+function computeSignal(q) {
+  const k = (q.recommendationKey||'').toLowerCase();
+  const vs50 = q.fiftyDayAverageChangePercent || 0; // +ve = above 50DMA
+  if (k === 'strong_buy') return '▲ Strong Buy';
+  if (k === 'buy' && vs50 >= 0) return '▲ Bullish';
+  if (k === 'buy') return '▲ Buy';
+  if (k === 'strong_sell' || k === 'sell') return '▼ Bearish';
+  if (k === 'underperform' && vs50 < -0.05) return '▼ Weak';
+  if (vs50 > 0.05) return '▲ Above 50DMA';
+  if (vs50 < -0.05) return '▼ Below 50DMA';
+  return '◀ Neutral';
 }
 
 // ── AUTH GUARD ─────────────────────────────────────────────────────────────
@@ -735,53 +764,152 @@ function updateStats() {
   }
 }
 
-// ── REFRESH PRICES ─────────────────────────────────────────────────────────
+// ── COMPREHENSIVE DATA REFRESH (v7 batch + v10 quoteSummary) ─────────────
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '⏳ Fetching prices…';
-  let done = 0;
-  document.getElementById('refreshNote').textContent = `0 / ${stocks.length}`;
+  const note = document.getElementById('refreshNote');
+  btn.disabled = true; btn.textContent = '⏳ Fetching data…';
 
-  // Fetch in batches of 3 with a generous delay to avoid Yahoo rate-limiting
-  for (let i = 0; i < stocks.length; i += 3) {
-    const batch = stocks.slice(i, i + 3);
-    await Promise.all(batch.map(async s => {
-      s.priceLoading = true;
-      const price = await fetchYahooPrice(s.symbol);
-      s.priceLoading = false;
-      if (price !== null) s.currentPrice = price;
-      done++;
-      document.getElementById('refreshNote').textContent = `${done} / ${stocks.length}`;
-      renderTable();
-    }));
-    if (i + 3 < stocks.length) await delay(700); // 700ms between batches prevents rate-limiting
+  // Build yahoo-symbol → stock map; try .NS first, .BO fallback later
+  const symMap = {}; // yahooSym → stock
+  stocks.forEach(s => {
+    s._ysym = YAHOO_OVERRIDES[s.symbol] || (s.symbol + '.NS');
+    symMap[s._ysym] = s;
+  });
+  const allYsyms = Object.keys(symMap);
+
+  // ── PHASE 1: v7 batch quote (50 per call) — prices + fundamentals ────────
+  note.textContent = `Phase 1/2 — loading prices & fundamentals…`;
+  let phase1Got = 0;
+  const missedSyms = []; // symbols with no price after phase 1
+
+  for (let i = 0; i < allYsyms.length; i += 50) {
+    const batch = allYsyms.slice(i, i + 50);
+    const results = await fetchBatchQuotes(batch);
+
+    for (const q of results) {
+      const s = symMap[q.symbol];
+      if (!s) continue;
+      if (q.regularMarketPrice)       s.currentPrice = q.regularMarketPrice;
+      if (q.trailingPE)               s.pe = parseFloat(q.trailingPE.toFixed(2));
+      // Company name (fill if missing or same as symbol)
+      if (!s.name || s.name === s.symbol) s.name = q.longName || q.shortName || s.name;
+      // Industry — prefer most specific available
+      const ind = q.industryDisp || q.industry || q.sectorDisp || q.sector || '';
+      if (ind) s.industry = ind;
+      // Recommendation & signal
+      const rec = recKeyToLabel(q.recommendationKey);
+      if (rec) s.recommendation = rec;
+      s.signal = computeSignal(q);
+      // 52-week change (vs 50DMA as fallback)
+      if (q.fiftyTwoWeekChangePercent != null)
+        s.change12w = parseFloat((q.fiftyTwoWeekChangePercent * 100).toFixed(1));
+      else if (q.fiftyDayAverageChangePercent != null)
+        s.change12w = parseFloat((q.fiftyDayAverageChangePercent * 100).toFixed(1));
+      phase1Got++;
+    }
+
+    // Mark which symbols had no price result for .BO retry
+    batch.forEach(ysym => {
+      const s = symMap[ysym];
+      if (s && s.currentPrice == null && !YAHOO_OVERRIDES[s.symbol]) missedSyms.push(s);
+    });
+
+    note.textContent = `Phase 1/2 — ${Math.min(phase1Got, stocks.length)} / ${stocks.length} ✓`;
+    renderTable(); updateStats();
+    if (i + 50 < allYsyms.length) await delay(400);
   }
 
-  // Save updated prices to Firestore
+  // .BO fallback for any stock still missing a price
+  if (missedSyms.length) {
+    note.textContent = `Phase 1/2 — retrying ${missedSyms.length} symbols on BSE (.BO)…`;
+    const boSyms = missedSyms.map(s => s.symbol + '.BO');
+    const boMap = {};
+    missedSyms.forEach(s => { boMap[s.symbol + '.BO'] = s; });
+    for (let i = 0; i < boSyms.length; i += 50) {
+      const results = await fetchBatchQuotes(boSyms.slice(i, i + 50));
+      for (const q of results) {
+        const s = boMap[q.symbol];
+        if (!s) continue;
+        if (q.regularMarketPrice) { s.currentPrice = q.regularMarketPrice; s._ysym = q.symbol; }
+        if (q.trailingPE) s.pe = parseFloat(q.trailingPE.toFixed(2));
+        const ind = q.industryDisp || q.industry || q.sectorDisp || q.sector || '';
+        if (ind) s.industry = ind;
+        const rec = recKeyToLabel(q.recommendationKey);
+        if (rec) s.recommendation = rec;
+        s.signal = computeSignal(q);
+      }
+      if (i + 50 < boSyms.length) await delay(300);
+    }
+    renderTable(); updateStats();
+  }
+
+  // ── PHASE 2: v10 quoteSummary — exact buy/sell counts + richer PE/industry ─
+  note.textContent = `Phase 2/2 — loading analyst data (0 / ${stocks.length})…`;
+  let phase2Done = 0;
+  for (let i = 0; i < stocks.length; i += 8) {
+    const batch = stocks.slice(i, i + 8);
+    await Promise.all(batch.map(async s => {
+      const summary = await fetchQuoteSummary(s._ysym || s.symbol + '.NS');
+      if (summary) {
+        // Exact analyst buy/sell breakdown
+        const trend = summary.recommendationTrend?.trend?.[0];
+        if (trend) {
+          s.buyRecs  = (trend.strongBuy||0) + (trend.buy||0);
+          s.sellRecs = (trend.sell||0)      + (trend.strongSell||0);
+        }
+        // More accurate PE from summaryDetail
+        const sd = summary.summaryDetail;
+        if (!s.pe && sd?.trailingPE?.raw) s.pe = parseFloat(sd.trailingPE.raw.toFixed(2));
+        // More specific industry from assetProfile
+        const ap = summary.assetProfile;
+        if (ap?.industry) s.industry = ap.industry;
+        // Precise 52w change from defaultKeyStatistics
+        const ks = summary.defaultKeyStatistics;
+        if (ks?.['52WeekChange']?.raw != null)
+          s.change12w = parseFloat((ks['52WeekChange'].raw * 100).toFixed(1));
+      }
+      phase2Done++;
+      note.textContent = `Phase 2/2 — analyst data ${phase2Done} / ${stocks.length}…`;
+      renderTable();
+    }));
+    if (i + 8 < stocks.length) await delay(350);
+  }
+
+  // ── SAVE EVERYTHING TO FIRESTORE ─────────────────────────────────────────
   const batchWrite = db.batch();
   stocks.forEach(s => {
-    if (s.currentPrice != null) {
-      batchWrite.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
-        { currentPrice: s.currentPrice, priceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    }
+    batchWrite.update(
+      db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
+      {
+        currentPrice:    s.currentPrice    ?? null,
+        pe:              s.pe              ?? null,
+        industry:        s.industry        || '',
+        signal:          s.signal          || null,
+        recommendation:  s.recommendation  || null,
+        buyRecs:         s.buyRecs         ?? null,
+        sellRecs:        s.sellRecs        ?? null,
+        change12w:       s.change12w       ?? null,
+        name:            s.name            || s.symbol,
+        priceUpdatedAt:  firebase.firestore.FieldValue.serverTimestamp()
+      }
+    );
   });
-  try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
+  try { await batchWrite.commit(); } catch(e) {}
 
-  // Save refresh timestamp to Firestore so auto-refresh timer resets
   try {
     await db.collection('portfolios').doc(currentUser.uid)
       .collection('meta').doc('refresh')
       .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  } catch(e) { /* non-critical */ }
+  } catch(e) {}
 
-  updateStats();
-  renderTable();
-  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
+  updateStats(); renderTable(); populateIndustryFilter();
+  btn.disabled = false; btn.textContent = '🔄 Refresh All Data';
   const now = new Date();
-  document.getElementById('refreshNote').textContent =
-    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~12h`;
-  showToast(`✅ Prices updated for ${done} stocks`,'success');
+  const priced = stocks.filter(s => s.currentPrice != null).length;
+  note.textContent = `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${priced}/${stocks.length} prices · Next auto-refresh in ~12h`;
+  showToast(`✅ Full data refresh complete — ${priced} prices, ${stocks.filter(s=>s.pe).length} P/E, ${stocks.filter(s=>s.industry).length} industries`, 'success');
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
