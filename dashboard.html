@@ -112,6 +112,45 @@
     .btn-modal-save:hover{background:#0d47a1}
     .btn-modal-cancel{flex:1;background:#f0f4f8;color:#444;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
     .btn-chg-pwd{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;margin-right:6px}
+    /* FILTER BAR */
+    .filter-bar{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #e8edf2;background:#fafbff}
+    .filter-bar input[type=text]{padding:7px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.85rem;outline:none;min-width:180px;flex:1}
+    .filter-bar input[type=text]:focus{border-color:#1565c0}
+    .filter-bar select{padding:7px 10px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.85rem;outline:none;cursor:pointer;background:#fff}
+    .filter-bar select:focus{border-color:#1565c0}
+    .filter-count{font-size:0.78rem;color:#888;white-space:nowrap}
+    .btn-clear-filter{background:#f0f4f8;border:none;border-radius:6px;padding:7px 12px;font-size:0.82rem;cursor:pointer;color:#555;white-space:nowrap}
+    .btn-clear-filter:hover{background:#e0e7f0}
+    /* SORTABLE HEADERS */
+    thead th.sortable{cursor:pointer;user-select:none}
+    thead th.sortable:hover{background:#eef2ff}
+    .sort-arrow{font-size:0.7rem;margin-left:3px;opacity:0.4}
+    .sort-arrow.active{opacity:1;color:#1565c0}
+    /* 12W CHANGE */
+    .chg-up{color:#2e7d32;font-weight:600}
+    .chg-dn{color:#c62828;font-weight:600}
+    /* CLICKABLE ROW */
+    tbody tr{cursor:pointer}
+    /* DETAIL CARD MODAL */
+    .detail-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:none;align-items:center;justify-content:center;padding:16px}
+    .detail-modal-bg.show{display:flex}
+    .detail-card{background:#fff;border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2)}
+    .detail-card-header{background:#1565c0;color:#fff;padding:18px 20px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:flex-start}
+    .detail-card-header h2{font-size:1.05rem;font-weight:700;margin-bottom:2px}
+    .detail-card-header p{font-size:0.82rem;opacity:0.85}
+    .detail-close{background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .detail-body{padding:20px}
+    .detail-section{margin-bottom:18px}
+    .detail-section h3{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#888;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f4f8}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(min-width:480px){.detail-grid{grid-template-columns:1fr 1fr 1fr}}
+    .detail-item{background:#f8faff;border-radius:8px;padding:10px 12px}
+    .detail-item .di-label{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:#888;margin-bottom:3px}
+    .detail-item .di-value{font-size:0.95rem;font-weight:700;color:#222}
+    .detail-item .di-value.gain{color:#2e7d32}
+    .detail-item .di-value.loss{color:#c62828}
+    .detail-commentary{background:#fffde7;border:1px solid #fff176;border-radius:8px;padding:12px 14px;font-size:0.85rem;color:#555;line-height:1.6}
+    .detail-rec-badge{display:inline-block;padding:5px 14px;border-radius:6px;font-size:0.88rem;font-weight:700}
   </style>
 </head>
 <body>
@@ -151,24 +190,48 @@
           🔄 Refresh Prices
         </button>
       </div>
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <input type="text" id="filterSearch" placeholder="🔍 Search company or ticker…" oninput="applyFilters()"/>
+        <select id="filterIndustry" onchange="applyFilters()">
+          <option value="">All Industries</option>
+        </select>
+        <select id="filterRec" onchange="applyFilters()">
+          <option value="">All Recommendations</option>
+          <option value="BUY">BUY</option>
+          <option value="HOLD">HOLD</option>
+          <option value="SELL">SELL</option>
+        </select>
+        <select id="filterSignal" onchange="applyFilters()">
+          <option value="">All Signals</option>
+          <option value="▲">▲ Gainers</option>
+          <option value="▼">▼ Declining</option>
+          <option value="⚠">⚠ Loss-Making</option>
+        </select>
+        <span class="filter-count" id="filterCount"></span>
+        <button class="btn-clear-filter" onclick="clearFilters()">✕ Clear</button>
+      </div>
       <div class="table-scroll">
         <table id="portfolioTable">
           <thead>
             <tr>
               <th>#</th>
-              <th>Company</th>
-              <th>Ticker</th>
-              <th>Industry</th>
-              <th class="num">Avg Cost ₹</th>
-              <th class="num">Qty</th>
-              <th class="num">Invested ₹</th>
-              <th class="num">Price ₹</th>
-              <th class="num">Value ₹</th>
-              <th class="num">P&amp;L ₹</th>
-              <th class="num">P&amp;L %</th>
-              <th class="num">P/E</th>
-              <th>Signal</th>
-              <th>Rec.</th>
+              <th class="sortable" onclick="sortBy('name')">Company <span class="sort-arrow" id="sort-name">⇅</span></th>
+              <th class="sortable" onclick="sortBy('symbol')">Ticker <span class="sort-arrow" id="sort-symbol">⇅</span></th>
+              <th class="sortable" onclick="sortBy('industry')">Industry <span class="sort-arrow" id="sort-industry">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('avgCost')">Avg Cost ₹ <span class="sort-arrow" id="sort-avgCost">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('qty')">Qty <span class="sort-arrow" id="sort-qty">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('invested')">Invested ₹ <span class="sort-arrow" id="sort-invested">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('currentPrice')">Price ₹ <span class="sort-arrow" id="sort-currentPrice">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('value')">Value ₹ <span class="sort-arrow" id="sort-value">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pnl')">P&amp;L ₹ <span class="sort-arrow" id="sort-pnl">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pnlPct')">P&amp;L % <span class="sort-arrow" id="sort-pnlPct">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pe')">P/E <span class="sort-arrow" id="sort-pe">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('change12w')">12w Chg% <span class="sort-arrow" id="sort-change12w">⇅</span></th>
+              <th class="num">Buy Recs</th>
+              <th class="num">Sell Recs</th>
+              <th class="sortable" onclick="sortBy('signal')">Signal <span class="sort-arrow" id="sort-signal">⇅</span></th>
+              <th class="sortable" onclick="sortBy('recommendation')">Rec. <span class="sort-arrow" id="sort-recommendation">⇅</span></th>
               <th>Commentary</th>
               <th></th>
             </tr>
@@ -234,6 +297,61 @@
 
 <div class="toast" id="toast"></div>
 <div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-msg" id="overlayMsg">Loading…</div></div>
+
+<!-- STOCK DETAIL CARD MODAL -->
+<div class="detail-modal-bg" id="detailModal">
+  <div class="detail-card">
+    <div class="detail-card-header">
+      <div>
+        <h2 id="dc-title">—</h2>
+        <p id="dc-subtitle">—</p>
+      </div>
+      <button class="detail-close" onclick="closeDetailCard()">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-section">
+        <h3>💰 Purchase Details</h3>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="di-label">Avg Cost</div><div class="di-value" id="dc-avgCost">—</div></div>
+          <div class="detail-item"><div class="di-label">Quantity</div><div class="di-value" id="dc-qty">—</div></div>
+          <div class="detail-item"><div class="di-label">Total Invested</div><div class="di-value" id="dc-invested">—</div></div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>📈 Current Performance</h3>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="di-label">Current Price</div><div class="di-value" id="dc-price">—</div></div>
+          <div class="detail-item"><div class="di-label">Current Value</div><div class="di-value" id="dc-value">—</div></div>
+          <div class="detail-item"><div class="di-label">P&L ₹</div><div class="di-value" id="dc-pnl">—</div></div>
+          <div class="detail-item"><div class="di-label">P&L %</div><div class="di-value" id="dc-pnlPct">—</div></div>
+          <div class="detail-item"><div class="di-label">12-Week Change</div><div class="di-value" id="dc-chg12w">—</div></div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>🔬 Fundamentals</h3>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="di-label">P/E Ratio</div><div class="di-value" id="dc-pe">—</div></div>
+          <div class="detail-item"><div class="di-label">Buy Recommendations</div><div class="di-value" id="dc-buyRecs">—</div></div>
+          <div class="detail-item"><div class="di-label">Sell Recommendations</div><div class="di-value" id="dc-sellRecs">—</div></div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>📊 Signal & Recommendation</h3>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <span id="dc-signal" style="font-weight:600;font-size:0.92rem">—</span>
+          <span id="dc-rec" class="detail-rec-badge">—</span>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>💬 Commentary</h3>
+        <div class="detail-commentary" id="dc-reason">—</div>
+      </div>
+      <div style="text-align:right;margin-top:8px">
+        <button onclick="closeDetailCard()" class="btn-modal-cancel" style="min-width:100px">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- CHANGE PASSWORD MODAL -->
 <div class="modal-bg" id="changePwdModal">
@@ -350,6 +468,7 @@ async function loadPortfolio() {
     stocks = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderTable();
     updateStats();
+    populateIndustryFilter();
     checkAutoRefresh(); // auto-refresh every 12h
   } catch(e) { showToast('Error loading portfolio.','error'); }
   hideOverlay();
@@ -382,6 +501,37 @@ async function checkAutoRefresh() {
   } catch(e) { /* silently skip — non-critical */ }
 }
 
+// ── SORT & FILTER STATE ────────────────────────────────────────────────────
+let sortState = { col: null, dir: 1 };
+let filterState = { search: '', industry: '', rec: '', signal: '' };
+
+function getFilteredSorted() {
+  let list = stocks.map(s => {
+    const invested = (s.avgCost||0)*(s.qty||0);
+    const value = s.currentPrice != null ? s.currentPrice * s.qty : null;
+    const pnl = value != null ? value - invested : null;
+    const pnlPct = (pnl != null && invested > 0) ? pnl/invested*100 : null;
+    return {...s, _invested: invested, _value: value, _pnl: pnl, _pnlPct: pnlPct};
+  });
+  // Filters
+  const q = filterState.search.toLowerCase();
+  if (q) list = list.filter(s => (s.name||'').toLowerCase().includes(q) || (s.symbol||'').toLowerCase().includes(q));
+  if (filterState.industry) list = list.filter(s => s.industry === filterState.industry);
+  if (filterState.rec) list = list.filter(s => s.recommendation === filterState.rec);
+  if (filterState.signal) list = list.filter(s => (s.signal||'').includes(filterState.signal));
+  // Sort
+  if (sortState.col) {
+    list.sort((a, b) => {
+      let av = a[sortState.col] ?? a['_'+sortState.col];
+      let bv = b[sortState.col] ?? b['_'+sortState.col];
+      if (av == null) return 1; if (bv == null) return -1;
+      if (typeof av === 'string') return av.localeCompare(bv) * sortState.dir;
+      return (av - bv) * sortState.dir;
+    });
+  }
+  return list;
+}
+
 // ── RENDER TABLE ───────────────────────────────────────────────────────────
 function renderTable() {
   const tbody = document.getElementById('portfolioBody');
@@ -390,25 +540,26 @@ function renderTable() {
   count.textContent = stocks.length ? `(${stocks.length} stocks)` : '';
   if (!stocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
-  tbody.innerHTML = stocks.map((s, i) => {
-    const invested = (s.avgCost || 0) * (s.qty || 0);
-    const price = s.currentPrice;
-    const value = price != null ? price * s.qty : null;
-    const pnl = value != null ? value - invested : null;
-    const pnlPct = (pnl != null && invested > 0) ? (pnl / invested * 100) : null;
+  const list = getFilteredSorted();
+  document.getElementById('filterCount').textContent =
+    list.length < stocks.length ? `Showing ${list.length} of ${stocks.length}` : '';
+  tbody.innerHTML = list.map((s, i) => {
+    const invested = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
     const pnlClass = pnl == null ? '' : pnl >= 0 ? 'gain-cell' : 'loss-cell';
-    const priceDisp = price != null ? '₹' + fmt(price) : '<span style="color:#bbb">—</span>';
-    const valueDisp = value != null ? '₹' + fmt(value) : '<span style="color:#bbb">—</span>';
+    const priceDisp = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : '<span style="color:#bbb">—</span>';
+    const valueDisp = value != null ? '₹'+fmt(value) : '<span style="color:#bbb">—</span>';
     const pnlDisp = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
     const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">—</span>';
     const peDisp = s.pe != null ? s.pe.toFixed(2) : '—';
+    const chg = s.change12w;
+    const chgDisp = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
     const signalClass = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
-    const recClass = s.recommendation === 'BUY' ? 'rec-buy' : s.recommendation === 'SELL' ? 'rec-sell' : 'rec-hold';
-    return `<tr>
-      <td>${i+1}</td>
-      <td class="company" title="${s.name || s.symbol}">${s.name || s.symbol}</td>
+    const recClass = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
+    return `<tr onclick="openDetailCard('${s.id}')" title="Click for full details">
+      <td onclick="event.stopPropagation()">${i+1}</td>
+      <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}</td>
       <td><strong>${s.symbol}</strong></td>
-      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis">${s.industry || '—'}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${s.industry||'—'}</td>
       <td class="num">₹${fmt(s.avgCost)}</td>
       <td class="num">${s.qty}</td>
       <td class="num">₹${fmt(invested)}</td>
@@ -417,10 +568,13 @@ function renderTable() {
       <td class="num ${pnlClass}">${pnlDisp}</td>
       <td class="num ${pnlClass}">${pnlPctDisp}</td>
       <td class="num">${peDisp}</td>
-      <td class="${signalClass}">${s.signal || '—'}</td>
-      <td><span class="${recClass}">${s.recommendation || '—'}</span></td>
-      <td style="max-width:260px;min-width:160px;font-size:0.78rem;color:#555;white-space:normal;line-height:1.4">${s.reason || '—'}</td>
-      <td><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
+      <td class="num">${chgDisp}</td>
+      <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
+      <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
+      <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'—'}</td>
+      <td><span class="${recClass}">${s.recommendation||'—'}</span></td>
+      <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4">${s.reason||'—'}</td>
+      <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
     </tr>`;
   }).join('');
 }
@@ -429,6 +583,101 @@ function fmt(v) {
   if (v == null) return '—';
   return Number(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
+
+// ── SORT ───────────────────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortState.col === col) sortState.dir *= -1;
+  else { sortState.col = col; sortState.dir = 1; }
+  // Update arrow indicators
+  document.querySelectorAll('.sort-arrow').forEach(el => {
+    el.classList.remove('active');
+    el.textContent = '⇅';
+  });
+  const arrow = document.getElementById('sort-' + col);
+  if (arrow) { arrow.classList.add('active'); arrow.textContent = sortState.dir === 1 ? '▲' : '▼'; }
+  renderTable();
+}
+
+// ── FILTER ─────────────────────────────────────────────────────────────────
+function applyFilters() {
+  filterState.search   = document.getElementById('filterSearch').value;
+  filterState.industry = document.getElementById('filterIndustry').value;
+  filterState.rec      = document.getElementById('filterRec').value;
+  filterState.signal   = document.getElementById('filterSignal').value;
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById('filterSearch').value = '';
+  document.getElementById('filterIndustry').value = '';
+  document.getElementById('filterRec').value = '';
+  document.getElementById('filterSignal').value = '';
+  filterState = { search:'', industry:'', rec:'', signal:'' };
+  renderTable();
+}
+
+function populateIndustryFilter() {
+  const industries = [...new Set(stocks.map(s => s.industry).filter(Boolean))].sort();
+  const sel = document.getElementById('filterIndustry');
+  sel.innerHTML = '<option value="">All Industries</option>' +
+    industries.map(ind => `<option value="${ind}">${ind}</option>`).join('');
+}
+
+// ── STOCK DETAIL CARD ──────────────────────────────────────────────────────
+function openDetailCard(stockId) {
+  const s = stocks.find(x => x.id === stockId);
+  if (!s) return;
+  const invested = (s.avgCost||0)*(s.qty||0);
+  const value = s.currentPrice != null ? s.currentPrice * s.qty : null;
+  const pnl = value != null ? value - invested : null;
+  const pnlPct = (pnl != null && invested > 0) ? pnl/invested*100 : null;
+  const pnlClass = pnl == null ? '' : pnl >= 0 ? 'gain' : 'loss';
+  const recClass = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
+
+  document.getElementById('dc-title').textContent = s.name || s.symbol;
+  document.getElementById('dc-subtitle').textContent = `${s.symbol}  ·  ${s.industry || 'Unknown Industry'}`;
+  document.getElementById('dc-avgCost').textContent = '₹' + fmt(s.avgCost);
+  document.getElementById('dc-qty').textContent = s.qty + ' shares';
+  document.getElementById('dc-invested').textContent = '₹' + fmt(invested);
+  document.getElementById('dc-price').textContent = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : 'Not fetched yet';
+  document.getElementById('dc-value').textContent = value != null ? '₹'+fmt(value) : '—';
+
+  const pnlEl = document.getElementById('dc-pnl');
+  pnlEl.textContent = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '—';
+  pnlEl.className = 'di-value ' + pnlClass;
+
+  const pnlPctEl = document.getElementById('dc-pnlPct');
+  pnlPctEl.textContent = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '—';
+  pnlPctEl.className = 'di-value ' + pnlClass;
+
+  const chg = s.change12w;
+  const chgEl = document.getElementById('dc-chg12w');
+  chgEl.textContent = chg != null ? (chg>=0?'+':'')+chg.toFixed(1)+'%' : '—';
+  chgEl.className = 'di-value ' + (chg == null ? '' : chg >= 0 ? 'gain' : 'loss');
+
+  document.getElementById('dc-pe').textContent = s.pe != null ? s.pe.toFixed(2) : '—';
+  document.getElementById('dc-buyRecs').textContent = s.buyRecs != null ? s.buyRecs + ' analysts' : '—';
+  document.getElementById('dc-sellRecs').textContent = s.sellRecs != null ? s.sellRecs + ' analysts' : '—';
+
+  const sigEl = document.getElementById('dc-signal');
+  sigEl.textContent = s.signal || '—';
+  sigEl.className = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
+
+  const recEl = document.getElementById('dc-rec');
+  recEl.textContent = s.recommendation || '—';
+  recEl.className = 'detail-rec-badge ' + recClass;
+
+  document.getElementById('dc-reason').textContent = s.reason || 'No commentary available.';
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeDetailCard() {
+  document.getElementById('detailModal').classList.remove('show');
+}
+// Close detail modal on background click
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailCard();
+});
 
 // ── UPDATE SUMMARY STATS ───────────────────────────────────────────────────
 function updateStats() {
