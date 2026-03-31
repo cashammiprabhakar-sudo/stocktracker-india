@@ -359,7 +359,7 @@ async function loadUserPortfolio(uid) {
             <th class="num">Avg Cost</th><th class="num">Qty</th>
             <th class="num">Invested</th><th class="num">Price</th>
             <th class="num">Value</th><th class="num">P&L</th><th class="num">P&L%</th>
-            <th>Rec.</th></tr></thead>
+            <th>Signal</th><th>Rec.</th><th>Commentary</th></tr></thead>
           <tbody>
             ${stks.map((s,i) => {
               const inv = (s.avgCost||0)*(s.qty||0);
@@ -380,7 +380,9 @@ async function loadUserPortfolio(uid) {
                 <td class="num">${val!=null?'₹'+fmt(val):'—'}</td>
                 <td class="num ${pc}">${pl!=null?(pl>=0?'+':'')+fmt(pl):'—'}</td>
                 <td class="num ${pc}">${plp!=null?(plp>=0?'+':'')+plp.toFixed(2)+'%':'—'}</td>
+                <td style="white-space:nowrap;font-size:0.78rem">${s.signal||'—'}</td>
                 <td>${s.recommendation?`<span class="${rc}">${s.recommendation}</span>`:'—'}</td>
+                <td style="max-width:260px;min-width:160px;font-size:0.78rem;color:#555;white-space:normal;line-height:1.4">${s.reason||'—'}</td>
               </tr>`;
             }).join('')}
           </tbody>

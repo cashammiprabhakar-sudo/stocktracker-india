@@ -169,6 +169,7 @@
               <th class="num">P/E</th>
               <th>Signal</th>
               <th>Rec.</th>
+              <th>Commentary</th>
               <th></th>
             </tr>
           </thead>
@@ -321,14 +322,22 @@ async function fetchYahooPrice(sym) {
 // ── AUTH GUARD ─────────────────────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = 'index.html'; return; }
-  // Check approval
+  // Super admin always gets access (no Firestore doc needed)
+  if (user.email === ADMIN_EMAIL) {
+    currentUser = user;
+    document.getElementById('userName').textContent = user.displayName || user.email;
+    document.getElementById('adminLink').style.display = 'inline';
+    loadPortfolio();
+    return;
+  }
+  // Regular users: check approval
   const snap = await db.collection('users').doc(user.uid).get();
   if (!snap.exists || snap.data().status !== 'approved') {
     window.location.href = 'index.html'; return;
   }
   currentUser = user;
   document.getElementById('userName').textContent = user.displayName || user.email;
-  if (user.email === ADMIN_EMAIL || snap.data().role === 'admin') document.getElementById('adminLink').style.display='inline';
+  if (snap.data().role === 'admin') document.getElementById('adminLink').style.display='inline';
   loadPortfolio();
 });
 
@@ -341,8 +350,36 @@ async function loadPortfolio() {
     stocks = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderTable();
     updateStats();
+    checkAutoRefresh(); // auto-refresh every 12h
   } catch(e) { showToast('Error loading portfolio.','error'); }
   hideOverlay();
+}
+
+// ── AUTO REFRESH (every 12 hours) ─────────────────────────────────────────
+const AUTO_REFRESH_HOURS = 12;
+async function checkAutoRefresh() {
+  if (!stocks.length) return;
+  try {
+    // Read last refresh time from Firestore (so it persists across devices)
+    const metaRef = db.collection('portfolios').doc(currentUser.uid).collection('meta').doc('refresh');
+    const metaSnap = await metaRef.get();
+    const lastRefresh = metaSnap.exists && metaSnap.data().refreshedAt
+      ? metaSnap.data().refreshedAt.toDate() : null;
+    const now = new Date();
+    const hoursSince = lastRefresh ? (now - lastRefresh) / (1000 * 60 * 60) : 999;
+    if (hoursSince >= AUTO_REFRESH_HOURS) {
+      const msg = lastRefresh
+        ? `⏰ Auto-refreshing prices (${Math.round(hoursSince)}h since last update)…`
+        : '⏰ Auto-refreshing prices for the first time…';
+      showToast(msg);
+      await refreshPrices();
+    } else {
+      const hoursLeft = Math.ceil(AUTO_REFRESH_HOURS - hoursSince);
+      const mins = Math.round((AUTO_REFRESH_HOURS - hoursSince) * 60) % 60;
+      document.getElementById('refreshNote').textContent =
+        `Last updated: ${lastRefresh.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~${hoursLeft > 1 ? hoursLeft+'h' : mins+'m'}`;
+    }
+  } catch(e) { /* silently skip — non-critical */ }
 }
 
 // ── RENDER TABLE ───────────────────────────────────────────────────────────
@@ -382,6 +419,7 @@ function renderTable() {
       <td class="num">${peDisp}</td>
       <td class="${signalClass}">${s.signal || '—'}</td>
       <td><span class="${recClass}">${s.recommendation || '—'}</span></td>
+      <td style="max-width:260px;min-width:160px;font-size:0.78rem;color:#555;white-space:normal;line-height:1.4">${s.reason || '—'}</td>
       <td><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
     </tr>`;
   }).join('');
@@ -450,11 +488,19 @@ async function refreshPrices() {
   });
   try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
 
+  // Save refresh timestamp to Firestore so auto-refresh timer resets
+  try {
+    await db.collection('portfolios').doc(currentUser.uid)
+      .collection('meta').doc('refresh')
+      .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  } catch(e) { /* non-critical */ }
+
   updateStats();
   renderTable();
   btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
   const now = new Date();
-  document.getElementById('refreshNote').textContent = `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('refreshNote').textContent =
+    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~12h`;
   showToast(`✅ Prices updated for ${done} stocks`,'success');
 }
 
