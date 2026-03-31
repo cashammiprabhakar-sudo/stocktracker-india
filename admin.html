@@ -41,6 +41,9 @@
     .btn-approve{background:#2e7d32;color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:0.78rem;font-weight:600;cursor:pointer;margin-right:4px}
     .btn-reject{background:#c62828;color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:0.78rem;font-weight:600;cursor:pointer}
     .btn-approve:hover{background:#1b5e20} .btn-reject:hover{background:#b71c1c}
+    .btn-reset-pwd{background:#e65100;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:0.75rem;font-weight:600;cursor:pointer;margin-top:4px;display:block}
+    .btn-reset-pwd:hover{background:#bf360c}
+    .pwd-note{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;font-size:0.82rem;color:#7f6000;margin-bottom:14px}
     /* PORTFOLIO VIEWER */
     .user-select-wrap{padding:18px}
     .user-select-wrap label{font-size:0.82rem;font-weight:600;color:#555;text-transform:uppercase;margin-bottom:6px;display:block}
@@ -108,11 +111,14 @@
         <h2>All Users</h2>
         <button onclick="loadUsers()" style="background:#f0f4f8;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem">🔄 Refresh</button>
       </div>
+      <div style="padding:10px 16px">
+        <div class="pwd-note">🔒 <strong>Passwords are encrypted</strong> by Firebase and cannot be viewed by anyone — including admins. Use the <strong>Reset Password</strong> button to send a reset email to any user.</div>
+      </div>
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>#</th><th>Name</th><th>Email</th><th>Status</th><th>Registered</th><th>Actions</th>
+              <th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Registered</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="usersBody"></tbody>
@@ -267,7 +273,8 @@ function renderUsers() {
   tbody.innerHTML = nonAdmin.map((u, i) => {
     const date = u.createdAt ? new Date(u.createdAt.seconds * 1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
     const badgeClass = u.status === 'approved' ? 'approved' : u.status === 'rejected' ? 'rejected' : 'pending';
-    const actions = u.status === 'pending'
+    const phone = u.phone ? '+91 ' + u.phone : '—';
+    const statusActions = u.status === 'pending'
       ? `<button class="btn-approve" onclick="updateStatus('${u.id}','approved')">✓ Approve</button><button class="btn-reject" onclick="updateStatus('${u.id}','rejected')">✗ Reject</button>`
       : u.status === 'approved'
       ? `<button class="btn-reject" onclick="updateStatus('${u.id}','rejected')">Revoke Access</button>`
@@ -275,10 +282,14 @@ function renderUsers() {
     return `<tr>
       <td>${i+1}</td>
       <td><strong>${u.displayName || '—'}</strong></td>
-      <td>${u.email}</td>
+      <td style="font-size:0.8rem">${u.email}</td>
+      <td style="white-space:nowrap">${phone}</td>
       <td><span class="badge ${badgeClass}">${u.status || 'pending'}</span></td>
       <td style="white-space:nowrap">${date}</td>
-      <td>${actions}</td>
+      <td>
+        ${statusActions}
+        <button class="btn-reset-pwd" onclick="resetUserPassword('${u.email}','${u.displayName||u.email}')">🔑 Reset Password</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -294,8 +305,14 @@ function updateUserStats() {
 function populateUserPicker() {
   const sel = document.getElementById('userPicker');
   const approved = allUsers.filter(u => u.status === 'approved' || u.role === 'admin');
+  // Always put admin (you) at the top so seeded portfolio is always visible
+  const adminOption = currentUser
+    ? `<option value="${currentUser.uid}">🔑 ${currentUser.displayName || currentUser.email} (You — Admin)</option>`
+    : '';
   sel.innerHTML = '<option value="">— Select a user —</option>' +
-    approved.map(u => `<option value="${u.id}">${u.displayName||u.email} (${u.email})</option>`).join('');
+    adminOption +
+    approved.filter(u => u.email !== ADMIN_EMAIL)
+      .map(u => `<option value="${u.id}">${u.displayName||u.email} (${u.email})</option>`).join('');
 }
 
 // ── UPDATE USER STATUS ─────────────────────────────────────────────────────
@@ -620,6 +637,17 @@ async function exportAllData() {
   } catch(e) {
     status.textContent = '❌ Export failed: ' + e.message;
     btn.disabled = false;
+  }
+}
+
+// ── RESET USER PASSWORD ────────────────────────────────────────────────────
+async function resetUserPassword(email, name) {
+  if (!confirm(`Send a password reset email to:\n\n${name} (${email})\n\nThey will receive a link to set a new password.`)) return;
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showToast(`✅ Password reset email sent to ${email}`, 'success');
+  } catch(e) {
+    showToast('❌ Failed to send reset email: ' + (e.message || e), 'error');
   }
 }
 

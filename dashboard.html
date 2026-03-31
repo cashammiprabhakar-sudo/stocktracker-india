@@ -94,6 +94,24 @@
     .overlay-msg{margin-top:14px;font-size:0.9rem;color:#555}
     @keyframes spin{to{transform:rotate(360deg)}}
     .price-loading{opacity:0.4}
+    /* CHANGE PASSWORD MODAL */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
+    .modal-bg.show{display:flex}
+    .modal-box{background:#fff;border-radius:14px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+    .modal-box h2{font-size:1rem;font-weight:700;margin-bottom:20px;color:#1565c0}
+    .modal-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+    .modal-field label{font-size:0.78rem;font-weight:600;color:#555;text-transform:uppercase}
+    .modal-field input{padding:10px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.92rem;outline:none}
+    .modal-field input:focus{border-color:#1565c0}
+    .pwd-rules{font-size:0.75rem;color:#777;background:#f5f8ff;border-radius:6px;padding:10px 12px;margin-bottom:14px;line-height:1.8}
+    .pwd-rules span{display:block}
+    .pwd-rules .ok{color:#2e7d32}
+    .pwd-rules .fail{color:#aaa}
+    .modal-btns{display:flex;gap:10px;margin-top:4px}
+    .btn-modal-save{flex:1;background:#1565c0;color:#fff;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
+    .btn-modal-save:hover{background:#0d47a1}
+    .btn-modal-cancel{flex:1;background:#f0f4f8;color:#444;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
+    .btn-chg-pwd{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;margin-right:6px}
   </style>
 </head>
 <body>
@@ -103,6 +121,7 @@
   <div class="header-right">
     <span class="user-name" id="userName"></span>
     <span id="adminLink" style="display:none"><a href="admin.html" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;text-decoration:none;margin-right:6px">⚙ Admin</a></span>
+    <button class="btn-chg-pwd" onclick="openChangePwd()">🔑 Change Password</button>
     <button class="btn-logout" onclick="doSignOut()">Sign Out</button>
   </div>
 </div>
@@ -214,6 +233,37 @@
 
 <div class="toast" id="toast"></div>
 <div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-msg" id="overlayMsg">Loading…</div></div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-bg" id="changePwdModal">
+  <div class="modal-box">
+    <h2>🔑 Change Password</h2>
+    <div class="modal-field">
+      <label>Current Password</label>
+      <input type="password" id="pwdCurrent" placeholder="Enter your current password"/>
+    </div>
+    <div class="modal-field">
+      <label>New Password</label>
+      <input type="password" id="pwdNew" placeholder="Enter new password" oninput="checkPwdRules()"/>
+    </div>
+    <div class="pwd-rules" id="pwdRules">
+      <span id="r1" class="fail">✗ At least 8 characters</span>
+      <span id="r2" class="fail">✗ One uppercase letter (A–Z)</span>
+      <span id="r3" class="fail">✗ One lowercase letter (a–z)</span>
+      <span id="r4" class="fail">✗ One number (0–9)</span>
+      <span id="r5" class="fail">✗ One special character (!@#$…)</span>
+      <span id="r6" class="fail">✗ No spaces</span>
+    </div>
+    <div class="modal-field">
+      <label>Confirm New Password</label>
+      <input type="password" id="pwdConfirm" placeholder="Re-enter new password"/>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeChangePwd()">Cancel</button>
+      <button class="btn-modal-save" onclick="saveNewPassword()">Save Password</button>
+    </div>
+  </div>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
@@ -521,6 +571,52 @@ function showOverlay(msg) { document.getElementById('overlay').classList.add('sh
 function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
 
 async function doSignOut() { await auth.signOut(); window.location.href = 'index.html'; }
+
+// ── CHANGE PASSWORD ────────────────────────────────────────────────────────
+function openChangePwd() {
+  document.getElementById('pwdCurrent').value = '';
+  document.getElementById('pwdNew').value = '';
+  document.getElementById('pwdConfirm').value = '';
+  checkPwdRules();
+  document.getElementById('changePwdModal').classList.add('show');
+}
+function closeChangePwd() {
+  document.getElementById('changePwdModal').classList.remove('show');
+}
+function checkPwdRules() {
+  const v = document.getElementById('pwdNew').value;
+  const set = (id, ok) => {
+    const el = document.getElementById(id);
+    el.className = ok ? 'ok' : 'fail';
+    el.textContent = (ok ? '✓ ' : '✗ ') + el.textContent.slice(2);
+  };
+  set('r1', v.length >= 8);
+  set('r2', /[A-Z]/.test(v));
+  set('r3', /[a-z]/.test(v));
+  set('r4', /[0-9]/.test(v));
+  set('r5', /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(v));
+  set('r6', !/\s/.test(v) && v.length > 0);
+}
+async function saveNewPassword() {
+  const current = document.getElementById('pwdCurrent').value;
+  const newPwd  = document.getElementById('pwdNew').value;
+  const confirm = document.getElementById('pwdConfirm').value;
+  if (!current) { showToast('Please enter your current password.','error'); return; }
+  if (newPwd.length < 8 || !/[A-Z]/.test(newPwd) || !/[a-z]/.test(newPwd) || !/[0-9]/.test(newPwd) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(newPwd) || /\s/.test(newPwd)) {
+    showToast('New password does not meet all requirements.','error'); return;
+  }
+  if (newPwd !== confirm) { showToast('Passwords do not match.','error'); return; }
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, current);
+    await currentUser.reauthenticateWithCredential(cred);
+    await currentUser.updatePassword(newPwd);
+    closeChangePwd();
+    showToast('✅ Password changed successfully!', 'success');
+  } catch(e) {
+    if (e.code === 'auth/wrong-password') showToast('❌ Current password is incorrect.', 'error');
+    else showToast('❌ Error: ' + (e.message || e), 'error');
+  }
+}
 </script>
 <div style="text-align:center;padding:12px 0 8px;color:#888;font-size:0.78rem;">
   Support: <a href="mailto:admin@fnikar.com" style="color:#1976d2;">admin@fnikar.com</a>
