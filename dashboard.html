@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StockTracker India — My Portfolio</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
+    /* HEADER */
+    .header{background:#1565c0;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+    .header h1{font-size:1.1rem;font-weight:700}
+    .header-right{display:flex;align-items:center;gap:12px}
+    .user-name{font-size:0.82rem;opacity:0.85;display:none}
+    @media(min-width:480px){.user-name{display:block}}
+    .btn-logout{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:6px;font-size:0.82rem;cursor:pointer;transition:background 0.2s}
+    .btn-logout:hover{background:rgba(255,255,255,0.25)}
+    /* MAIN */
+    .main{max-width:1400px;margin:0 auto;padding:16px}
+    /* STATS STRIP */
+    .stats-strip{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+    @media(min-width:700px){.stats-strip{grid-template-columns:repeat(4,1fr)}}
+    .stat-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+    .stat-card .label{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px}
+    .stat-card .value{font-size:1.25rem;font-weight:700;color:#1565c0}
+    .stat-card .value.gain{color:#2e7d32}
+    .stat-card .value.loss{color:#c62828}
+    /* TABS */
+    .tabs{display:flex;gap:4px;margin-bottom:16px}
+    .tab{padding:9px 18px;background:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;color:#666;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:all 0.2s}
+    .tab.active{background:#1565c0;color:#fff}
+    /* TABLE CONTAINER */
+    .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);overflow:hidden}
+    .table-toolbar{padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e8edf2}
+    .table-toolbar .title{font-weight:700;font-size:0.95rem;flex:1}
+    .btn-refresh{background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.2s}
+    .btn-refresh:hover{background:#0d47a1}
+    .btn-refresh:disabled{background:#90a4ae;cursor:not-allowed}
+    .refresh-note{font-size:0.75rem;color:#888}
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:0.82rem}
+    thead th{background:#f5f8ff;color:#444;font-weight:700;padding:10px 10px;text-align:left;border-bottom:2px solid #e0e8f5;white-space:nowrap;position:sticky;top:0}
+    tbody tr{border-bottom:1px solid #f0f4f8;transition:background 0.1s}
+    tbody tr:hover{background:#fafbff}
+    td{padding:9px 10px;vertical-align:middle;white-space:nowrap}
+    td.company{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+    .gain-cell{color:#2e7d32;font-weight:600}
+    .loss-cell{color:#c62828;font-weight:600}
+    .rec-buy{background:#e8f5e9;color:#2e7d32;padding:3px 8px;border-radius:4px;font-size:0.78rem;font-weight:700}
+    .rec-hold{background:#fff8e1;color:#f57f17;padding:3px 8px;border-radius:4px;font-size:0.78rem;font-weight:700}
+    .rec-sell{background:#ffebee;color:#c62828;padding:3px 8px;border-radius:4px;font-size:0.78rem;font-weight:700}
+    .signal-up{color:#2e7d32;font-weight:600}
+    .signal-down{color:#c62828;font-weight:600}
+    .btn-del{background:none;border:none;color:#e53935;cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:4px;transition:background 0.15s}
+    .btn-del:hover{background:#ffebee}
+    .empty-state{text-align:center;padding:48px 20px;color:#888}
+    .empty-state .icon{font-size:3rem;margin-bottom:12px}
+    .empty-state p{font-size:0.9rem}
+    /* ADD STOCK PANEL */
+    .add-panel{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);padding:24px}
+    .add-panel h2{font-size:1rem;font-weight:700;margin-bottom:20px;color:#333}
+    .form-row{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:600px){.form-row{grid-template-columns:1fr 1fr}}
+    @media(min-width:900px){.form-row{grid-template-columns:1fr 1fr 1fr}}
+    .form-group{display:flex;flex-direction:column;gap:5px}
+    .form-group label{font-size:0.78rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.4px}
+    .form-group input, .form-group select{padding:10px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.92rem;outline:none;transition:border-color 0.2s}
+    .form-group input:focus, .form-group select:focus{border-color:#1565c0}
+    .form-hint{font-size:0.74rem;color:#999;margin-top:2px}
+    .btn-add{background:#2e7d32;color:#fff;border:none;padding:11px 24px;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:10px}
+    .btn-add:hover{background:#1b5e20}
+    .btn-add:disabled{background:#90a4ae;cursor:not-allowed}
+    /* CSV SECTION */
+    .csv-section{margin-top:28px;padding-top:24px;border-top:1px solid #eee}
+    .csv-section h3{font-size:0.95rem;font-weight:700;margin-bottom:8px;color:#333}
+    .csv-info{font-size:0.82rem;color:#666;line-height:1.6;margin-bottom:14px}
+    .csv-info code{background:#f5f5f5;padding:2px 5px;border-radius:3px;font-size:0.8rem}
+    .csv-drop{border:2px dashed #b0bec5;border-radius:8px;padding:28px;text-align:center;color:#888;cursor:pointer;transition:all 0.2s;background:#fafafa}
+    .csv-drop:hover,.csv-drop.dragover{border-color:#1565c0;background:#e3f2fd;color:#1565c0}
+    .csv-drop input[type=file]{display:none}
+    .csv-status{margin-top:10px;font-size:0.85rem;padding:10px 14px;border-radius:7px;display:none}
+    .csv-status.success{background:#e8f5e9;color:#2e7d32;display:block}
+    .csv-status.error{background:#ffebee;color:#c62828;display:block}
+    /* MESSAGES */
+    .toast{position:fixed;bottom:20px;right:20px;background:#333;color:#fff;padding:12px 18px;border-radius:8px;font-size:0.88rem;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000;max-width:320px}
+    .toast.show{opacity:1}
+    .toast.success{background:#2e7d32}
+    .toast.error{background:#c62828}
+    /* LOADING */
+    .overlay{position:fixed;inset:0;background:rgba(255,255,255,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;display:none}
+    .overlay.show{display:flex}
+    .spinner{width:40px;height:40px;border:4px solid #e3e8f0;border-top:4px solid #1565c0;border-radius:50%;animation:spin 0.8s linear infinite}
+    .overlay-msg{margin-top:14px;font-size:0.9rem;color:#555}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .price-loading{opacity:0.4}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 StockTracker India</h1>
+  <div class="header-right">
+    <span class="user-name" id="userName"></span>
+    <button class="btn-logout" onclick="doSignOut()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- STATS -->
+  <div class="stats-strip">
+    <div class="stat-card"><div class="label">Total Invested</div><div class="value" id="statInvested">—</div></div>
+    <div class="stat-card"><div class="label">Current Value</div><div class="value" id="statValue">—</div></div>
+    <div class="stat-card"><div class="label">Gain / Loss</div><div class="value" id="statGainLoss">—</div></div>
+    <div class="stat-card"><div class="label">Return %</div><div class="value" id="statReturn">—</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('portfolio')">📊 My Portfolio</button>
+    <button class="tab" onclick="showTab('add')">➕ Add Stocks</button>
+  </div>
+
+  <!-- PORTFOLIO TAB -->
+  <div id="tabPortfolio">
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
+        <span class="refresh-note" id="refreshNote"></span>
+        <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
+          🔄 Refresh Prices
+        </button>
+      </div>
+      <div class="table-scroll">
+        <table id="portfolioTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Company</th>
+              <th>Ticker</th>
+              <th>Industry</th>
+              <th class="num">Avg Cost ₹</th>
+              <th class="num">Qty</th>
+              <th class="num">Invested ₹</th>
+              <th class="num">Price ₹</th>
+              <th class="num">Value ₹</th>
+              <th class="num">P&amp;L ₹</th>
+              <th class="num">P&amp;L %</th>
+              <th class="num">P/E</th>
+              <th>Signal</th>
+              <th>Rec.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="portfolioBody">
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="icon">📭</div>
+        <p>No stocks added yet.<br/>Click <strong>Add Stocks</strong> to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD STOCKS TAB -->
+  <div id="tabAdd" style="display:none">
+    <div class="add-panel">
+      <h2>Add a Stock Manually</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>NSE/BSE Symbol *</label>
+          <input type="text" id="fSym" placeholder="e.g. HDFCBANK, INFY, TCS" oninput="this.value=this.value.toUpperCase()"/>
+          <span class="form-hint">Use NSE symbol (capital letters). For BSE-only stocks use numeric code.</span>
+        </div>
+        <div class="form-group">
+          <label>Company Name *</label>
+          <input type="text" id="fName" placeholder="e.g. HDFC Bank Limited"/>
+        </div>
+        <div class="form-group">
+          <label>Industry</label>
+          <input type="text" id="fIndustry" placeholder="e.g. Banking Services"/>
+        </div>
+        <div class="form-group">
+          <label>Avg Purchase Price ₹ *</label>
+          <input type="number" id="fCost" placeholder="e.g. 1500.50" step="0.01" min="0"/>
+        </div>
+        <div class="form-group">
+          <label>Quantity (shares) *</label>
+          <input type="number" id="fQty" placeholder="e.g. 10" step="1" min="1"/>
+        </div>
+      </div>
+      <button class="btn-add" id="addBtn" onclick="addStock()">+ Add to Portfolio</button>
+
+      <!-- CSV UPLOAD -->
+      <div class="csv-section">
+        <h3>📂 Or Upload a CSV File</h3>
+        <div class="csv-info">
+          Upload a CSV with these columns in order:<br/>
+          <code>Symbol, CompanyName, Industry, AvgCost, Quantity</code><br/>
+          Example row: <code>HDFCBANK, HDFC Bank Limited, Banking Services, 1500, 10</code><br/>
+          The first row can be a header row — it will be skipped automatically.
+        </div>
+        <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()" ondragover="csvDragOver(event)" ondragleave="csvDragLeave(event)" ondrop="csvDrop(event)">
+          <input type="file" id="csvFile" accept=".csv,.txt" onchange="handleCsvFile(this.files[0])"/>
+          📄 Click to select CSV file, or drag &amp; drop here
+        </div>
+        <div class="csv-status" id="csvStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-msg" id="overlayMsg">Loading…</div></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
+  authDomain: "stocktracker-india.firebaseapp.com",
+  projectId: "stocktracker-india",
+  storageBucket: "stocktracker-india.firebasestorage.app",
+  messagingSenderId: "144829364145",
+  appId: "1:144829364145:web:ef183ff4e3035dac272f90"
+};
+const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+// ──────────────────────────────────────────────────────────────────────────
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+let stocks = [];  // in-memory cache of portfolio
+
+// ── YAHOO FINANCE SYMBOL MAPPING ──────────────────────────────────────────
+const YAHOO_OVERRIDES = {
+  '532281':'HCLTECH.NS','524715':'SUNPHARMA.NS','533248':'GPPL.NS',
+  '538567':'GULFOILLUB.NS','538666':'SHARDACROP.NS','513262':'SSWL.NS',
+  '540124':'GNA.NS','543300':'SONACOMS.NS','544289':'NTPCGREEN.NS',
+  '500285':'SPICEJET.NS','500314':'ORIENTHOT.NS','500400':'TATAPOWER.NS',
+  '100312':'ONGC.NS','100113':'SAIL.NS','532699':'ROYALHOTEL.NS',
+  '531340':'531340.BO','RELIANCEP1':'RELIANCE.NS','UPLPP1':'UPL.NS',
+  'IL&FSENGG':'ILFSENGG.NS','AIRTELPP':'AIRTELPP.NS',
+  'MID150BEES':'MID150BEES.NS','SBISILVER':'SBISILVER.NS',
+  'TMPV':'TATAMTRDVR.NS','NSLNISP':'NSLNISP.NS'
+};
+function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
+
+// ── PRICE FETCHING ────────────────────────────────────────────────────────
+async function fetchYahooPrice(sym) {
+  const ysym = toYahoo(sym);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  try {
+    const r = await fetch(proxy, {signal: AbortSignal.timeout(10000)});
+    if (!r.ok) return null;
+    const d = await r.json();
+    const parsed = JSON.parse(d.contents || '{}');
+    return parsed?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
+  } catch(e) { return null; }
+}
+
+// ── AUTH GUARD ─────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  // Check admin
+  if (user.email === ADMIN_EMAIL) { window.location.href = 'admin.html'; return; }
+  // Check approval
+  const snap = await db.collection('users').doc(user.uid).get();
+  if (!snap.exists || snap.data().status !== 'approved') {
+    window.location.href = 'index.html'; return;
+  }
+  currentUser = user;
+  document.getElementById('userName').textContent = user.displayName || user.email;
+  loadPortfolio();
+});
+
+// ── LOAD PORTFOLIO ─────────────────────────────────────────────────────────
+async function loadPortfolio() {
+  showOverlay('Loading portfolio…');
+  try {
+    const snap = await db.collection('portfolios').doc(currentUser.uid)
+      .collection('stocks').orderBy('addedAt','asc').get();
+    stocks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    renderTable();
+    updateStats();
+  } catch(e) { showToast('Error loading portfolio.','error'); }
+  hideOverlay();
+}
+
+// ── RENDER TABLE ───────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('portfolioBody');
+  const empty = document.getElementById('emptyState');
+  const count = document.getElementById('stockCount');
+  count.textContent = stocks.length ? `(${stocks.length} stocks)` : '';
+  if (!stocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = stocks.map((s, i) => {
+    const invested = (s.avgCost || 0) * (s.qty || 0);
+    const price = s.currentPrice;
+    const value = price != null ? price * s.qty : null;
+    const pnl = value != null ? value - invested : null;
+    const pnlPct = (pnl != null && invested > 0) ? (pnl / invested * 100) : null;
+    const pnlClass = pnl == null ? '' : pnl >= 0 ? 'gain-cell' : 'loss-cell';
+    const priceDisp = price != null ? '₹' + fmt(price) : '<span style="color:#bbb">—</span>';
+    const valueDisp = value != null ? '₹' + fmt(value) : '<span style="color:#bbb">—</span>';
+    const pnlDisp = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
+    const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">—</span>';
+    const peDisp = s.pe != null ? s.pe.toFixed(2) : '—';
+    const signalClass = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
+    const recClass = s.recommendation === 'BUY' ? 'rec-buy' : s.recommendation === 'SELL' ? 'rec-sell' : 'rec-hold';
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="company" title="${s.name || s.symbol}">${s.name || s.symbol}</td>
+      <td><strong>${s.symbol}</strong></td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis">${s.industry || '—'}</td>
+      <td class="num">₹${fmt(s.avgCost)}</td>
+      <td class="num">${s.qty}</td>
+      <td class="num">₹${fmt(invested)}</td>
+      <td class="num ${s.priceLoading?'price-loading':''}">${priceDisp}</td>
+      <td class="num">${valueDisp}</td>
+      <td class="num ${pnlClass}">${pnlDisp}</td>
+      <td class="num ${pnlClass}">${pnlPctDisp}</td>
+      <td class="num">${peDisp}</td>
+      <td class="${signalClass}">${s.signal || '—'}</td>
+      <td><span class="${recClass}">${s.recommendation || '—'}</span></td>
+      <td><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function fmt(v) {
+  if (v == null) return '—';
+  return Number(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ── UPDATE SUMMARY STATS ───────────────────────────────────────────────────
+function updateStats() {
+  let totalInvested = 0, totalValue = 0, hasValue = false;
+  stocks.forEach(s => {
+    const inv = (s.avgCost||0) * (s.qty||0);
+    totalInvested += inv;
+    if (s.currentPrice != null) { totalValue += s.currentPrice * s.qty; hasValue = true; }
+  });
+  const pnl = hasValue ? totalValue - totalInvested : null;
+  const pnlPct = (pnl != null && totalInvested > 0) ? (pnl/totalInvested*100) : null;
+  document.getElementById('statInvested').textContent = '₹'+fmt(totalInvested);
+  document.getElementById('statValue').textContent = hasValue ? '₹'+fmt(totalValue) : '—';
+  const glEl = document.getElementById('statGainLoss');
+  const retEl = document.getElementById('statReturn');
+  if (pnl != null) {
+    glEl.textContent = (pnl>=0?'+':'')+fmt(pnl);
+    glEl.className = 'value ' + (pnl>=0?'gain':'loss');
+    retEl.textContent = (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%';
+    retEl.className = 'value ' + (pnlPct>=0?'gain':'loss');
+  } else {
+    glEl.textContent = '—'; retEl.textContent = '—';
+  }
+}
+
+// ── REFRESH PRICES ─────────────────────────────────────────────────────────
+async function refreshPrices() {
+  if (!stocks.length) { showToast('No stocks to refresh.'); return; }
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.textContent = '⏳ Fetching prices…';
+  let done = 0;
+  document.getElementById('refreshNote').textContent = `0 / ${stocks.length}`;
+
+  // Fetch in batches of 5 to avoid rate limiting
+  for (let i = 0; i < stocks.length; i += 5) {
+    const batch = stocks.slice(i, i + 5);
+    await Promise.all(batch.map(async s => {
+      s.priceLoading = true;
+      const price = await fetchYahooPrice(s.symbol);
+      s.priceLoading = false;
+      if (price !== null) s.currentPrice = price;
+      done++;
+      document.getElementById('refreshNote').textContent = `${done} / ${stocks.length}`;
+      renderTable();
+    }));
+    // Small delay between batches
+    if (i + 5 < stocks.length) await delay(300);
+  }
+
+  // Save updated prices to Firestore
+  const batchWrite = db.batch();
+  stocks.forEach(s => {
+    if (s.currentPrice != null) {
+      batchWrite.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
+        { currentPrice: s.currentPrice, priceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+  });
+  try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
+
+  updateStats();
+  renderTable();
+  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
+  const now = new Date();
+  document.getElementById('refreshNote').textContent = `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
+  showToast(`✅ Prices updated for ${done} stocks`,'success');
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── ADD STOCK ──────────────────────────────────────────────────────────────
+async function addStock() {
+  const sym  = document.getElementById('fSym').value.trim().toUpperCase();
+  const name = document.getElementById('fName').value.trim();
+  const ind  = document.getElementById('fIndustry').value.trim();
+  const cost = parseFloat(document.getElementById('fCost').value);
+  const qty  = parseInt(document.getElementById('fQty').value);
+  if (!sym)         { showToast('Please enter a symbol.','error'); return; }
+  if (!name)        { showToast('Please enter company name.','error'); return; }
+  if (isNaN(cost) || cost <= 0) { showToast('Enter a valid average cost.','error'); return; }
+  if (isNaN(qty)  || qty  < 1) { showToast('Enter a valid quantity.','error'); return; }
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    const doc = { symbol: sym, name, industry: ind, avgCost: cost, qty,
+      addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      currentPrice: null, pe: null, signal: null, recommendation: null };
+    const ref = await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add(doc);
+    stocks.push({id: ref.id, ...doc, addedAt: new Date()});
+    clearAddForm();
+    renderTable(); updateStats();
+    showToast(`✅ ${sym} added to portfolio`,'success');
+  } catch(e) { showToast('Error adding stock.','error'); }
+  btn.disabled = false; btn.textContent = '+ Add to Portfolio';
+}
+
+function clearAddForm() {
+  ['fSym','fName','fIndustry','fCost','fQty'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ── DELETE STOCK ───────────────────────────────────────────────────────────
+async function deleteStock(docId) {
+  if (!confirm('Remove this stock from your portfolio?')) return;
+  try {
+    await db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(docId).delete();
+    stocks = stocks.filter(s => s.id !== docId);
+    renderTable(); updateStats();
+    showToast('Stock removed.','success');
+  } catch(e) { showToast('Error removing stock.','error'); }
+}
+
+// ── CSV UPLOAD ─────────────────────────────────────────────────────────────
+function csvDragOver(e) { e.preventDefault(); document.getElementById('csvDrop').classList.add('dragover'); }
+function csvDragLeave(e) { document.getElementById('csvDrop').classList.remove('dragover'); }
+function csvDrop(e) { e.preventDefault(); document.getElementById('csvDrop').classList.remove('dragover'); if(e.dataTransfer.files[0]) handleCsvFile(e.dataTransfer.files[0]); }
+
+function handleCsvFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => parseCsv(e.target.result);
+  reader.readAsText(file);
+}
+
+async function parseCsv(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  if (!lines.length) { setCsvStatus('Empty file.','error'); return; }
+  const rows = [];
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g,''));
+    if (cols.length < 4) continue;
+    // Skip header row
+    if (i === 0 && isNaN(parseFloat(cols[3]))) continue;
+    const sym  = cols[0].toUpperCase();
+    const name = cols[1] || sym;
+    const ind  = cols[2] || '';
+    const cost = parseFloat(cols[3]);
+    const qty  = parseInt(cols[4]);
+    if (!sym || isNaN(cost) || isNaN(qty)) continue;
+    rows.push({symbol:sym, name, industry:ind, avgCost:cost, qty});
+  }
+  if (!rows.length) { setCsvStatus('No valid rows found. Check format.','error'); return; }
+  setCsvStatus(`Found ${rows.length} stocks. Importing…`,'info');
+  let added = 0;
+  for (const row of rows) {
+    try {
+      const doc = { ...row, currentPrice: null, pe: null, signal: null, recommendation: null,
+        addedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      const ref = await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add(doc);
+      stocks.push({id: ref.id, ...doc, addedAt: new Date()});
+      added++;
+    } catch(e) { /* skip errors */ }
+  }
+  renderTable(); updateStats();
+  setCsvStatus(`✅ Imported ${added} stocks successfully!`,'success');
+  showToast(`✅ ${added} stocks imported from CSV`,'success');
+}
+
+function setCsvStatus(msg, type) {
+  const el = document.getElementById('csvStatus');
+  el.textContent = msg; el.className = 'csv-status ' + (type === 'info' ? 'success' : type);
+}
+
+// ── UI HELPERS ─────────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('tabPortfolio').style.display = tab==='portfolio' ? '' : 'none';
+  document.getElementById('tabAdd').style.display = tab==='add' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',(i===0&&tab==='portfolio')||(i===1&&tab==='add')));
+}
+
+let toastTimer;
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function showOverlay(msg) { document.getElementById('overlay').classList.add('show'); document.getElementById('overlayMsg').textContent = msg||'Loading…'; }
+function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+async function doSignOut() { await auth.signOut(); window.location.href = 'index.html'; }
+</script>
+</body>
+</html>

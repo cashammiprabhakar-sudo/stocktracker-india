@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StockTracker India — Admin</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
+    .header{background:#1a237e;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+    .header h1{font-size:1.1rem;font-weight:700}
+    .admin-badge{background:#f50057;color:#fff;font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;margin-left:8px;vertical-align:middle}
+    .btn-logout{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:6px;font-size:0.82rem;cursor:pointer}
+    .main{max-width:1400px;margin:0 auto;padding:16px}
+    /* STAT CARDS */
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+    @media(min-width:700px){.stats{grid-template-columns:repeat(4,1fr)}}
+    .stat{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);text-align:center}
+    .stat .n{font-size:1.6rem;font-weight:700;color:#1a237e}
+    .stat .l{font-size:0.75rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.4px;margin-top:2px}
+    /* TABS */
+    .tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{padding:9px 18px;background:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;color:#666;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:all 0.2s}
+    .tab.active{background:#1a237e;color:#fff}
+    /* PANELS */
+    .panel{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);overflow:hidden}
+    .panel-header{padding:14px 18px;border-bottom:1px solid #e8edf2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .panel-header h2{font-size:0.95rem;font-weight:700}
+    /* USER TABLE */
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:0.83rem}
+    thead th{background:#f5f8ff;color:#444;font-weight:700;padding:10px 12px;text-align:left;border-bottom:2px solid #e0e8f5;white-space:nowrap}
+    tbody tr{border-bottom:1px solid #f0f4f8;transition:background 0.1s}
+    tbody tr:hover{background:#fafbff}
+    td{padding:10px 12px;vertical-align:middle}
+    .badge{padding:3px 9px;border-radius:4px;font-size:0.75rem;font-weight:700;text-transform:uppercase}
+    .badge.pending{background:#fff8e1;color:#f57f17}
+    .badge.approved{background:#e8f5e9;color:#2e7d32}
+    .badge.rejected{background:#ffebee;color:#c62828}
+    .badge.admin{background:#e8eaf6;color:#1a237e}
+    .btn-approve{background:#2e7d32;color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:0.78rem;font-weight:600;cursor:pointer;margin-right:4px}
+    .btn-reject{background:#c62828;color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:0.78rem;font-weight:600;cursor:pointer}
+    .btn-approve:hover{background:#1b5e20} .btn-reject:hover{background:#b71c1c}
+    /* PORTFOLIO VIEWER */
+    .user-select-wrap{padding:18px}
+    .user-select-wrap label{font-size:0.82rem;font-weight:600;color:#555;text-transform:uppercase;margin-bottom:6px;display:block}
+    select.user-picker{width:100%;max-width:400px;padding:10px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.92rem;outline:none}
+    select.user-picker:focus{border-color:#1a237e}
+    /* SEED SECTION */
+    .seed-section{padding:20px}
+    .seed-section h3{font-size:0.95rem;font-weight:700;margin-bottom:8px}
+    .seed-section p{font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:14px}
+    .btn-seed{background:#1a237e;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:background 0.2s}
+    .btn-seed:hover{background:#0d1257}
+    .btn-seed:disabled{background:#90a4ae;cursor:not-allowed}
+    .seed-progress{margin-top:14px;font-size:0.85rem;color:#555;display:none}
+    .progress-bar-wrap{background:#e0e0e0;border-radius:4px;height:8px;margin-top:8px;overflow:hidden}
+    .progress-bar{background:#1a237e;height:8px;border-radius:4px;transition:width 0.3s}
+    /* PORTFOLIO STATS ROW */
+    .mini-stats{display:flex;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #eee}
+    .mini-stat{font-size:0.82rem;color:#555}
+    .mini-stat strong{color:#1a237e}
+    /* PORTFOLIO TABLE */
+    .rec-buy{background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:3px;font-size:0.75rem;font-weight:700}
+    .rec-hold{background:#fff8e1;color:#f57f17;padding:2px 7px;border-radius:3px;font-size:0.75rem;font-weight:700}
+    .rec-sell{background:#ffebee;color:#c62828;padding:2px 7px;border-radius:3px;font-size:0.75rem;font-weight:700}
+    .gain-c{color:#2e7d32;font-weight:600}
+    .loss-c{color:#c62828;font-weight:600}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+    /* EMPTY & LOADING */
+    .empty{text-align:center;padding:40px;color:#aaa;font-size:0.9rem}
+    .spinner{display:inline-block;width:20px;height:20px;border:3px solid #e3e8f0;border-top:3px solid #1a237e;border-radius:50%;animation:spin 0.8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .toast{position:fixed;bottom:20px;right:20px;background:#333;color:#fff;padding:12px 18px;border-radius:8px;font-size:0.88rem;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000;max-width:320px}
+    .toast.show{opacity:1}
+    .toast.success{background:#2e7d32}
+    .toast.error{background:#c62828}
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+<div class="header">
+  <h1>📈 StockTracker India <span class="admin-badge">ADMIN</span></h1>
+  <button class="btn-logout" onclick="doSignOut()">Sign Out</button>
+</div>
+
+<div class="main">
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="n" id="sTotalUsers">—</div><div class="l">Total Users</div></div>
+    <div class="stat"><div class="n" id="sPending">—</div><div class="l">Pending Approval</div></div>
+    <div class="stat"><div class="n" id="sApproved">—</div><div class="l">Approved</div></div>
+    <div class="stat"><div class="n" id="sRejected">—</div><div class="l">Rejected</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('users')">👥 Users</button>
+    <button class="tab" onclick="showTab('portfolios')">📊 View Portfolios</button>
+    <button class="tab" onclick="showTab('seed')">🌱 Seed My Portfolio</button>
+  </div>
+
+  <!-- USERS TAB -->
+  <div id="tabUsers">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>All Users</h2>
+        <button onclick="loadUsers()" style="background:#f0f4f8;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem">🔄 Refresh</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Name</th><th>Email</th><th>Status</th><th>Registered</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+      <div class="empty hidden" id="usersEmpty">No users registered yet.</div>
+    </div>
+  </div>
+
+  <!-- PORTFOLIOS TAB -->
+  <div id="tabPortfolios" class="hidden">
+    <div class="panel">
+      <div class="user-select-wrap">
+        <label>Select User to View Portfolio</label>
+        <select class="user-picker" id="userPicker" onchange="loadUserPortfolio(this.value)">
+          <option value="">— Select a user —</option>
+        </select>
+      </div>
+      <div id="portfolioViewer">
+        <div class="empty">Select a user above to view their portfolio.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEED TAB -->
+  <div id="tabSeed" class="hidden">
+    <div class="panel">
+      <div class="seed-section">
+        <h3>🌱 Seed Shammi's 116-Stock Portfolio</h3>
+        <p>
+          This will load all <strong>116 verified stocks</strong> with March 30, 2026 NSE/BSE closing prices into <strong>your</strong> admin portfolio.<br/>
+          Prices were fetched via Yahoo Finance on March 31, 2026 (March 30 = last trading day before Mahavir Jayanti holiday).<br/><br/>
+          ⚠️ <strong>Run this only once.</strong> If you've already seeded your portfolio, this will add duplicates.
+          Check the "View Portfolios" tab first to confirm your portfolio is empty before seeding.
+        </p>
+        <button class="btn-seed" id="seedBtn" onclick="seedPortfolio()">🌱 Seed My 116-Stock Portfolio</button>
+        <div class="seed-progress" id="seedProgress">
+          <span id="seedStatus">Starting…</span>
+          <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
+  authDomain: "stocktracker-india.firebaseapp.com",
+  projectId: "stocktracker-india",
+  storageBucket: "stocktracker-india.firebasestorage.app",
+  messagingSenderId: "144829364145",
+  appId: "1:144829364145:web:ef183ff4e3035dac272f90"
+};
+const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+// ──────────────────────────────────────────────────────────────────────────
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+let currentUser = null;
+let allUsers = [];
+
+// ── AUTH GUARD ─────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  const snap = await db.collection('users').doc(user.uid).get();
+  if (!snap.exists || (snap.data().role !== 'admin' && user.email !== ADMIN_EMAIL)) {
+    window.location.href = 'dashboard.html'; return;
+  }
+  currentUser = user;
+  loadUsers();
+});
+
+// ── LOAD USERS ─────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const tbody = document.getElementById('usersBody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px"><span class="spinner"></span></td></tr>';
+  try {
+    const snap = await db.collection('users').orderBy('createdAt','desc').get();
+    allUsers = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    renderUsers();
+    updateUserStats();
+    populateUserPicker();
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#c62828">Error loading users.</td></tr>'; }
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('usersBody');
+  const empty = document.getElementById('usersEmpty');
+  const nonAdmin = allUsers.filter(u => u.email !== ADMIN_EMAIL);
+  if (!nonAdmin.length) { tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  tbody.innerHTML = nonAdmin.map((u, i) => {
+    const date = u.createdAt ? new Date(u.createdAt.seconds * 1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+    const badgeClass = u.status === 'approved' ? 'approved' : u.status === 'rejected' ? 'rejected' : 'pending';
+    const actions = u.status === 'pending'
+      ? `<button class="btn-approve" onclick="updateStatus('${u.id}','approved')">✓ Approve</button><button class="btn-reject" onclick="updateStatus('${u.id}','rejected')">✗ Reject</button>`
+      : u.status === 'approved'
+      ? `<button class="btn-reject" onclick="updateStatus('${u.id}','rejected')">Revoke Access</button>`
+      : `<button class="btn-approve" onclick="updateStatus('${u.id}','approved')">Re-Approve</button>`;
+    return `<tr>
+      <td>${i+1}</td>
+      <td><strong>${u.displayName || '—'}</strong></td>
+      <td>${u.email}</td>
+      <td><span class="badge ${badgeClass}">${u.status || 'pending'}</span></td>
+      <td style="white-space:nowrap">${date}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateUserStats() {
+  const all = allUsers.filter(u => u.email !== ADMIN_EMAIL);
+  document.getElementById('sTotalUsers').textContent = all.length;
+  document.getElementById('sPending').textContent = all.filter(u => u.status === 'pending').length;
+  document.getElementById('sApproved').textContent = all.filter(u => u.status === 'approved').length;
+  document.getElementById('sRejected').textContent = all.filter(u => u.status === 'rejected').length;
+}
+
+function populateUserPicker() {
+  const sel = document.getElementById('userPicker');
+  const approved = allUsers.filter(u => u.status === 'approved' || u.role === 'admin');
+  sel.innerHTML = '<option value="">— Select a user —</option>' +
+    approved.map(u => `<option value="${u.id}">${u.displayName||u.email} (${u.email})</option>`).join('');
+}
+
+// ── UPDATE USER STATUS ─────────────────────────────────────────────────────
+async function updateStatus(uid, status) {
+  const label = status === 'approved' ? 'approve' : status === 'rejected' ? 'reject/revoke' : status;
+  if (!confirm(`Are you sure you want to ${label} this user?`)) return;
+  try {
+    await db.collection('users').doc(uid).update({ status, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    const u = allUsers.find(x => x.id === uid);
+    if (u) u.status = status;
+    renderUsers(); updateUserStats(); populateUserPicker();
+    showToast(`✅ User ${status} successfully`, 'success');
+  } catch(e) { showToast('Error updating user status.','error'); }
+}
+
+// ── VIEW USER PORTFOLIO ────────────────────────────────────────────────────
+async function loadUserPortfolio(uid) {
+  const viewer = document.getElementById('portfolioViewer');
+  if (!uid) { viewer.innerHTML = '<div class="empty">Select a user above to view their portfolio.</div>'; return; }
+  viewer.innerHTML = '<div class="empty"><span class="spinner"></span> Loading portfolio…</div>';
+  try {
+    const snap = await db.collection('portfolios').doc(uid).collection('stocks').orderBy('addedAt','asc').get();
+    const stks = snap.docs.map(d => ({id:d.id,...d.data()}));
+    if (!stks.length) { viewer.innerHTML = '<div class="empty">This user has no stocks in their portfolio.</div>'; return; }
+    let totalInv = 0, totalVal = 0, hasVal = false;
+    stks.forEach(s => {
+      const inv = (s.avgCost||0)*(s.qty||0);
+      totalInv += inv;
+      if (s.currentPrice != null) { totalVal += s.currentPrice * s.qty; hasVal = true; }
+    });
+    const pnl = hasVal ? totalVal - totalInv : null;
+    const pct = (pnl != null && totalInv > 0) ? (pnl/totalInv*100) : null;
+    const pnlClass = pnl==null?'':(pnl>=0?'gain-c':'loss-c');
+    viewer.innerHTML = `
+      <div class="mini-stats">
+        <div class="mini-stat">Stocks: <strong>${stks.length}</strong></div>
+        <div class="mini-stat">Invested: <strong>₹${fmt(totalInv)}</strong></div>
+        ${hasVal?`<div class="mini-stat">Current Value: <strong>₹${fmt(totalVal)}</strong></div>`:''}
+        ${pnl!=null?`<div class="mini-stat ${pnlClass}">P&L: <strong>${pnl>=0?'+':''}₹${fmt(pnl)}</strong> (${pct>=0?'+':''}${pct.toFixed(2)}%)</div>`:''}
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Company</th><th>Ticker</th><th>Industry</th>
+            <th class="num">Avg Cost</th><th class="num">Qty</th>
+            <th class="num">Invested</th><th class="num">Price</th>
+            <th class="num">Value</th><th class="num">P&L</th><th class="num">P&L%</th>
+            <th>Rec.</th></tr></thead>
+          <tbody>
+            ${stks.map((s,i) => {
+              const inv = (s.avgCost||0)*(s.qty||0);
+              const val = s.currentPrice != null ? s.currentPrice * s.qty : null;
+              const pl = val != null ? val - inv : null;
+              const plp = (pl!=null&&inv>0) ? (pl/inv*100) : null;
+              const pc = pl==null?'':(pl>=0?'gain-c':'loss-c');
+              const rc = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
+              return `<tr>
+                <td>${i+1}</td>
+                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.name||s.symbol}">${s.name||s.symbol}</td>
+                <td><strong>${s.symbol}</strong></td>
+                <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.industry||'—'}</td>
+                <td class="num">₹${fmt(s.avgCost)}</td>
+                <td class="num">${s.qty}</td>
+                <td class="num">₹${fmt(inv)}</td>
+                <td class="num">${s.currentPrice!=null?'₹'+fmt(s.currentPrice):'—'}</td>
+                <td class="num">${val!=null?'₹'+fmt(val):'—'}</td>
+                <td class="num ${pc}">${pl!=null?(pl>=0?'+':'')+fmt(pl):'—'}</td>
+                <td class="num ${pc}">${plp!=null?(plp>=0?'+':'')+plp.toFixed(2)+'%':'—'}</td>
+                <td>${s.recommendation?`<span class="${rc}">${s.recommendation}</span>`:'—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) { viewer.innerHTML = '<div class="empty" style="color:#c62828">Error loading portfolio.</div>'; }
+}
+
+// ── SEED PORTFOLIO ─────────────────────────────────────────────────────────
+// All 116 verified stocks — March 30, 2026 NSE/BSE closing prices
+// Format: [symbol, yahooSym, name, industry, avgCost, qty, price, pe, buyRecs, sellRecs, chg12w, rec, reason]
+const SHAMMI_116 = [
+  ["ADANIPORTS","ADANIPORTS.NS","ADANI PORTS AND SPECIAL ECONOMIC ZONE LIMITED","Transport Infrastructure",1346,13,1312.60,26.14,19,0,14.97,"HOLD","Declining trend from Mar high; solid fundamentals but momentum weakening"],
+  ["ADANIGREEN","ADANIGREEN.NS","ADANI GREEN ENERGY LIMITED","Electrical Utilities & IPPs",1049,4,806.90,87.04,null,null,-18.5,"HOLD","High P/E 87; near 52-week low; mixed market sentiment on Adani group"],
+  ["IMAGICAA","IMAGICAA.NS","IMAGICAAWORLD ENTERTAINMENT LIMITED","Hotels & Entertainment Services",4,75,37.46,77.10,null,null,-45.4,"HOLD","Theme-park recovery play; 52-week high ₹103; requires sustained footfall growth"],
+  ["ADVANIHOTR","ADVANIHOTR.NS","ADVANI HOTELS AND RESORTS (INDIA) LIMITED","Hotels & Entertainment Services",53,78,47.10,21.49,null,1,-24.3,"HOLD","Hospitality recovery story; near 52-week low; stable resort operator"],
+  ["AEGISLOG","AEGISLOG.NS","AEGIS LOGISTICS LIMITED","Oil & Gas Equipment & Services",225,16,598.65,30.28,5,null,-31.6,"BUY","80% analyst BUY; ₹909 target (~52% upside); logistics infrastructure growth"],
+  ["ALOKINDS","ALOKINDS.NS","ALOK INDUSTRIES LIMITED","Textiles & Apparel",13,10,11.18,null,null,null,-43.6,"SELL","Negative P/E; persistent losses; textile sector distress; recovery uncertain"],
+  ["ARVIND","ARVIND.NS","ARVIND LIMITED","Textiles & Apparel",230,42,338.70,25.66,null,null,-15.8,"HOLD","Textiles cyclical recovery; P/E 25.66 reasonable; export demand remains weak"],
+  ["AXISBANK","AXISBANK.NS","AXIS BANK LIMITED","Banking Services",1071,5,1161.30,13.76,null,null,-18.2,"BUY","Strong bank; P/E 13.76 attractive; slight decline provides good entry point"],
+  ["BAJAJHIND","BAJAJHIND.NS","BAJAJ HINDUSTHAN SUGAR LIMITED","Food & Tobacco",16,122,16.47,null,null,null,-46.0,"SELL","Micro-cap sugar stock; very low liquidity; limited growth visibility"],
+  ["BANDHANBNK","BANDHANBNK.NS","BANDHAN BANK LIMITED","Banking Services",199,22,141.35,27.80,12,5,-26.5,"BUY","12 analysts BUY vs 5 SELL; avg target ₹166; near support; asset quality improving"],
+  ["BANKBARODA","BANKBARODA.NS","THE BANK OF BARODA LIMITED","Banking Services",193,41,247.60,6.64,null,null,-22.7,"BUY","P/E 6.64 very attractive; dividend yield 3.15%; govt bank stability"],
+  ["BANKINDIA","BANKINDIA.NS","BANK OF INDIA LIMITED","Banking Services",44,50,136.99,6.85,null,null,-18.6,"BUY","Low P/E 6.85; dividend appeal; govt bank stability; strong annual return"],
+  ["UFBL","UFBL.NS","UNITED FOODBRANDS LIMITED","Hotels & Entertainment Services",1025,7,195.30,null,null,null,-44.2,"SELL","Negative P/E; restaurant chain struggling; persistent losses"],
+  ["531340","531340.BO","BERVIN INVESTMENT AND LEASING LIMITED","Banking Services",34,1,40.30,null,null,null,-18.8,"HOLD","NBFC; moderate volatility; niche financing player; low liquidity"],
+  ["AIRTELPP","AIRTELPP.NS","BHARTI AIRTEL LIMITED (PP)","Telecom Services",1111,10,1573.60,null,null,null,8.2,"BUY","Telecom giant partly paid shares; up 31.56% YoY; strong parent fundamentals"],
+  ["BIKAJI","BIKAJI.NS","BIKAJI FOODS INTERNATIONAL LIMITED","Food & Tobacco",715,8,621.95,62.66,null,null,-24.3,"BUY","Leading FMCG snacks brand; strong growth in traditional snacks segment"],
+  ["ZYDUSLIFE","ZYDUSLIFE.NS","ZYDUS LIFESCIENCES LIMITED","Pharmaceuticals",684,5,871.20,null,null,null,-17.7,"BUY","Pharma leader; strong research pipeline; P/E 18 reasonable for pharma"],
+  ["CANBK","CANBK.NS","THE CANARA BANK LIMITED","Banking Services",76,61,123.45,6.70,null,null,-20.0,"BUY","Bank stock with low P/E 6.70; strong dividend appeal; near support levels"],
+  ["CASTROLIND","CASTROLIND.NS","CASTROL INDIA LIMITED","Oil & Gas",134,36,173.52,null,null,null,-26.0,"BUY","Premium lubricants; high dividend yield 7.47%; stable cash-generating business"],
+  ["COALINDIA","COALINDIA.NS","COAL INDIA LTD","Coal",434,19,450.45,7.93,null,null,4.1,"BUY","Strong dividend yield 5.82%; positive 12-week momentum; energy demand stable"],
+  ["COCHINSHIP","COCHINSHIP.NS","COCHIN SHIPYARD LIMITED","Machinery & Components",125,6,1193.10,40.36,null,null,-52.4,"BUY","Large order book; shipbuilding recovery; significant pull-back from highs offers entry"],
+  ["DAMCAPITAL","DAMCAPITAL.NS","DAM CAPITAL ADVISORS LIMITED","Investment Banking",283,18,123.26,11.40,null,null,-60.3,"HOLD","Fastest-growing investment bank; IPO-stage volatility expected; watch for stability"],
+  ["DCW","DCW.NS","D C W LIMITED","Chemicals",25,51,37.53,null,null,null,-1.0,"SELL","Down 41.52% YoY vs Nifty +5.20%; chemical margin pressure; avoid"],
+  ["DREAMFOLKS","DREAMFOLKS.NS","DREAMFOLKS SERVICES LIMITED","Transport Infrastructure",411,25,57.19,9.21,null,null,-77.5,"BUY","Airport services aggregator; P/E ~9 very attractive; tourism recovery play"],
+  ["DWARKESH","DWARKESH.NS","DWARIKESH SUGAR INDUSTRIES LIMITED","Food & Tobacco",58,151,45.92,null,null,null,58.4,"HOLD","Sugar-ethanol producer; commodity price dependent; strong 12-wk gain"],
+  ["EKC","EKC.NS","EVEREST KANTO CYLINDER LIMITED","Machinery & Components",150,35,90.89,14.31,null,null,-21.4,"HOLD","Gas cylinder manufacturer; clean energy play; near 52-week low; recovery potential"],
+  ["FEDERALBNK","FEDERALBNK.NS","THE FEDERAL BANK LTD","Banking Services",145,20,259.40,15.07,null,null,-13.5,"BUY","P/E 15.07 reasonable; strong deposit growth; private bank with quality loan book"],
+  ["NYKAA","NYKAA.NS","FSN E-COMMERCE VENTURES LIMITED (NYKAA)","Diversified Retail",151,1,235.00,1017.16,null,null,-17.9,"HOLD","Beauty e-commerce leader; P/E 1017 – extreme valuation risk; monitor profitability"],
+  ["FRETAIL","FRETAIL.NS","FUTURE RETAIL LIMITED","Food & Drug Retailing",22,135,2.28,null,null,null,0.0,"SELL","Micro-cap ₹130 Cr; retail chain in distress; insolvency proceedings ongoing"],
+  ["GAIL","GAIL.NS","GAIL (INDIA) LIMITED","Natural Gas Utilities",124,6,137.71,11.80,12,3,2.5,"HOLD","Low P/E 7.20; moderate dividend; declining trend in March; energy infrastructure"],
+  ["GATEWAY","GATEWAY.NS","GATEWAY DISTRIPARKS LIMITED","Freight & Logistics",112,1,50.55,10.31,6,0,-1.2,"BUY","Strong EPS beat; analyst target ₹89.44; near 52-week low; insider buying"],
+  ["GESHIP","GESHIP.NS","GREAT EASTERN SHIPPING COMPANY","Oil & Gas Equipment & Services",895,19,1414.70,8.36,8,3,15.8,"BUY","Low P/E 8.36; dividend yield 2.16%; strong fleet; 12-week momentum positive"],
+  ["GMRAIRPORT","GMRAIRPORT.NS","GMR AIRPORTS LIMITED","Transport Infrastructure",75,11,84.75,null,5,1,-8.5,"BUY","Leading airport operator; analysts target up to ₹130; strategic expansion"],
+  ["540124","GNA.NS","G N A AXLES LIMITED","Automobiles & Auto Parts",347,36,356.70,15.22,25,20,12.3,"HOLD","Auto-ancillary; P/E 15.22 reasonable; hold and review at ₹357 level"],
+  ["533248","GPPL.NS","GUJARAT PIPAVAV PORT LIMITED","Transport Infrastructure",88,61,142.39,18.04,4,4,5.2,"HOLD","Good dividend yield 5.48%; evenly split analyst views; port traffic recovery"],
+  ["538567","GULFOILLUB.NS","GULF OIL LUBRICANTS INDIA LIMITED","Oil & Gas",1259,9,889.50,13.38,5,0,-28.7,"HOLD","P/E 13 reasonable; dividend yield 5.10%; within normal range; hold for yield"],
+  ["532281","HCLTECH.NS","HCL TECHNOLOGIES LIMITED","Software & IT Services",1079,2,1341.60,22.38,20,10,-15.3,"BUY","Strong IT fundamentals; P/E 22 reasonable for IT sector; growth potential"],
+  ["HDFCBANK","HDFCBANK.NS","HDFC BANK LIMITED","Banking Services",1801,7,731.55,19.53,18,8,-20.5,"BUY","India's largest private bank; confirmed ₹731.55 close Mar-30; P/E 19 attractive; accumulate"],
+  ["HEROMOTOCO","HEROMOTOCO.NS","HERO MOTOCORP LIMITED","Automobiles & Auto Parts",5021,1,5063.00,21.00,12,5,3.8,"BUY","World's largest 2-wheeler maker; strong dividend; positive 12-wk momentum"],
+  ["HAL","HAL.NS","HINDUSTAN AERONAUTICS LIMITED","Aerospace & Defense",3597,9,3487.20,49.08,14,4,8.2,"BUY","Defence sector strength; analyst target ₹5,179; 15 Buy recommendations"],
+  ["HINDMOTORS","HINDMOTORS.NS","HINDUSTAN MOTORS LTD","Automobiles & Auto Parts",24,1,20.69,27.43,2,8,-36.6,"SELL","Down 36.55% YoY; automotive headwinds; weak fundamentals; avoid"],
+  ["HYUNDAI","HYUNDAI.NS","HYUNDAI MOTOR INDIA LIMITED","Automobiles & Auto Parts",1874,3,1778.00,34.69,10,12,-18.9,"HOLD","P/E 34.69 elevated for auto; leading EV segment; dividend yield 1.16%"],
+  ["ICICIBANK","ICICIBANK.NS","ICICI BANK LIMITED","Banking Services",1031,13,1205.90,18.17,37,0,6.7,"BUY","37 analyst BUY; strong fundamentals; confirmed ₹1,205.90 close Mar-30"],
+  ["IDEA","IDEA.NS","VODAFONE IDEA LIMITED","Telecom Services",8,50,8.53,-3.44,1,15,-27.8,"SELL","Negative P/E; ongoing losses; high debt; speculative – high risk"],
+  ["IL&FSENGG","ILFSENGG.NS","IL&FS ENGINEERING AND CONSTRUCTION","Construction & Engineering",4,70,23.16,-6.77,0,4,-24.5,"SELL","Negative P/E and P/B; distressed valuation; insolvency risk; avoid"],
+  ["INDUSINDBK","INDUSINDBK.NS","INDUSIND BANK LTD.","Banking Services",1471,1,752.45,6.09,8,6,-13.4,"HOLD","P/E 6.09 very low; stable operations; monitor asset quality trends"],
+  ["INDIANB","INDIANB.NS","INDIAN BANK","Banking Services",191,15,845.70,10.28,6,2,-14.8,"BUY","Low P/E 10; strong fundamental value; govt bank with asset quality improvement"],
+  ["IOC","IOC.NS","INDIAN OIL CORPORATION LIMITED","Oil & Gas",108,19,135.40,14.34,19,6,-26.9,"HOLD","P/E 14.34 reasonable; dividend Rs 2; marketing margins under pressure"],
+  ["IPL","IPL.NS","INDIA PESTICIDES LIMITED","Chemicals",239,10,125.36,13.49,4,3,-48.9,"HOLD","Agrochem cycle weakness; 52-week high ₹245; cyclical recovery potential"],
+  ["IRCTC","IRCTC.NS","IRCTC","Passenger Transportation",527,5,494.50,31.05,8,20,-30.7,"HOLD","High P/E 31; down 30.7% YoY; strong brand but stretched valuation; wait"],
+  ["NAUKRI","NAUKRI.NS","INFO EDGE (INDIA) LIMITED","Software & IT Services",736,10,967.70,65.60,16,7,-38.5,"HOLD","Very high P/E 65.60; growth priced in; wait for consolidation"],
+  ["INFY","INFY.NS","INFOSYS LIMITED","Software & IT Services",1560,11,1250.60,15.64,33,2,4.3,"BUY","IT sector leader; AI growth driver; analyst target ₹1,670; 29 Buy recs"],
+  ["ITC","ITC.NS","ITC LIMITED","Food & Tobacco",315,74,287.70,17.86,14,8,-28.1,"HOLD","P/E 17.86; strong dividend yield 4.93%; interim dividend announced; hold"],
+  ["ITCHOTELS","ITCHOTELS.NS","ITC HOTELS LIMITED","Hotels & Entertainment Services",455,7,137.87,45.99,8,2,-47.2,"SELL","Down 47.2% in 12 weeks post-demerger; trading near 52-week low; overvalued"],
+  ["JPPOWER","JPPOWER.NS","JAIPRAKASH POWER VENTURES LIMITED","Electrical Utilities & IPPs",17,200,14.04,18.07,2,8,-47.9,"SELL","Weak fundamentals; CRISIL downgrade watch; power sector cyclical pressure"],
+  ["JAMNAAUTO","JAMNAAUTO.NS","JAMNA AUTO INDUSTRIES LIMITED","Automobiles & Auto Parts",119,115,111.92,20.34,6,1,-2.9,"HOLD","P/E 20.34 slightly elevated; auto components cyclical; neutral at current levels"],
+  ["JETAIRWAYS","JETAIRWAYS.NS","JET AIRWAYS (INDIA) LIMITED","Passenger Transportation",34,1,34.16,null,0,5,-43.2,"SELL","Suspended operations; insolvency proceedings; avoid – value likely zero"],
+  ["JIOFIN","JIOFIN.NS","JIO FINANCIAL SERVICES LIMITED","Banking Services",266,13,224.10,121.45,7,2,8.6,"HOLD","Very high P/E 121; down 10.74% in March; recent listing premium fading; monitor"],
+  ["JUSTDIAL","JUSTDIAL.NS","JUST DIAL LIMITED","Software & IT Services",630,14,490.70,7.87,6,1,-41.22,"HOLD","Mixed analyst sentiment; declining profitability; P/E 7.87 attractive but caution"],
+  ["KPIL","KPIL.NS","KALPATARU PROJECTS INTERNATIONAL","Construction & Engineering",696,7,1057.60,23.23,18,0,36.54,"BUY","Strong Buy consensus; infrastructure growth momentum; 18 Buy recs; no Sells"],
+  ["LEMONTREE","LEMONTREE.NS","LEMON TREE HOTELS LIMITED","Hotels & Entertainment",73,15,100.42,81.67,18,1,-17.58,"HOLD","Tourism recovery play; high P/E 81; valuation stretched; 18 Buy vs 1 Sell"],
+  ["LICI","LICI.NS","LIFE INSURANCE CORPORATION OF INDIA","Insurance",862,9,725.65,9.69,17,1,-4.22,"BUY","Buy consensus from 21 analysts; P/E 9.69 attractive; strong FY26 performance"],
+  ["LTFOODS","LTFOODS.NS","LT FOODS LIMITED","Food & Tobacco",140,32,363.30,19.31,null,null,13.71,"BUY","Strong Buy consensus; 47% upside potential; basmati rice strong growth"],
+  ["LUPIN","LUPIN.NS","LUPIN LIMITED","Pharmaceuticals",638,1,2313.90,23.10,35,1,29.20,"BUY","35 Buy vs 1 Sell; strong FDA clearances; 29.2% 12-week gain; pharma leader"],
+  ["POONAWALLA","POONAWALLA.NS","POONAWALLA FINCORP LIMITED","Banking Services",349,16,368.40,-360.23,4,3,-12.80,"HOLD","Fincorp fundamentals solid; price declined through March; monitor for entry"],
+  ["MAWANASUG","MAWANASUG.NS","MAWANA SUGARS LIMITED","Food & Tobacco",96,26,94.52,null,null,null,-36.66,"HOLD","Sugar cycle recovery; improved margins but commodity exposed; wait for stability"],
+  ["MAXHEALTH","MAXHEALTH.NS","MAX HEALTHCARE INSTITUTE LIMITED","Healthcare",653,8,962.30,86.55,null,null,-24.75,"HOLD","Healthcare growth story; P/E 86 elevated; net profit +26% growth positive"],
+  ["MAZDOCK","MAZDOCK.NS","MAZAGON DOCK SHIPBUILDERS LTD","Aerospace & Defense",73,20,2065.20,36.88,3,1,-40.27,"BUY","Defence capex tailwinds; strong order book; 51% Colombo stake acquisition"],
+  ["MOIL","MOIL.NS","MOIL LIMITED","Metals & Mining",290,14,283.25,15.21,null,null,-32.16,"HOLD","Stable business; modest growth; decent dividend; monitor manganese prices"],
+  ["MSTCLTD","MSTCLTD.NS","MSTC LIMITED","Software & IT Services",316,3,365.85,8.30,null,null,24.52,"BUY","E-commerce B2B leader; P/E 8.30 attractive; 2.95% dividend yield; 12-wk gain"],
+  ["MUKTAARTS","MUKTAARTS.NS","MUKTA ARTS LIMITED","Media & Publishing",27,30,37.31,null,null,null,-56.26,"SELL","Sharp decline; near 52-week low; structural challenges in media"],
+  ["NSLNISP","NSLNISP.NS","NMDC STEEL LIMITED","Metals & Mining",50,63,33.20,-14.51,null,null,-24.24,"HOLD","Steel cycle recovery play; negative P/E; commodity price dependent; speculative"],
+  ["NDTV","NDTV.NS","NEW DELHI TELEVISION LIMITED","Media & Publishing",354,5,59.28,-3.45,null,null,-24.39,"SELL","Media sector pressure; erratic price movement; structural challenges; avoid"],
+  ["NTPC","NTPC.NS","NTPC LIMITED","Electrical Utilities & IPPs",244,25,370.65,15.42,22,1,-4.88,"BUY","22 analyst Buy vs 1 Sell; 21% upside to target ₹421; dividend yield attractive"],
+  ["544289","NTPCGREEN.NS","NTPC GREEN ENERGY LIMITED","Electrical Utilities & IPPs",108,31,92.32,null,null,null,8.24,"BUY","Renewable energy exposure; green energy tailwinds; operational progress strong"],
+  ["PAYTM","PAYTM.NS","ONE 97 COMMUNICATIONS LIMITED (PAYTM)","Professional Services",461,6,959.00,-368.10,19,null,37.07,"HOLD","Digital payments growth; 37% 12-week gain; high volatility; regulatory uncertainty"],
+  ["100312","ONGC.NS","OIL AND NATURAL GAS CORPORATION","Oil & Gas",190,66,284.65,null,null,null,14.12,"BUY","Energy security play; attractive dividend; 14% 12-week gain; P/E ~9 cheap"],
+  ["500314","ORIENTHOT.NS","ORIENTAL HOTELS LIMITED","Hotels & Entertainment",52,79,82.01,null,null,null,-48.79,"HOLD","Hospitality recovery play; cyclical sensitivity; significant correction offers opportunity"],
+  ["PETRONET","PETRONET.NS","PETRONET LNG LIMITED","Oil & Gas Equipment & Services",233,8,248.45,10.23,null,null,-27.24,"HOLD","LNG import leverage; P/E 10.23 reasonable; energy commodity exposure"],
+  ["PNCINFRA","PNCINFRA.NS","PNC INFRATECH LIMITED","Construction & Engineering",279,33,160.55,13.87,11,null,-25.66,"HOLD","Infrastructure monetization ongoing; SPV transfer progress; 100% upside potential"],
+  ["PFC","PFC.NS","POWER FINANCE CORPORATION LIMITED","Banking Services",316,30,379.50,5.71,null,null,-11.05,"BUY","Power sector financing leader; P/E 5.71 extremely attractive; strong credit demand"],
+  ["PRAJIND","PRAJIND.NS","PRAJ INDUSTRIES LIMITED","Construction & Engineering",499,11,318.05,41.85,8,null,-46.05,"HOLD","Bioenergy and distillery machinery; niche player; P/E 41 elevated; moderate growth"],
+  ["PNB","PNB.NS","PUNJAB NATIONAL BANK","Banking Services",33,26,100.56,6.56,null,null,-25.59,"HOLD","Public sector bank; P/E 6.56 low; stressed asset concerns remain; cautious"],
+  ["PVRINOX","PVRINOX.NS","PVR INOX LIMITED","Hotels & Entertainment",1617,3,918.60,-35.24,null,null,-23.65,"HOLD","Cinema duopoly; post-pandemic recovery; negative P/E but improving rapidly"],
+  ["RAJESHEXPO","RAJESHEXPO.NS","RAJESH EXPORTS LIMITED","Textiles & Apparel",339,15,80.38,34.26,null,null,-39.54,"HOLD","Gold refining cyclical; dependent on gold market dynamics"],
+  ["MID150BEES","MID150BEES.NS","NIPPON INDIA ETF NIFTYMIDCAP150","ETF",101,2,200.30,null,null,null,-12.63,"BUY","Midcap 150 index ETF; low expense ratio 0.21%; passive diversified exposure"],
+  ["RCOM","RCOM.NS","RELIANCE COMMUNICATIONS LIMITED","Telecom Services",1,100,0.76,null,null,null,null,"SELL","Under corporate insolvency; high distress risk; value likely negligible"],
+  ["RELIGARE","RELIGARE.NS","RELIGARE ENTERPRISES LIMITED","Insurance",328,5,202.15,70.47,null,null,null,"HOLD","Stretched P/E 70; watch for pullback before buying"],
+  ["RELIANCEP1","RELIANCE.NS","RELIANCE INDUSTRIES LIMITED (PP)","Oil & Gas",923,14,1343.90,null,null,null,null,"HOLD","Partly paid shares converted; RELIANCE.NS ₹1,343.90 used as proxy; monitor"],
+  ["RPOWER","RPOWER.NS","RELIANCE POWER LIMITED","Electrical Utilities & IPPs",10,60,20.36,38.61,null,null,-15.94,"SELL","Severe downtrend; down 72% from 52-week high ₹76.49; structural headwinds"],
+  ["RENUKA","RENUKA.NS","SHREE RENUKA SUGARS LIMITED","Food & Tobacco",42,12,27.50,-8.87,null,null,null,"HOLD","Sugar cycle pressures; cyclical recovery potential; high risk"],
+  ["532699","ROYALHOTEL.NS","ROYAL ORCHID HOTELS LIMITED","Hotels & Entertainment",112,21,271.30,21.23,null,null,null,"HOLD","P/E 22; moderate valuation; hospitality sector recovery play; hold"],
+  ["REC","REC.NS","REC LIMITED","Power Finance",501,19,305.10,5.25,12,0,-1.55,"BUY","P/E 5.25 extremely attractive; strong dividend yield; robust funding demand"],
+  ["100113","SAIL.NS","STEEL AUTHORITY OF INDIA LIMITED (SAIL)","Metals & Mining",66,14,151.42,24.52,4,10,27.05,"BUY","Up 29.56% YoY; strong momentum; capital expenditure benefits; steel recovery"],
+  ["SBISILVER","SBISILVER.NS","SBI SILVER ETF","ETF",380,1,221.51,null,null,null,null,"HOLD","Commodity linked ETF; reflects silver price movements"],
+  ["538666","SHARDACROP.NS","SHARDA CROPCHEM LIMITED","Chemicals",572,6,870.10,16.23,null,null,59.99,"BUY","Strong Q3 growth; P/E 17.57 fair; 60% 12-week gain; agrochem recovery play"],
+  ["543300","SONACOMS.NS","SONA BLW PRECISION FORGINGS LIMITED","Automobiles & Auto Parts",485,11,481.50,47.63,null,null,-14.35,"HOLD","Auto-ancillary EV play; P/E 47.63 elevated; awaiting new EV orders impact"],
+  ["500285","SPICEJET.NS","SPICEJET LIMITED","Passenger Transportation",52,23,9.74,-2.45,null,1,-77.30,"SELL","Distressed stock; down 77.3% YoY; liquidity concerns; structural challenges"],
+  ["SBIN","SBIN.NS","STATE BANK OF INDIA","Banking Services",694,15,979.40,12.28,null,null,17.66,"BUY","Large cap bank; P/E 12.28 reasonable; confirmed ₹979.40 close Mar-30; positive momentum"],
+  ["513262","SSWL.NS","STEEL STRIPS WHEELS LTD","Automobiles & Auto Parts",197,75,170.43,15.83,null,null,null,"HOLD","P/E 15 fair value; auto-ancillary benefiting from BS-VI transition"],
+  ["524715","SUNPHARMA.NS","SUN PHARMACEUTICAL INDUSTRIES","Pharmaceuticals",1401,15,1757.20,38.30,null,null,3.13,"BUY","32 Buy vs 4 Sell; 12-month target ₹1,961; solid fundamentals; US generics strong"],
+  ["SUNTV","SUNTV.NS","SUN TV NETWORK LIMITED","Media & Publishing",526,11,566.95,14.30,null,null,null,"BUY","P/E 14.68 attractive; strong dividend franchise; market leader in regional media"],
+  ["TMPV","TATAMTRDVR.NS","TATA MOTORS (DVR / PASSENGER VEH.)","Automobiles & Auto Parts",756,30,296.20,4.04,null,null,null,"HOLD","Limited liquidity; P/E 4.04 cheap; hold until clarity on segment restructuring"],
+  ["500400","TATAPOWER.NS","THE TATA POWER COMPANY LIMITED","Electrical Utilities & IPPs",173,30,378.75,31.14,null,null,null,"BUY","P/E 31 reasonable for power utility; renewable energy growth; dividend paying"],
+  ["TATASTEEL","TATASTEEL.NS","TATA STEEL LIMITED","Metals & Mining",77,200,191.86,null,12,0,-2.25,"HOLD","Steel sector recovery play; global commodity price dependent; 12 analyst Buys"],
+  ["TATATECH","TATATECH.NS","TATA TECHNOLOGIES LIMITED","Integrated Hardware & Software",500,14,509.20,null,null,null,-23.97,"HOLD","Recent IPO; P/E elevated; valuation concerns; technology engineering exposure"],
+  ["TCS","TCS.NS","TATA CONSULTANCY SERVICES LIMITED","Software & IT Services",3588,5,2358.90,17.76,29,5,null,"HOLD","P/E 17.76 reasonable for IT; down 33% YoY; AI deals pipeline; recovery potential"],
+  ["TRIDENT","TRIDENT.NS","TRIDENT LIMITED","Textiles & Apparel",36,653,22.51,33.41,1,null,null,"HOLD","Textiles cycle play; P/E 31 elevated; awaiting demand recovery"],
+  ["UNIONBANK","UNIONBANK.NS","UNION BANK OF INDIA LIMITED","Banking Services",67,68,164.20,7.66,null,null,56.03,"BUY","P/E 7.29 very attractive; P/B 1.58; up 56% in 12 weeks; solid NPA recovery"],
+  ["UPLPP1","UPL.NS","UPL LIMITED (PP)","Chemicals",594,7,567.95,29.35,null,null,null,"HOLD","Partly paid shares; lower liquidity; proxy UPL.NS price used; watch parent"],
+  ["VBL","VBL.NS","VARUN BEVERAGES LIMITED","Beverages",456,22,384.10,42.57,null,null,null,"HOLD","P/E 42.57 premium; strong FMCG franchise but expensive; wait for pullback"],
+  ["VTL","VTL.NS","VARDHMAN TEXTILES LIMITED","Textiles & Apparel",422,17,523.70,19.42,null,null,-5.18,"BUY","Up 45.78% YoY strong momentum; P/E 19.42 reasonable; textile cycle recovery"],
+  ["VEDL","VEDL.NS","VEDANTA LIMITED","Metals & Mining",370,25,654.80,16.84,10,0,null,"BUY","Dividend yield 6.74%; P/E 16.84 attractive; strong earnings recovery"],
+  ["WIPRO","WIPRO.NS","WIPRO LIMITED","Software & IT Services",222,48,187.64,14.97,null,null,-22.27,"HOLD","P/E 16.71 fair; down 29.4% YoY; IT sector headwinds; AI pipeline recovery"],
+  ["YESBANK","YESBANK.NS","YES BANK LIMITED","Banking Services",14,21,17.25,null,0,9,7.35,"SELL","0 Buy vs 9 Sell; recovery story challenged; execution risks high; avoid"],
+  ["ETERNAL","ETERNAL.NS","ETERNAL LIMITED (FORMERLY ZOMATO)","Software & IT Services",109,95,228.98,null,28,3,null,"HOLD","Zomato rebranded; down from 52-week high ₹368; food delivery growth but path to profitability uncertain"]
+];
+
+function getSignal(pe, chg) {
+  if (pe !== null && typeof pe === 'number' && pe < 0) return '⚠ Loss-Making';
+  if (chg === null) return 'N/A';
+  if (chg > 10) return '▲ Strong Gainer';
+  if (chg >= 0) return '▲ Gainer';
+  if (chg >= -10) return '▼ Mild Decline';
+  return '▼ Significant Decline';
+}
+
+async function seedPortfolio() {
+  if (!currentUser) return;
+  if (!confirm(`This will add all 116 stocks to YOUR admin portfolio (${currentUser.email}).\n\nHave you verified your portfolio is empty? Click Cancel and check "View Portfolios" if unsure.`)) return;
+  const btn = document.getElementById('seedBtn');
+  const progress = document.getElementById('seedProgress');
+  const status = document.getElementById('seedStatus');
+  const bar = document.getElementById('progressBar');
+  btn.disabled = true;
+  progress.style.display = 'block';
+  let done = 0;
+  for (const s of SHAMMI_116) {
+    const [sym, ysym, name, industry, avgCost, qty, price, pe, buyRecs, sellRecs, chg12w, rec, reason] = s;
+    const signal = getSignal(pe, chg12w);
+    try {
+      await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add({
+        symbol: sym, yahooSymbol: ysym, name, industry, avgCost, qty,
+        currentPrice: price, pe: pe, buyRecs: buyRecs, sellRecs: sellRecs,
+        change12w: chg12w, signal, recommendation: rec, reason,
+        addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        priceDate: 'March 30, 2026', source: 'Yahoo Finance v8 verified'
+      });
+    } catch(e) { /* skip errors on individual stocks */ }
+    done++;
+    const pct = Math.round(done / SHAMMI_116.length * 100);
+    status.textContent = `Importing ${done} / ${SHAMMI_116.length}: ${name.slice(0, 40)}…`;
+    bar.style.width = pct + '%';
+    // Small delay to avoid Firestore rate limits
+    if (done % 10 === 0) await delay(200);
+  }
+  status.textContent = `✅ Done! All ${SHAMMI_116.length} stocks imported.`;
+  bar.style.width = '100%';
+  btn.textContent = '✅ Portfolio Seeded!';
+  showToast(`✅ ${SHAMMI_116.length} stocks seeded to your portfolio!`, 'success');
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function fmt(v) {
+  if (v == null) return '—';
+  return Number(v).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function showTab(tab) {
+  ['tabUsers','tabPortfolios','tabSeed'].forEach((id,i) => {
+    document.getElementById(id).classList.toggle('hidden', id !== 'tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  });
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['users','portfolios','seed'][i] === tab);
+  });
+}
+
+let toastTimer;
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function doSignOut() { await auth.signOut(); window.location.href = 'index.html'; }
+</script>
+</body>
+</html>

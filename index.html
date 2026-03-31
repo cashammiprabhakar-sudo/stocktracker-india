@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StockTracker India — Login</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#1565c0 0%,#0d47a1 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+    .logo{color:#fff;text-align:center;margin-bottom:24px}
+    .logo h1{font-size:1.8rem;font-weight:700;letter-spacing:-0.5px}
+    .logo p{font-size:0.9rem;opacity:0.85;margin-top:4px}
+    .card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);width:100%;max-width:420px;overflow:hidden}
+    .tabs{display:flex;border-bottom:2px solid #e3e8f0}
+    .tab{flex:1;padding:14px;text-align:center;cursor:pointer;font-weight:600;font-size:0.95rem;color:#888;transition:all 0.2s;border:none;background:none}
+    .tab.active{color:#1565c0;border-bottom:2px solid #1565c0;margin-bottom:-2px}
+    .form-body{padding:28px 24px}
+    .form-group{margin-bottom:18px}
+    label{display:block;font-size:0.82rem;font-weight:600;color:#444;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px}
+    input{width:100%;padding:12px 14px;border:1.5px solid #dde3ec;border-radius:8px;font-size:0.95rem;outline:none;transition:border-color 0.2s}
+    input:focus{border-color:#1565c0}
+    .btn{width:100%;padding:13px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:4px}
+    .btn:hover{background:#0d47a1}
+    .btn:disabled{background:#9ab;cursor:not-allowed}
+    .msg{margin-top:14px;padding:11px 14px;border-radius:8px;font-size:0.88rem;text-align:center;display:none}
+    .msg.success{background:#e8f5e9;color:#2e7d32;display:block}
+    .msg.error{background:#ffebee;color:#c62828;display:block}
+    .msg.info{background:#e3f2fd;color:#1565c0;display:block}
+    .divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:#aaa;font-size:0.82rem}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e3e8f0}
+    .pending-box{padding:28px 24px;text-align:center}
+    .pending-box .icon{font-size:3rem;margin-bottom:12px}
+    .pending-box h2{color:#f57f17;font-size:1.1rem;margin-bottom:8px}
+    .pending-box p{color:#666;font-size:0.9rem;line-height:1.5}
+    .pending-box .btn-sm{padding:10px 20px;width:auto;font-size:0.85rem;margin-top:16px;background:#666}
+    .rejected-box{padding:28px 24px;text-align:center}
+    .rejected-box .icon{font-size:3rem;margin-bottom:12px}
+    .rejected-box h2{color:#c62828;font-size:1.1rem;margin-bottom:8px}
+    .hidden{display:none!important}
+    .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.5);border-top:2px solid #fff;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .footer{margin-top:20px;color:rgba(255,255,255,0.6);font-size:0.78rem;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <h1>📈 StockTracker India</h1>
+    <p>NSE &amp; BSE Portfolio Intelligence</p>
+  </div>
+
+  <div class="card" id="authCard">
+    <!-- TABS -->
+    <div class="tabs" id="tabsRow">
+      <button class="tab active" onclick="showTab('signin')">Sign In</button>
+      <button class="tab" onclick="showTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- SIGN IN -->
+    <div class="form-body" id="signinForm">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="siPass" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn" id="siBtn" onclick="doSignIn()">Sign In</button>
+      <div class="msg" id="siMsg"></div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div class="form-body hidden" id="signupForm">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="suName" placeholder="Full name"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Password <span style="font-weight:400;text-transform:none">(min 6 chars)</span></label>
+        <input type="password" id="suPass" placeholder="Choose a password" autocomplete="new-password"/>
+      </div>
+      <button class="btn" id="suBtn" onclick="doSignUp()">Create Account</button>
+      <div class="msg" id="suMsg"></div>
+    </div>
+
+    <!-- PENDING APPROVAL -->
+    <div class="pending-box hidden" id="pendingBox">
+      <div class="icon">⏳</div>
+      <h2>Awaiting Approval</h2>
+      <p>Your account has been created and is pending admin approval.<br/><br/>
+      You'll be able to access your portfolio once the admin approves your account. Please check back later.</p>
+      <button class="btn btn-sm" onclick="doSignOut()">Sign Out</button>
+    </div>
+
+    <!-- REJECTED -->
+    <div class="rejected-box hidden" id="rejectedBox">
+      <div class="icon">❌</div>
+      <h2>Access Denied</h2>
+      <p>Your account request was not approved. Please contact the administrator.</p>
+      <button class="btn btn-sm" onclick="doSignOut()" style="background:#c62828">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="footer">Secure login powered by Firebase &nbsp;|&nbsp; Data from Yahoo Finance</div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+  <script>
+  // ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
+  // STEP: Replace ALL values below with your Firebase project settings
+  // (Get these from Firebase Console → Project Settings → Your Apps)
+  const firebaseConfig = {
+      	apiKey: "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
+  	authDomain: "stocktracker-india.firebaseapp.com",
+  	projectId: "stocktracker-india",
+ 	storageBucket: "stocktracker-india.firebasestorage.app",
+  	messagingSenderId: "144829364145",
+  	appId: "1:144829364145:web:ef183ff4e3035dac272f90"
+  };
+  const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+  // ──────────────────────────────────────────────────────────────────────────
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+
+  // Check if already logged in
+  auth.onAuthStateChanged(async user => {
+    if (!user) return; // not logged in, stay on this page
+    await routeUser(user);
+  });
+
+  async function routeUser(user) {
+    if (user.email === ADMIN_EMAIL) {
+      window.location.href = 'admin.html'; return;
+    }
+    try {
+      const snap = await db.collection('users').doc(user.uid).get();
+      if (!snap.exists) { doSignOut(); return; }
+      const data = snap.data();
+      if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
+      if (data.status === 'approved') { window.location.href = 'dashboard.html'; return; }
+      if (data.status === 'rejected') { showBox('rejectedBox'); return; }
+      showBox('pendingBox');
+    } catch(e) {
+      showMsg('siMsg', 'Connection error. Please try again.', 'error');
+    }
+  }
+
+  function showBox(id) {
+    document.getElementById('tabsRow').classList.add('hidden');
+    document.getElementById('signinForm').classList.add('hidden');
+    document.getElementById('signupForm').classList.add('hidden');
+    document.getElementById('pendingBox').classList.add('hidden');
+    document.getElementById('rejectedBox').classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function showTab(tab) {
+    document.getElementById('signinForm').classList.toggle('hidden', tab !== 'signin');
+    document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='signin')||(i===1&&tab==='signup')));
+    clearMsgs();
+  }
+
+  function clearMsgs() {
+    ['siMsg','suMsg'].forEach(id => { const el=document.getElementById(id); el.className='msg'; el.textContent=''; });
+  }
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text; el.className = 'msg ' + type;
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (loading) { btn.innerHTML = '<span class="spinner"></span>Please wait…'; btn.disabled = true; }
+    else { btn.innerHTML = btnId === 'siBtn' ? 'Sign In' : 'Create Account'; btn.disabled = false; }
+  }
+
+  async function doSignIn() {
+    const email = document.getElementById('siEmail').value.trim();
+    const pass  = document.getElementById('siPass').value;
+    if (!email || !pass) { showMsg('siMsg','Please enter email and password.','error'); return; }
+    setLoading('siBtn', true);
+    try {
+      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      await routeUser(cred.user);
+    } catch(e) {
+      setLoading('siBtn', false);
+      const msgs = {
+        'auth/user-not-found': 'No account found with this email.',
+        'auth/wrong-password': 'Incorrect password.',
+        'auth/invalid-email': 'Invalid email address.',
+        'auth/too-many-requests': 'Too many attempts. Please wait a moment.',
+      };
+      showMsg('siMsg', msgs[e.code] || 'Sign in failed: ' + e.message, 'error');
+    }
+  }
+
+  async function doSignUp() {
+    const name  = document.getElementById('suName').value.trim();
+    const email = document.getElementById('suEmail').value.trim();
+    const pass  = document.getElementById('suPass').value;
+    if (!name)  { showMsg('suMsg','Please enter your name.','error'); return; }
+    if (!email) { showMsg('suMsg','Please enter your email.','error'); return; }
+    if (pass.length < 6) { showMsg('suMsg','Password must be at least 6 characters.','error'); return; }
+    setLoading('suBtn', true);
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.updateProfile({ displayName: name });
+      const role = (email === ADMIN_EMAIL) ? 'admin' : 'user';
+      const status = (email === ADMIN_EMAIL) ? 'approved' : 'pending';
+      await db.collection('users').doc(cred.user.uid).set({
+        uid: cred.user.uid, email, displayName: name,
+        role, status, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      if (email === ADMIN_EMAIL) { window.location.href = 'admin.html'; return; }
+      showMsg('suMsg', '✅ Account created! Awaiting admin approval.', 'success');
+      showBox('pendingBox');
+    } catch(e) {
+      setLoading('suBtn', false);
+      const msgs = {
+        'auth/email-already-in-use': 'An account with this email already exists.',
+        'auth/invalid-email': 'Invalid email address.',
+        'auth/weak-password': 'Password is too weak.',
+      };
+      showMsg('suMsg', msgs[e.code] || 'Sign up failed: ' + e.message, 'error');
+    }
+  }
+
+  async function doSignOut() {
+    await auth.signOut();
+    location.reload();
+  }
+
+  // Allow Enter key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (!document.getElementById('signinForm').classList.contains('hidden')) doSignIn();
+      else if (!document.getElementById('signupForm').classList.contains('hidden')) doSignUp();
+    }
+  });
+  </script>
+</body>
+</html>
