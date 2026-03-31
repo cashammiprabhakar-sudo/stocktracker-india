@@ -587,6 +587,48 @@ const NSE_STOCKS = {
   'ZYDUSLIFE':{'n':'Zydus Lifesciences Ltd','i':'Pharmaceuticals'},
 };
 
+// ── FULL NSE EQUITY LIST (fetched from NSE at login) ─────────────────────
+let nseStockList = {};   // symbol → {name, industry}
+let nseListLoaded = false;
+
+async function loadNseStockList() {
+  if (nseListLoaded) return;
+  try {
+    // NSE publishes the full equity list as a public CSV — fetch via allorigins proxy
+    const nseUrl = 'https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv';
+    const proxy  = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(nseUrl);
+    const resp = await fetch(proxy);
+    if (!resp.ok) return;
+    const text = await resp.text();
+    const lines = text.split('\n');
+    // Header: SYMBOL,NAME OF COMPANY,SERIES,DATE OF LISTING,PAID UP VALUE,MARKET LOT,ISIN NUMBER,FACE VALUE
+    let parsed = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      // Handle quoted fields (some names contain commas)
+      const cols = [];
+      let cur = '', inQ = false;
+      for (const ch of line + ',') {
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      const sym    = (cols[0] || '').replace(/^"|"$/g,'').trim();
+      const name   = (cols[1] || '').replace(/^"|"$/g,'').trim();
+      const series = (cols[2] || '').replace(/^"|"$/g,'').trim();
+      // Only EQ series = main board equity (excludes BE, BZ, SM, ST, IL etc.)
+      if (!sym || !name || series !== 'EQ') continue;
+      nseStockList[sym] = { name, industry: '' };
+      parsed++;
+    }
+    nseListLoaded = true;
+    console.log(`NSE equity list loaded: ${parsed} EQ-series stocks`);
+  } catch(e) {
+    console.log('NSE equity list unavailable, using local list:', e.message);
+  }
+}
+
 // ── SYMBOL AUTOCOMPLETE ───────────────────────────────────────────────────
 let acHighlight = -1;
 
@@ -594,16 +636,31 @@ function getStockSuggestions(query) {
   if (!query || query.length < 1) return [];
   const q = query.toUpperCase();
   const qLow = query.toLowerCase();
-  // Merge marketData + NSE_STOCKS
+
+  // Layer 1 — full NSE equity list (all ~1800 EQ stocks)
   const combined = {};
-  Object.keys(NSE_STOCKS).forEach(sym => { combined[sym] = {name: NSE_STOCKS[sym].n, industry: NSE_STOCKS[sym].i}; });
+  Object.keys(nseStockList).forEach(sym => {
+    combined[sym] = { name: nseStockList[sym].name, industry: '' };
+  });
+  // Layer 2 — curated list (adds industry info for ~150 popular stocks)
+  Object.keys(NSE_STOCKS).forEach(sym => {
+    combined[sym] = { name: NSE_STOCKS[sym].n, industry: NSE_STOCKS[sym].i };
+  });
+  // Layer 3 — live marketData (most accurate: real name + industry from Yahoo)
   Object.keys(marketData).forEach(sym => {
     const md = marketData[sym];
-    if (md && md.name) combined[sym] = {name: md.name, industry: md.industry || (combined[sym]||{}).industry || ''};
+    if (md && md.name) combined[sym] = {
+      name: md.name,
+      industry: md.industry || (combined[sym] || {}).industry || ''
+    };
   });
+
   const symMatch = [], nameMatch = [];
   Object.entries(combined).forEach(([sym, info]) => {
-    if (sym.startsWith(q)) symMatch.push({sym, ...info});
+    // Filter penny stocks: if price known from marketData and < ₹10, skip
+    const md = marketData[sym];
+    if (md && md.price != null && md.price < 10) return;
+    if (sym.startsWith(q))                          symMatch.push({sym, ...info});
     else if (info.name.toLowerCase().includes(qLow)) nameMatch.push({sym, ...info});
   });
   symMatch.sort((a,b) => a.sym.localeCompare(b.sym));
@@ -755,6 +812,7 @@ auth.onAuthStateChanged(async user => {
 // ── LOAD PORTFOLIO ─────────────────────────────────────────────────────────
 async function loadPortfolio() {
   showOverlay('Loading portfolio…');
+  loadNseStockList();   // background — no await, populates autocomplete while portfolio loads
   try {
     const snap = await db.collection('portfolios').doc(currentUser.uid)
       .collection('stocks').orderBy('addedAt','asc').get();
