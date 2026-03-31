@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fnikar \u2014 My Portfolio</title>
+  <title>Fnikar — My Portfolio</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
@@ -156,11 +156,11 @@
 <body>
 
 <div class="header">
-  <h1>\ud83d\udcc8 Fnikar</h1>
+  <h1>📈 Fnikar</h1>
   <div class="header-right">
     <span class="user-name" id="userName"></span>
-    <span id="adminLink" style="display:none"><a href="admin.html" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;text-decoration:none;margin-right:6px">\u2699 Admin</a></span>
-    <button class="btn-chg-pwd" onclick="openChangePwd()">\ud83d\udd11 Change Password</button>
+    <span id="adminLink" style="display:none"><a href="admin.html" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;text-decoration:none;margin-right:6px">⚙ Admin</a></span>
+    <button class="btn-chg-pwd" onclick="openChangePwd()">🔑 Change Password</button>
     <button class="btn-logout" onclick="doSignOut()">Sign Out</button>
   </div>
 </div>
@@ -168,16 +168,16 @@
 <div class="main">
   <!-- STATS -->
   <div class="stats-strip">
-    <div class="stat-card"><div class="label">Total Invested</div><div class="value" id="statInvested">\u2014</div></div>
-    <div class="stat-card"><div class="label">Current Value</div><div class="value" id="statValue">\u2014</div></div>
-    <div class="stat-card"><div class="label">Gain / Loss</div><div class="value" id="statGainLoss">\u2014</div></div>
-    <div class="stat-card"><div class="label">Return %</div><div class="value" id="statReturn">\u2014</div></div>
+    <div class="stat-card"><div class="label">Total Invested</div><div class="value" id="statInvested">—</div></div>
+    <div class="stat-card"><div class="label">Current Value</div><div class="value" id="statValue">—</div></div>
+    <div class="stat-card"><div class="label">Gain / Loss</div><div class="value" id="statGainLoss">—</div></div>
+    <div class="stat-card"><div class="label">Return %</div><div class="value" id="statReturn">—</div></div>
   </div>
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="showTab('portfolio')">\ud83d\udcca My Portfolio</button>
-    <button class="tab" onclick="showTab('add')">\u2795 Add Stocks</button>
+    <button class="tab active" onclick="showTab('portfolio')">📊 My Portfolio</button>
+    <button class="tab" onclick="showTab('add')">➕ Add Stocks</button>
   </div>
 
   <!-- PORTFOLIO TAB -->
@@ -187,12 +187,12 @@
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
-          \ud83d\udd04 Refresh Prices
+          🔄 Refresh Prices
         </button>
       </div>
       <!-- FILTER BAR -->
       <div class="filter-bar">
-        <input type="text" id="filterSearch" placeholder="\ud83d\udd0d Search company or ticker\u2026" oninput="applyFilters()"/>
+        <input type="text" id="filterSearch" placeholder="🔍 Search company or ticker…" oninput="applyFilters()"/>
         <select id="filterIndustry" onchange="applyFilters()">
           <option value="">All Industries</option>
         </select>
@@ -204,34 +204,34 @@
         </select>
         <select id="filterSignal" onchange="applyFilters()">
           <option value="">All Signals</option>
-          <option value="\u25b2">\u25b2 Gainers</option>
-          <option value="\u25bc">\u25bc Declining</option>
-          <option value="\u26a0">\u26a0 Loss-Making</option>
+          <option value="▲">▲ Gainers</option>
+          <option value="▼">▼ Declining</option>
+          <option value="⚠">⚠ Loss-Making</option>
         </select>
         <span class="filter-count" id="filterCount"></span>
-        <button class="btn-clear-filter" onclick="clearFilters()">\u2715 Clear</button>
+        <button class="btn-clear-filter" onclick="clearFilters()">✕ Clear</button>
       </div>
       <div class="table-scroll">
         <table id="portfolioTable">
           <thead>
             <tr>
               <th>#</th>
-              <th class="sortable" onclick="sortBy('name')">Company <span class="sort-arrow" id="sort-name">\u21c5</span></th>
-              <th class="sortable" onclick="sortBy('symbol')">Ticker <span class="sort-arrow" id="sort-symbol">\u21c5</span></th>
-              <th class="sortable" onclick="sortBy('industry')">Industry <span class="sort-arrow" id="sort-industry">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('avgCost')">Avg Cost \u20b9 <span class="sort-arrow" id="sort-avgCost">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('qty')">Qty <span class="sort-arrow" id="sort-qty">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('invested')">Invested \u20b9 <span class="sort-arrow" id="sort-invested">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('currentPrice')">Price \u20b9 <span class="sort-arrow" id="sort-currentPrice">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('value')">Value \u20b9 <span class="sort-arrow" id="sort-value">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('pnl')">P&amp;L \u20b9 <span class="sort-arrow" id="sort-pnl">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('pnlPct')">P&amp;L % <span class="sort-arrow" id="sort-pnlPct">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('pe')">P/E <span class="sort-arrow" id="sort-pe">\u21c5</span></th>
-              <th class="num sortable" onclick="sortBy('change12w')">12w Chg% <span class="sort-arrow" id="sort-change12w">\u21c5</span></th>
+              <th class="sortable" onclick="sortBy('name')">Company <span class="sort-arrow" id="sort-name">⇅</span></th>
+              <th class="sortable" onclick="sortBy('symbol')">Ticker <span class="sort-arrow" id="sort-symbol">⇅</span></th>
+              <th class="sortable" onclick="sortBy('industry')">Industry <span class="sort-arrow" id="sort-industry">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('avgCost')">Avg Cost ₹ <span class="sort-arrow" id="sort-avgCost">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('qty')">Qty <span class="sort-arrow" id="sort-qty">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('invested')">Invested ₹ <span class="sort-arrow" id="sort-invested">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('currentPrice')">Price ₹ <span class="sort-arrow" id="sort-currentPrice">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('value')">Value ₹ <span class="sort-arrow" id="sort-value">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pnl')">P&amp;L ₹ <span class="sort-arrow" id="sort-pnl">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pnlPct')">P&amp;L % <span class="sort-arrow" id="sort-pnlPct">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pe')">P/E <span class="sort-arrow" id="sort-pe">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('change12w')">12w Chg% <span class="sort-arrow" id="sort-change12w">⇅</span></th>
               <th class="num">Buy Recs</th>
               <th class="num">Sell Recs</th>
-              <th class="sortable" onclick="sortBy('signal')">Signal <span class="sort-arrow" id="sort-signal">\u21c5</span></th>
-              <th class="sortable" onclick="sortBy('recommendation')">Rec. <span class="sort-arrow" id="sort-recommendation">\u21c5</span></th>
+              <th class="sortable" onclick="sortBy('signal')">Signal <span class="sort-arrow" id="sort-signal">⇅</span></th>
+              <th class="sortable" onclick="sortBy('recommendation')">Rec. <span class="sort-arrow" id="sort-recommendation">⇅</span></th>
               <th>Commentary</th>
               <th></th>
             </tr>
@@ -241,7 +241,7 @@
         </table>
       </div>
       <div class="empty-state" id="emptyState" style="display:none">
-        <div class="icon">\ud83d\udced</div>
+        <div class="icon">📭</div>
         <p>No stocks added yet.<br/>Click <strong>Add Stocks</strong> to get started.</p>
       </div>
     </div>
@@ -266,7 +266,7 @@
           <input type="text" id="fIndustry" placeholder="e.g. Banking Services"/>
         </div>
         <div class="form-group">
-          <label>Avg Purchase Price \u20b9 *</label>
+          <label>Avg Purchase Price ₹ *</label>
           <input type="number" id="fCost" placeholder="e.g. 1500.50" step="0.01" min="0"/>
         </div>
         <div class="form-group">
@@ -278,21 +278,21 @@
 
       <!-- CSV UPLOAD -->
       <div class="csv-section">
-        <h3>\ud83d\udcc2 Or Upload a CSV File</h3>
+        <h3>📂 Or Upload a CSV File</h3>
         <div class="csv-info">
-          Just 3 columns \u2014 company name and price are fetched automatically from NSE/BSE:<br/>
+          Just 3 columns — company name and price are fetched automatically from NSE/BSE:<br/>
           <code>Symbol, AvgCost, Quantity</code><br/>
-          Example rows: <code>HDFCBANK, 1800, 10</code> &nbsp;\u00b7&nbsp; <code>INFY, 1500</code> (Qty defaults to 1 if blank)<br/>
-          First row can be a header \u2014 it's skipped automatically. Symbols are validated live.
+          Example rows: <code>HDFCBANK, 1800, 10</code> &nbsp;·&nbsp; <code>INFY, 1500</code> (Qty defaults to 1 if blank)<br/>
+          First row can be a header — it's skipped automatically. Symbols are validated live.
         </div>
         <div style="margin-bottom:12px">
           <button onclick="downloadCsvTemplate()" style="background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer">
-            \ud83d\udce5 Download Sample Template
+            📥 Download Sample Template
           </button>
         </div>
         <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()" ondragover="csvDragOver(event)" ondragleave="csvDragLeave(event)" ondrop="csvDrop(event)">
           <input type="file" id="csvFile" accept=".csv,.txt" onchange="handleCsvFile(this.files[0])"/>
-          \ud83d\udcc4 Click to select CSV file, or drag &amp; drop here
+          📄 Click to select CSV file, or drag &amp; drop here
         </div>
         <div class="csv-status" id="csvStatus"></div>
       </div>
@@ -301,55 +301,55 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-msg" id="overlayMsg">Loading\u2026</div></div>
+<div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-msg" id="overlayMsg">Loading…</div></div>
 
 <!-- STOCK DETAIL CARD MODAL -->
 <div class="detail-modal-bg" id="detailModal">
   <div class="detail-card">
     <div class="detail-card-header">
       <div>
-        <h2 id="dc-title">\u2014</h2>
-        <p id="dc-subtitle">\u2014</p>
+        <h2 id="dc-title">—</h2>
+        <p id="dc-subtitle">—</p>
       </div>
-      <button class="detail-close" onclick="closeDetailCard()">\u2715</button>
+      <button class="detail-close" onclick="closeDetailCard()">✕</button>
     </div>
     <div class="detail-body">
       <div class="detail-section">
-        <h3>\ud83d\udcb0 Purchase Details</h3>
+        <h3>💰 Purchase Details</h3>
         <div class="detail-grid">
-          <div class="detail-item"><div class="di-label">Avg Cost</div><div class="di-value" id="dc-avgCost">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">Quantity</div><div class="di-value" id="dc-qty">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">Total Invested</div><div class="di-value" id="dc-invested">\u2014</div></div>
+          <div class="detail-item"><div class="di-label">Avg Cost</div><div class="di-value" id="dc-avgCost">—</div></div>
+          <div class="detail-item"><div class="di-label">Quantity</div><div class="di-value" id="dc-qty">—</div></div>
+          <div class="detail-item"><div class="di-label">Total Invested</div><div class="di-value" id="dc-invested">—</div></div>
         </div>
       </div>
       <div class="detail-section">
-        <h3>\ud83d\udcc8 Current Performance</h3>
+        <h3>📈 Current Performance</h3>
         <div class="detail-grid">
-          <div class="detail-item"><div class="di-label">Current Price</div><div class="di-value" id="dc-price">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">Current Value</div><div class="di-value" id="dc-value">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">P&L \u20b9</div><div class="di-value" id="dc-pnl">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">P&L %</div><div class="di-value" id="dc-pnlPct">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">12-Week Change</div><div class="di-value" id="dc-chg12w">\u2014</div></div>
+          <div class="detail-item"><div class="di-label">Current Price</div><div class="di-value" id="dc-price">—</div></div>
+          <div class="detail-item"><div class="di-label">Current Value</div><div class="di-value" id="dc-value">—</div></div>
+          <div class="detail-item"><div class="di-label">P&L ₹</div><div class="di-value" id="dc-pnl">—</div></div>
+          <div class="detail-item"><div class="di-label">P&L %</div><div class="di-value" id="dc-pnlPct">—</div></div>
+          <div class="detail-item"><div class="di-label">12-Week Change</div><div class="di-value" id="dc-chg12w">—</div></div>
         </div>
       </div>
       <div class="detail-section">
-        <h3>\ud83d\udd2c Fundamentals</h3>
+        <h3>🔬 Fundamentals</h3>
         <div class="detail-grid">
-          <div class="detail-item"><div class="di-label">P/E Ratio</div><div class="di-value" id="dc-pe">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">Buy Recommendations</div><div class="di-value" id="dc-buyRecs">\u2014</div></div>
-          <div class="detail-item"><div class="di-label">Sell Recommendations</div><div class="di-value" id="dc-sellRecs">\u2014</div></div>
+          <div class="detail-item"><div class="di-label">P/E Ratio</div><div class="di-value" id="dc-pe">—</div></div>
+          <div class="detail-item"><div class="di-label">Buy Recommendations</div><div class="di-value" id="dc-buyRecs">—</div></div>
+          <div class="detail-item"><div class="di-label">Sell Recommendations</div><div class="di-value" id="dc-sellRecs">—</div></div>
         </div>
       </div>
       <div class="detail-section">
-        <h3>\ud83d\udcca Signal & Recommendation</h3>
+        <h3>📊 Signal & Recommendation</h3>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-          <span id="dc-signal" style="font-weight:600;font-size:0.92rem">\u2014</span>
-          <span id="dc-rec" class="detail-rec-badge">\u2014</span>
+          <span id="dc-signal" style="font-weight:600;font-size:0.92rem">—</span>
+          <span id="dc-rec" class="detail-rec-badge">—</span>
         </div>
       </div>
       <div class="detail-section">
-        <h3>\ud83d\udcac Commentary</h3>
-        <div class="detail-commentary" id="dc-reason">\u2014</div>
+        <h3>💬 Commentary</h3>
+        <div class="detail-commentary" id="dc-reason">—</div>
       </div>
       <div style="text-align:right;margin-top:8px">
         <button onclick="closeDetailCard()" class="btn-modal-cancel" style="min-width:100px">Close</button>
@@ -361,7 +361,7 @@
 <!-- CHANGE PASSWORD MODAL -->
 <div class="modal-bg" id="changePwdModal">
   <div class="modal-box">
-    <h2>\ud83d\udd11 Change Password</h2>
+    <h2>🔑 Change Password</h2>
     <div class="modal-field">
       <label>Current Password</label>
       <input type="password" id="pwdCurrent" placeholder="Enter your current password"/>
@@ -371,12 +371,12 @@
       <input type="password" id="pwdNew" placeholder="Enter new password" oninput="checkPwdRules()"/>
     </div>
     <div class="pwd-rules" id="pwdRules">
-      <span id="r1" class="fail">\u2717 At least 8 characters</span>
-      <span id="r2" class="fail">\u2717 One uppercase letter (A\u2013Z)</span>
-      <span id="r3" class="fail">\u2717 One lowercase letter (a\u2013z)</span>
-      <span id="r4" class="fail">\u2717 One number (0\u20139)</span>
-      <span id="r5" class="fail">\u2717 One special character (!@#$\u2026)</span>
-      <span id="r6" class="fail">\u2717 No spaces</span>
+      <span id="r1" class="fail">✗ At least 8 characters</span>
+      <span id="r2" class="fail">✗ One uppercase letter (A–Z)</span>
+      <span id="r3" class="fail">✗ One lowercase letter (a–z)</span>
+      <span id="r4" class="fail">✗ One number (0–9)</span>
+      <span id="r5" class="fail">✗ One special character (!@#$…)</span>
+      <span id="r6" class="fail">✗ No spaces</span>
     </div>
     <div class="modal-field">
       <label>Confirm New Password</label>
@@ -395,7 +395,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
 <script>
-// \u2500\u2500\u2500 FIREBASE CONFIG \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
   authDomain: "stocktracker-india.firebaseapp.com",
@@ -405,7 +405,7 @@ const firebaseConfig = {
   appId: "1:144829364145:web:ef183ff4e3035dac272f90"
 };
 const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
-// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ──────────────────────────────────────────────────────────────────────────
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -414,7 +414,7 @@ const db   = firebase.firestore();
 let currentUser = null;
 let stocks = [];  // in-memory cache of portfolio
 
-// \u2500\u2500 YAHOO FINANCE SYMBOL MAPPING \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── YAHOO FINANCE SYMBOL MAPPING ──────────────────────────────────────────
 const YAHOO_OVERRIDES = {
   '532281':'HCLTECH.NS','524715':'SUNPHARMA.NS','533248':'GPPL.NS',
   '538567':'GULFOILLUB.NS','538666':'SHARDACROP.NS','513262':'SSWL.NS',
@@ -428,7 +428,7 @@ const YAHOO_OVERRIDES = {
 };
 function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
 
-// \u2500\u2500 PRICE FETCHING \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── PRICE FETCHING ────────────────────────────────────────────────────────
 async function fetchYahooPrice(sym) {
   const ysym = toYahoo(sym);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
@@ -442,7 +442,7 @@ async function fetchYahooPrice(sym) {
   } catch(e) { return null; }
 }
 
-// \u2500\u2500 AUTH GUARD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── AUTH GUARD ─────────────────────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = 'index.html'; return; }
   // Super admin always gets access (no Firestore doc needed)
@@ -464,9 +464,9 @@ auth.onAuthStateChanged(async user => {
   loadPortfolio();
 });
 
-// \u2500\u2500 LOAD PORTFOLIO \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── LOAD PORTFOLIO ─────────────────────────────────────────────────────────
 async function loadPortfolio() {
-  showOverlay('Loading portfolio\u2026');
+  showOverlay('Loading portfolio…');
   try {
     const snap = await db.collection('portfolios').doc(currentUser.uid)
       .collection('stocks').orderBy('addedAt','asc').get();
@@ -479,7 +479,7 @@ async function loadPortfolio() {
   hideOverlay();
 }
 
-// \u2500\u2500 AUTO REFRESH (every 12 hours) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── AUTO REFRESH (every 12 hours) ─────────────────────────────────────────
 const AUTO_REFRESH_HOURS = 12;
 async function checkAutoRefresh() {
   if (!stocks.length) return;
@@ -493,20 +493,20 @@ async function checkAutoRefresh() {
     const hoursSince = lastRefresh ? (now - lastRefresh) / (1000 * 60 * 60) : 999;
     if (hoursSince >= AUTO_REFRESH_HOURS) {
       const msg = lastRefresh
-        ? `\u23f0 Auto-refreshing prices (${Math.round(hoursSince)}h since last update)\u2026`
-        : '\u23f0 Auto-refreshing prices for the first time\u2026';
+        ? `⏰ Auto-refreshing prices (${Math.round(hoursSince)}h since last update)…`
+        : '⏰ Auto-refreshing prices for the first time…';
       showToast(msg);
       await refreshPrices();
     } else {
       const hoursLeft = Math.ceil(AUTO_REFRESH_HOURS - hoursSince);
       const mins = Math.round((AUTO_REFRESH_HOURS - hoursSince) * 60) % 60;
       document.getElementById('refreshNote').textContent =
-        `Last updated: ${lastRefresh.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} \u00b7 Next auto-refresh in ~${hoursLeft > 1 ? hoursLeft+'h' : mins+'m'}`;
+        `Last updated: ${lastRefresh.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~${hoursLeft > 1 ? hoursLeft+'h' : mins+'m'}`;
     }
-  } catch(e) { /* silently skip \u2014 non-critical */ }
+  } catch(e) { /* silently skip — non-critical */ }
 }
 
-// \u2500\u2500 SORT & FILTER STATE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── SORT & FILTER STATE ────────────────────────────────────────────────────
 let sortState = { col: null, dir: 1 };
 let filterState = { search: '', industry: '', rec: '', signal: '' };
 
@@ -537,7 +537,7 @@ function getFilteredSorted() {
   return list;
 }
 
-// \u2500\u2500 RENDER TABLE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── RENDER TABLE ───────────────────────────────────────────────────────────
 function renderTable() {
   const tbody = document.getElementById('portfolioBody');
   const empty = document.getElementById('emptyState');
@@ -551,59 +551,59 @@ function renderTable() {
   tbody.innerHTML = list.map((s, i) => {
     const invested = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
     const pnlClass = pnl == null ? '' : pnl >= 0 ? 'gain-cell' : 'loss-cell';
-    const priceDisp = s.currentPrice != null ? '\u20b9'+fmt(s.currentPrice) : '<span style="color:#bbb">\u2014</span>';
-    const valueDisp = value != null ? '\u20b9'+fmt(value) : '<span style="color:#bbb">\u2014</span>';
-    const pnlDisp = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">\u2014</span>';
-    const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">\u2014</span>';
-    const peDisp = s.pe != null ? s.pe.toFixed(2) : '\u2014';
+    const priceDisp = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : '<span style="color:#bbb">—</span>';
+    const valueDisp = value != null ? '₹'+fmt(value) : '<span style="color:#bbb">—</span>';
+    const pnlDisp = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
+    const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">—</span>';
+    const peDisp = s.pe != null ? s.pe.toFixed(2) : '—';
     const chg = s.change12w;
-    const chgDisp = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '\u2014';
-    const signalClass = s.signal && s.signal.includes('\u25b2') ? 'signal-up' : s.signal && s.signal.includes('\u25bc') ? 'signal-down' : '';
+    const chgDisp = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
+    const signalClass = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
     const recClass = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
     return `<tr onclick="openDetailCard('${s.id}')" title="Click for full details">
       <td onclick="event.stopPropagation()">${i+1}</td>
       <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}</td>
       <td><strong>${s.symbol}</strong></td>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${s.industry||'\u2014'}</td>
-      <td class="num">\u20b9${fmt(s.avgCost)}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${s.industry||'—'}</td>
+      <td class="num">₹${fmt(s.avgCost)}</td>
       <td class="num">${s.qty}</td>
-      <td class="num">\u20b9${fmt(invested)}</td>
+      <td class="num">₹${fmt(invested)}</td>
       <td class="num ${s.priceLoading?'price-loading':''}">${priceDisp}</td>
       <td class="num">${valueDisp}</td>
       <td class="num ${pnlClass}">${pnlDisp}</td>
       <td class="num ${pnlClass}">${pnlPctDisp}</td>
       <td class="num">${peDisp}</td>
       <td class="num">${chgDisp}</td>
-      <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'\u2014'}</td>
-      <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'\u2014'}</td>
-      <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'\u2014'}</td>
-      <td><span class="${recClass}">${s.recommendation||'\u2014'}</span></td>
-      <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4">${s.reason||'\u2014'}</td>
-      <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">\ud83d\uddd1</button></td>
+      <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
+      <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
+      <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'—'}</td>
+      <td><span class="${recClass}">${s.recommendation||'—'}</span></td>
+      <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4">${s.reason||'—'}</td>
+      <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
     </tr>`;
   }).join('');
 }
 
 function fmt(v) {
-  if (v == null) return '\u2014';
+  if (v == null) return '—';
   return Number(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
-// \u2500\u2500 SORT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── SORT ───────────────────────────────────────────────────────────────────
 function sortBy(col) {
   if (sortState.col === col) sortState.dir *= -1;
   else { sortState.col = col; sortState.dir = 1; }
   // Update arrow indicators
   document.querySelectorAll('.sort-arrow').forEach(el => {
     el.classList.remove('active');
-    el.textContent = '\u21c5';
+    el.textContent = '⇅';
   });
   const arrow = document.getElementById('sort-' + col);
-  if (arrow) { arrow.classList.add('active'); arrow.textContent = sortState.dir === 1 ? '\u25b2' : '\u25bc'; }
+  if (arrow) { arrow.classList.add('active'); arrow.textContent = sortState.dir === 1 ? '▲' : '▼'; }
   renderTable();
 }
 
-// \u2500\u2500 FILTER \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── FILTER ─────────────────────────────────────────────────────────────────
 function applyFilters() {
   filterState.search   = document.getElementById('filterSearch').value;
   filterState.industry = document.getElementById('filterIndustry').value;
@@ -628,7 +628,7 @@ function populateIndustryFilter() {
     industries.map(ind => `<option value="${ind}">${ind}</option>`).join('');
 }
 
-// \u2500\u2500 STOCK DETAIL CARD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── STOCK DETAIL CARD ──────────────────────────────────────────────────────
 function openDetailCard(stockId) {
   const s = stocks.find(x => x.id === stockId);
   if (!s) return;
@@ -640,36 +640,36 @@ function openDetailCard(stockId) {
   const recClass = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
 
   document.getElementById('dc-title').textContent = s.name || s.symbol;
-  document.getElementById('dc-subtitle').textContent = `${s.symbol}  \u00b7  ${s.industry || 'Unknown Industry'}`;
-  document.getElementById('dc-avgCost').textContent = '\u20b9' + fmt(s.avgCost);
+  document.getElementById('dc-subtitle').textContent = `${s.symbol}  ·  ${s.industry || 'Unknown Industry'}`;
+  document.getElementById('dc-avgCost').textContent = '₹' + fmt(s.avgCost);
   document.getElementById('dc-qty').textContent = s.qty + ' shares';
-  document.getElementById('dc-invested').textContent = '\u20b9' + fmt(invested);
-  document.getElementById('dc-price').textContent = s.currentPrice != null ? '\u20b9'+fmt(s.currentPrice) : 'Not fetched yet';
-  document.getElementById('dc-value').textContent = value != null ? '\u20b9'+fmt(value) : '\u2014';
+  document.getElementById('dc-invested').textContent = '₹' + fmt(invested);
+  document.getElementById('dc-price').textContent = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : 'Not fetched yet';
+  document.getElementById('dc-value').textContent = value != null ? '₹'+fmt(value) : '—';
 
   const pnlEl = document.getElementById('dc-pnl');
-  pnlEl.textContent = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '\u2014';
+  pnlEl.textContent = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '—';
   pnlEl.className = 'di-value ' + pnlClass;
 
   const pnlPctEl = document.getElementById('dc-pnlPct');
-  pnlPctEl.textContent = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '\u2014';
+  pnlPctEl.textContent = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '—';
   pnlPctEl.className = 'di-value ' + pnlClass;
 
   const chg = s.change12w;
   const chgEl = document.getElementById('dc-chg12w');
-  chgEl.textContent = chg != null ? (chg>=0?'+':'')+chg.toFixed(1)+'%' : '\u2014';
+  chgEl.textContent = chg != null ? (chg>=0?'+':'')+chg.toFixed(1)+'%' : '—';
   chgEl.className = 'di-value ' + (chg == null ? '' : chg >= 0 ? 'gain' : 'loss');
 
-  document.getElementById('dc-pe').textContent = s.pe != null ? s.pe.toFixed(2) : '\u2014';
-  document.getElementById('dc-buyRecs').textContent = s.buyRecs != null ? s.buyRecs + ' analysts' : '\u2014';
-  document.getElementById('dc-sellRecs').textContent = s.sellRecs != null ? s.sellRecs + ' analysts' : '\u2014';
+  document.getElementById('dc-pe').textContent = s.pe != null ? s.pe.toFixed(2) : '—';
+  document.getElementById('dc-buyRecs').textContent = s.buyRecs != null ? s.buyRecs + ' analysts' : '—';
+  document.getElementById('dc-sellRecs').textContent = s.sellRecs != null ? s.sellRecs + ' analysts' : '—';
 
   const sigEl = document.getElementById('dc-signal');
-  sigEl.textContent = s.signal || '\u2014';
-  sigEl.className = s.signal && s.signal.includes('\u25b2') ? 'signal-up' : s.signal && s.signal.includes('\u25bc') ? 'signal-down' : '';
+  sigEl.textContent = s.signal || '—';
+  sigEl.className = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
 
   const recEl = document.getElementById('dc-rec');
-  recEl.textContent = s.recommendation || '\u2014';
+  recEl.textContent = s.recommendation || '—';
   recEl.className = 'detail-rec-badge ' + recClass;
 
   document.getElementById('dc-reason').textContent = s.reason || 'No commentary available.';
@@ -684,7 +684,7 @@ document.getElementById('detailModal').addEventListener('click', function(e) {
   if (e.target === this) closeDetailCard();
 });
 
-// \u2500\u2500 UPDATE SUMMARY STATS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── UPDATE SUMMARY STATS ───────────────────────────────────────────────────
 function updateStats() {
   let totalInvested = 0, totalValue = 0, hasValue = false;
   stocks.forEach(s => {
@@ -694,8 +694,8 @@ function updateStats() {
   });
   const pnl = hasValue ? totalValue - totalInvested : null;
   const pnlPct = (pnl != null && totalInvested > 0) ? (pnl/totalInvested*100) : null;
-  document.getElementById('statInvested').textContent = '\u20b9'+fmt(totalInvested);
-  document.getElementById('statValue').textContent = hasValue ? '\u20b9'+fmt(totalValue) : '\u2014';
+  document.getElementById('statInvested').textContent = '₹'+fmt(totalInvested);
+  document.getElementById('statValue').textContent = hasValue ? '₹'+fmt(totalValue) : '—';
   const glEl = document.getElementById('statGainLoss');
   const retEl = document.getElementById('statReturn');
   if (pnl != null) {
@@ -704,15 +704,15 @@ function updateStats() {
     retEl.textContent = (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%';
     retEl.className = 'value ' + (pnlPct>=0?'gain':'loss');
   } else {
-    glEl.textContent = '\u2014'; retEl.textContent = '\u2014';
+    glEl.textContent = '—'; retEl.textContent = '—';
   }
 }
 
-// \u2500\u2500 REFRESH PRICES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── REFRESH PRICES ─────────────────────────────────────────────────────────
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '\u23f3 Fetching prices\u2026';
+  btn.disabled = true; btn.textContent = '⏳ Fetching prices…';
   let done = 0;
   document.getElementById('refreshNote').textContent = `0 / ${stocks.length}`;
 
@@ -751,16 +751,16 @@ async function refreshPrices() {
 
   updateStats();
   renderTable();
-  btn.disabled = false; btn.textContent = '\ud83d\udd04 Refresh Prices';
+  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
   const now = new Date();
   document.getElementById('refreshNote').textContent =
-    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} \u00b7 Next auto-refresh in ~12h`;
-  showToast(`\u2705 Prices updated for ${done} stocks`,'success');
+    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Next auto-refresh in ~12h`;
+  showToast(`✅ Prices updated for ${done} stocks`,'success');
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// \u2500\u2500 ADD STOCK \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── ADD STOCK ──────────────────────────────────────────────────────────────
 async function addStock() {
   const sym  = document.getElementById('fSym').value.trim().toUpperCase();
   const name = document.getElementById('fName').value.trim();
@@ -772,7 +772,7 @@ async function addStock() {
   if (isNaN(cost) || cost <= 0) { showToast('Enter a valid average cost.','error'); return; }
   if (isNaN(qty)  || qty  < 1) { showToast('Enter a valid quantity.','error'); return; }
   const btn = document.getElementById('addBtn');
-  btn.disabled = true; btn.textContent = 'Adding\u2026';
+  btn.disabled = true; btn.textContent = 'Adding…';
   try {
     const doc = { symbol: sym, name, industry: ind, avgCost: cost, qty,
       addedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -781,7 +781,7 @@ async function addStock() {
     stocks.push({id: ref.id, ...doc, addedAt: new Date()});
     clearAddForm();
     renderTable(); updateStats();
-    showToast(`\u2705 ${sym} added to portfolio`,'success');
+    showToast(`✅ ${sym} added to portfolio`,'success');
   } catch(e) { showToast('Error adding stock.','error'); }
   btn.disabled = false; btn.textContent = '+ Add to Portfolio';
 }
@@ -790,7 +790,7 @@ function clearAddForm() {
   ['fSym','fName','fIndustry','fCost','fQty'].forEach(id => document.getElementById(id).value = '');
 }
 
-// \u2500\u2500 DELETE STOCK \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── DELETE STOCK ───────────────────────────────────────────────────────────
 async function deleteStock(docId) {
   if (!confirm('Remove this stock from your portfolio?')) return;
   try {
@@ -801,7 +801,7 @@ async function deleteStock(docId) {
   } catch(e) { showToast('Error removing stock.','error'); }
 }
 
-// \u2500\u2500 CSV UPLOAD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── CSV UPLOAD ─────────────────────────────────────────────────────────────
 function csvDragOver(e) { e.preventDefault(); document.getElementById('csvDrop').classList.add('dragover'); }
 function csvDragLeave(e) { document.getElementById('csvDrop').classList.remove('dragover'); }
 function csvDrop(e) { e.preventDefault(); document.getElementById('csvDrop').classList.remove('dragover'); if(e.dataTransfer.files[0]) handleCsvFile(e.dataTransfer.files[0]); }
@@ -814,8 +814,7 @@ function handleCsvFile(file) {
 }
 
 async function parseCsv(text) {
-  const lines = text.split('\
-').map(l => l.trim()).filter(l => l);
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
   if (!lines.length) { setCsvStatus('Empty file.','error'); return; }
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
@@ -832,7 +831,7 @@ async function parseCsv(text) {
     rows.push({symbol:sym, name, industry:ind, avgCost:cost, qty});
   }
   if (!rows.length) { setCsvStatus('No valid rows found. Check format.','error'); return; }
-  setCsvStatus(`Found ${rows.length} stocks. Importing\u2026`,'info');
+  setCsvStatus(`Found ${rows.length} stocks. Importing…`,'info');
   let added = 0;
   for (const row of rows) {
     try {
@@ -844,8 +843,8 @@ async function parseCsv(text) {
     } catch(e) { /* skip errors */ }
   }
   renderTable(); updateStats();
-  setCsvStatus(`\u2705 Imported ${added} stocks successfully!`,'success');
-  showToast(`\u2705 ${added} stocks imported from CSV`,'success');
+  setCsvStatus(`✅ Imported ${added} stocks successfully!`,'success');
+  showToast(`✅ ${added} stocks imported from CSV`,'success');
 }
 
 function setCsvStatus(msg, type) {
@@ -853,7 +852,7 @@ function setCsvStatus(msg, type) {
   el.textContent = msg; el.className = 'csv-status ' + (type === 'info' ? 'success' : type);
 }
 
-// \u2500\u2500 UI HELPERS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── UI HELPERS ─────────────────────────────────────────────────────────────
 function showTab(tab) {
   document.getElementById('tabPortfolio').style.display = tab==='portfolio' ? '' : 'none';
   document.getElementById('tabAdd').style.display = tab==='add' ? '' : 'none';
@@ -868,12 +867,12 @@ function showToast(msg, type='') {
   toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-function showOverlay(msg) { document.getElementById('overlay').classList.add('show'); document.getElementById('overlayMsg').textContent = msg||'Loading\u2026'; }
+function showOverlay(msg) { document.getElementById('overlay').classList.add('show'); document.getElementById('overlayMsg').textContent = msg||'Loading…'; }
 function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
 
 async function doSignOut() { await auth.signOut(); window.location.href = 'index.html'; }
 
-// \u2500\u2500 CHANGE PASSWORD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ── CHANGE PASSWORD ────────────────────────────────────────────────────────
 function openChangePwd() {
   document.getElementById('pwdCurrent').value = '';
   document.getElementById('pwdNew').value = '';
@@ -889,21 +888,21 @@ function checkPwdRules() {
   const set = (id, ok) => {
     const el = document.getElementById(id);
     el.className = ok ? 'ok' : 'fail';
-    el.textContent = (ok ? '\u2713 ' : '\u2717 ') + el.textContent.slice(2);
+    el.textContent = (ok ? '✓ ' : '✗ ') + el.textContent.slice(2);
   };
   set('r1', v.length >= 8);
   set('r2', /[A-Z]/.test(v));
   set('r3', /[a-z]/.test(v));
   set('r4', /[0-9]/.test(v));
-  set('r5', /[!@#$%^&*()_+\\-=\\[\\]{};':"\\\\|,.<>\\/?`~]/.test(v));
-  set('r6', !/\\s/.test(v) && v.length > 0);
+  set('r5', /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(v));
+  set('r6', !/\s/.test(v) && v.length > 0);
 }
 async function saveNewPassword() {
   const current = document.getElementById('pwdCurrent').value;
   const newPwd  = document.getElementById('pwdNew').value;
   const confirm = document.getElementById('pwdConfirm').value;
   if (!current) { showToast('Please enter your current password.','error'); return; }
-  if (newPwd.length < 8 || !/[A-Z]/.test(newPwd) || !/[a-z]/.test(newPwd) || !/[0-9]/.test(newPwd) || !/[!@#$%^&*()_+\\-=\\[\\]{};':"\\\\|,.<>\\/?`~]/.test(newPwd) || /\\s/.test(newPwd)) {
+  if (newPwd.length < 8 || !/[A-Z]/.test(newPwd) || !/[a-z]/.test(newPwd) || !/[0-9]/.test(newPwd) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(newPwd) || /\s/.test(newPwd)) {
     showToast('New password does not meet all requirements.','error'); return;
   }
   if (newPwd !== confirm) { showToast('Passwords do not match.','error'); return; }
@@ -912,10 +911,10 @@ async function saveNewPassword() {
     await currentUser.reauthenticateWithCredential(cred);
     await currentUser.updatePassword(newPwd);
     closeChangePwd();
-    showToast('\u2705 Password changed successfully!', 'success');
+    showToast('✅ Password changed successfully!', 'success');
   } catch(e) {
-    if (e.code === 'auth/wrong-password') showToast('\u274c Current password is incorrect.', 'error');
-    else showToast('\u274c Error: ' + (e.message || e), 'error');
+    if (e.code === 'auth/wrong-password') showToast('❌ Current password is incorrect.', 'error');
+    else showToast('❌ Error: ' + (e.message || e), 'error');
   }
 }
 </script>
@@ -924,3 +923,4 @@ async function saveNewPassword() {
 </div>
 </body>
 </html>
+           
