@@ -186,6 +186,7 @@
       <div class="table-toolbar">
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
+        <span id="mdAge" style="font-size:0.72rem;color:#888"></span>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
           🔄 Refresh All Data
         </button>
@@ -412,23 +413,60 @@ const auth = firebase.auth();
 const db   = firebase.firestore();
 
 let currentUser = null;
-let stocks = [];  // in-memory cache of portfolio
+let stocks = [];          // in-memory portfolio
+let marketData = {};      // pre-fetched fundamentals from market_data.json
 
 // ── YAHOO FINANCE SYMBOL MAPPING ──────────────────────────────────────────
+// Only entries that differ from the default "SYMBOL.NS" pattern
 const YAHOO_OVERRIDES = {
-  '532281':'HCLTECH.NS','524715':'SUNPHARMA.NS','533248':'GPPL.NS',
+  '532281':'HCLTECH.NS',  '524715':'SUNPHARMA.NS', '533248':'GPPL.NS',
   '538567':'GULFOILLUB.NS','538666':'SHARDACROP.NS','513262':'SSWL.NS',
-  '540124':'GNA.NS','543300':'SONACOMS.NS','544289':'NTPCGREEN.NS',
-  '500285':'SPICEJET.NS','500314':'ORIENTHOT.NS','500400':'TATAPOWER.NS',
-  '100312':'ONGC.NS','100113':'SAIL.NS','532699':'ROYALHOTEL.NS',
-  '531340':'531340.BO','RELIANCEP1':'RELIANCE.NS','UPLPP1':'UPL.NS',
-  'IL&FSENGG':'ILFSENGG.NS','AIRTELPP':'AIRTELPP.NS',
-  'MID150BEES':'MID150BEES.NS','SBISILVER':'SBISILVER.NS',
-  'TMPV':'TATAMTRDVR.NS','NSLNISP':'NSLNISP.NS',
-  'ALOKINDS':'ALOKINDS.NS','UFBL':'UFBL.NS','RCOM':'RCOM.NS',
-  'HINDMOTORS':'HINDMOTORS.NS','JPPOWER':'JPPOWER.NS','GATEWAY':'GATEWAY.NS',
-  'NAUKRI':'NAUKRI.NS','JIOFIN':'JIOFIN.NS','ETERNAL':'ETERNAL.NS'
+  '540124':'GNA.NS',      '543300':'SONACOMS.NS',  '544289':'NTPCGREEN.NS',
+  '500285':'SPICEJET.NS', '500314':'ORIENTHOT.NS', '500400':'TATAPOWER.NS',
+  '100312':'ONGC.NS',     '100113':'SAIL.NS',      '532699':'ROYALHOTEL.NS',
+  '531340':'531340.BO',
+  'RELIANCEP1':'RELIANCE.NS', 'UPLPP1':'UPL.NS',
+  'IL&FSENGG':'ILFSENGG.NS',  'TMPV':'TATAMTRDVR.NS',
+  'GATEWAY':'GDL.NS',
 };
+
+// ── LOAD PRE-FETCHED MARKET DATA (market_data.json, same-origin) ──────────
+async function loadMarketData() {
+  try {
+    const r = await fetch('market_data.json?_=' + Date.now());
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j && j.stocks) {
+      marketData = j.stocks;
+      document.getElementById('mdAge').textContent =
+        j.generatedAt ? 'Data as of ' + new Date(j.generatedAt).toLocaleString('en-IN',
+          {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    }
+  } catch(e) { /* silently skip if file not yet generated */ }
+}
+
+// ── APPLY MARKET DATA TO STOCKS (fills fundamentals from JSON) ────────────
+function applyMarketData() {
+  if (!Object.keys(marketData).length) return;
+  let filled = 0;
+  stocks.forEach(s => {
+    const md = marketData[s.symbol];
+    if (!md || !md.available) return;
+    // Only overwrite if the field is missing/null in Firestore — never overwrite manual admin edits
+    if (!s.name || s.name === s.symbol)         s.name           = md.name           || s.name;
+    if (!s.industry)                            s.industry       = md.industry        || '';
+    if (s.pe == null && md.pe != null)          s.pe             = md.pe;
+    if (!s.recommendation && md.recommendation) s.recommendation = md.recommendation;
+    if (!s.signal && md.signal)                 s.signal         = md.signal;
+    if (s.buyRecs  == null && md.buyRecs  != null) s.buyRecs     = md.buyRecs;
+    if (s.sellRecs == null && md.sellRecs != null) s.sellRecs    = md.sellRecs;
+    if (s.change12w == null && md.change52w != null) s.change12w = md.change52w;
+    // Use market_data price only if Firestore has no price yet
+    if (s.currentPrice == null && md.price != null) s.currentPrice = md.price;
+    filled++;
+  });
+  if (filled) { renderTable(); updateStats(); populateIndustryFilter(); }
+}
 
 // ── CORE PROXY FETCH (dual proxy, auto-detects response format) ──────────
 async function proxyFetch(url) {
@@ -524,13 +562,18 @@ auth.onAuthStateChanged(async user => {
 async function loadPortfolio() {
   showOverlay('Loading portfolio…');
   try {
-    const snap = await db.collection('portfolios').doc(currentUser.uid)
-      .collection('stocks').orderBy('addedAt','asc').get();
+    // Load Firestore data + market_data.json in parallel
+    const [snap] = await Promise.all([
+      db.collection('portfolios').doc(currentUser.uid)
+        .collection('stocks').orderBy('addedAt','asc').get(),
+      loadMarketData()
+    ]);
     stocks = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderTable();
     updateStats();
     populateIndustryFilter();
-    checkAutoRefresh(); // auto-refresh every 12h
+    applyMarketData();      // fill industry/PE/recs/signal from JSON
+    checkAutoRefresh();     // auto-refresh live prices every 12h
   } catch(e) { showToast('Error loading portfolio.','error'); }
   hideOverlay();
 }
@@ -764,152 +807,75 @@ function updateStats() {
   }
 }
 
-// ── COMPREHENSIVE DATA REFRESH (v7 batch + v10 quoteSummary) ─────────────
+// ── LIVE PRICE REFRESH (prices only — fundamentals come from market_data.json) ─
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
-  const btn = document.getElementById('refreshBtn');
+  const btn  = document.getElementById('refreshBtn');
   const note = document.getElementById('refreshNote');
-  btn.disabled = true; btn.textContent = '⏳ Fetching data…';
+  btn.disabled = true; btn.textContent = '⏳ Updating prices…';
 
-  // Build yahoo-symbol → stock map; try .NS first, .BO fallback later
-  const symMap = {}; // yahooSym → stock
+  // Always re-apply market data first so fundamentals are filled even before prices load
+  await loadMarketData();
+  applyMarketData();
+
+  // Build yahoo-symbol → stock map (.NS first, .BO override where defined)
+  const symMap = {};
   stocks.forEach(s => {
     s._ysym = YAHOO_OVERRIDES[s.symbol] || (s.symbol + '.NS');
     symMap[s._ysym] = s;
   });
   const allYsyms = Object.keys(symMap);
 
-  // ── PHASE 1: v7 batch quote (50 per call) — prices + fundamentals ────────
-  note.textContent = `Phase 1/2 — loading prices & fundamentals…`;
-  let phase1Got = 0;
-  const missedSyms = []; // symbols with no price after phase 1
+  let priced = 0;
+  note.textContent = `Fetching live prices… 0 / ${stocks.length}`;
 
-  for (let i = 0; i < allYsyms.length; i += 50) {
-    const batch = allYsyms.slice(i, i + 50);
+  // Fetch in batches of 25 with 600ms gap — conservative to avoid rate-limiting
+  for (let i = 0; i < allYsyms.length; i += 25) {
+    const batch   = allYsyms.slice(i, i + 25);
     const results = await fetchBatchQuotes(batch);
 
     for (const q of results) {
       const s = symMap[q.symbol];
       if (!s) continue;
-      if (q.regularMarketPrice)       s.currentPrice = q.regularMarketPrice;
-      if (q.trailingPE)               s.pe = parseFloat(q.trailingPE.toFixed(2));
-      // Company name (fill if missing or same as symbol)
-      if (!s.name || s.name === s.symbol) s.name = q.longName || q.shortName || s.name;
-      // Industry — prefer most specific available
-      const ind = q.industryDisp || q.industry || q.sectorDisp || q.sector || '';
-      if (ind) s.industry = ind;
-      // Recommendation & signal
-      const rec = recKeyToLabel(q.recommendationKey);
-      if (rec) s.recommendation = rec;
-      s.signal = computeSignal(q);
-      // 52-week change (vs 50DMA as fallback)
-      if (q.fiftyTwoWeekChangePercent != null)
-        s.change12w = parseFloat((q.fiftyTwoWeekChangePercent * 100).toFixed(1));
-      else if (q.fiftyDayAverageChangePercent != null)
-        s.change12w = parseFloat((q.fiftyDayAverageChangePercent * 100).toFixed(1));
-      phase1Got++;
+      if (q.regularMarketPrice) { s.currentPrice = q.regularMarketPrice; priced++; }
     }
 
-    // Mark which symbols had no price result for .BO retry
-    batch.forEach(ysym => {
-      const s = symMap[ysym];
-      if (s && s.currentPrice == null && !YAHOO_OVERRIDES[s.symbol]) missedSyms.push(s);
-    });
-
-    note.textContent = `Phase 1/2 — ${Math.min(phase1Got, stocks.length)} / ${stocks.length} ✓`;
+    note.textContent = `Fetching live prices… ${Math.min(priced, stocks.length)} / ${stocks.length}`;
     renderTable(); updateStats();
-    if (i + 50 < allYsyms.length) await delay(400);
+    if (i + 25 < allYsyms.length) await delay(600);
   }
 
-  // .BO fallback for any stock still missing a price
-  if (missedSyms.length) {
-    note.textContent = `Phase 1/2 — retrying ${missedSyms.length} symbols on BSE (.BO)…`;
-    const boSyms = missedSyms.map(s => s.symbol + '.BO');
-    const boMap = {};
-    missedSyms.forEach(s => { boMap[s.symbol + '.BO'] = s; });
-    for (let i = 0; i < boSyms.length; i += 50) {
-      const results = await fetchBatchQuotes(boSyms.slice(i, i + 50));
-      for (const q of results) {
-        const s = boMap[q.symbol];
-        if (!s) continue;
-        if (q.regularMarketPrice) { s.currentPrice = q.regularMarketPrice; s._ysym = q.symbol; }
-        if (q.trailingPE) s.pe = parseFloat(q.trailingPE.toFixed(2));
-        const ind = q.industryDisp || q.industry || q.sectorDisp || q.sector || '';
-        if (ind) s.industry = ind;
-        const rec = recKeyToLabel(q.recommendationKey);
-        if (rec) s.recommendation = rec;
-        s.signal = computeSignal(q);
-      }
-      if (i + 50 < boSyms.length) await delay(300);
+  // .BO fallback for stocks still without a price
+  const missed = stocks.filter(s => s.currentPrice == null && !YAHOO_OVERRIDES[s.symbol]);
+  if (missed.length) {
+    note.textContent = `Retrying ${missed.length} symbols on BSE…`;
+    const boMap = Object.fromEntries(missed.map(s => [s.symbol + '.BO', s]));
+    const boResults = await fetchBatchQuotes(Object.keys(boMap));
+    for (const q of boResults) {
+      const s = boMap[q.symbol];
+      if (s && q.regularMarketPrice) { s.currentPrice = q.regularMarketPrice; priced++; }
     }
     renderTable(); updateStats();
   }
 
-  // ── PHASE 2: v10 quoteSummary — exact buy/sell counts + richer PE/industry ─
-  note.textContent = `Phase 2/2 — loading analyst data (0 / ${stocks.length})…`;
-  let phase2Done = 0;
-  for (let i = 0; i < stocks.length; i += 8) {
-    const batch = stocks.slice(i, i + 8);
-    await Promise.all(batch.map(async s => {
-      const summary = await fetchQuoteSummary(s._ysym || s.symbol + '.NS');
-      if (summary) {
-        // Exact analyst buy/sell breakdown
-        const trend = summary.recommendationTrend?.trend?.[0];
-        if (trend) {
-          s.buyRecs  = (trend.strongBuy||0) + (trend.buy||0);
-          s.sellRecs = (trend.sell||0)      + (trend.strongSell||0);
-        }
-        // More accurate PE from summaryDetail
-        const sd = summary.summaryDetail;
-        if (!s.pe && sd?.trailingPE?.raw) s.pe = parseFloat(sd.trailingPE.raw.toFixed(2));
-        // More specific industry from assetProfile
-        const ap = summary.assetProfile;
-        if (ap?.industry) s.industry = ap.industry;
-        // Precise 52w change from defaultKeyStatistics
-        const ks = summary.defaultKeyStatistics;
-        if (ks?.['52WeekChange']?.raw != null)
-          s.change12w = parseFloat((ks['52WeekChange'].raw * 100).toFixed(1));
-      }
-      phase2Done++;
-      note.textContent = `Phase 2/2 — analyst data ${phase2Done} / ${stocks.length}…`;
-      renderTable();
-    }));
-    if (i + 8 < stocks.length) await delay(350);
-  }
-
-  // ── SAVE EVERYTHING TO FIRESTORE ─────────────────────────────────────────
-  const batchWrite = db.batch();
+  // Save updated prices to Firestore
+  const fw = db.batch();
   stocks.forEach(s => {
-    batchWrite.update(
-      db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
-      {
-        currentPrice:    s.currentPrice    ?? null,
-        pe:              s.pe              ?? null,
-        industry:        s.industry        || '',
-        signal:          s.signal          || null,
-        recommendation:  s.recommendation  || null,
-        buyRecs:         s.buyRecs         ?? null,
-        sellRecs:        s.sellRecs        ?? null,
-        change12w:       s.change12w       ?? null,
-        name:            s.name            || s.symbol,
-        priceUpdatedAt:  firebase.firestore.FieldValue.serverTimestamp()
-      }
-    );
+    if (s.currentPrice != null)
+      fw.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
+        { currentPrice: s.currentPrice, priceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() });
   });
-  try { await batchWrite.commit(); } catch(e) {}
-
+  try { await fw.commit(); } catch(e) {}
   try {
     await db.collection('portfolios').doc(currentUser.uid)
       .collection('meta').doc('refresh')
       .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
   } catch(e) {}
 
-  updateStats(); renderTable(); populateIndustryFilter();
-  btn.disabled = false; btn.textContent = '🔄 Refresh All Data';
+  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
   const now = new Date();
-  const priced = stocks.filter(s => s.currentPrice != null).length;
-  note.textContent = `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${priced}/${stocks.length} prices · Next auto-refresh in ~12h`;
-  showToast(`✅ Full data refresh complete — ${priced} prices, ${stocks.filter(s=>s.pe).length} P/E, ${stocks.filter(s=>s.industry).length} industries`, 'success');
+  note.textContent = `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${priced}/${stocks.length} live prices · Next auto-refresh in ~12h`;
+  showToast(`✅ ${priced} prices updated`, 'success');
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
