@@ -280,10 +280,15 @@
       <div class="csv-section">
         <h3>📂 Or Upload a CSV File</h3>
         <div class="csv-info">
-          Upload a CSV with these columns in order:<br/>
-          <code>Symbol, CompanyName, Industry, AvgCost, Quantity</code><br/>
-          Example row: <code>HDFCBANK, HDFC Bank Limited, Banking Services, 1500, 10</code><br/>
-          The first row can be a header row — it will be skipped automatically.
+          Just 3 columns — company name and price are fetched automatically from NSE/BSE:<br/>
+          <code>Symbol, AvgCost, Quantity</code><br/>
+          Example rows: <code>HDFCBANK, 1800, 10</code> &nbsp;·&nbsp; <code>INFY, 1500</code> (Qty defaults to 1 if blank)<br/>
+          First row can be a header — it's skipped automatically. Symbols are validated live.
+        </div>
+        <div style="margin-bottom:12px">
+          <button onclick="downloadCsvTemplate()" style="background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer">
+            📥 Download Sample Template
+          </button>
         </div>
         <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()" ondragover="csvDragOver(event)" ondragleave="csvDragLeave(event)" ondrop="csvDrop(event)">
           <input type="file" id="csvFile" accept=".csv,.txt" onchange="handleCsvFile(this.files[0])"/>
@@ -796,6 +801,26 @@ async function deleteStock(docId) {
   } catch(e) { showToast('Error removing stock.','error'); }
 }
 
+// ── FETCH YAHOO INFO (name + price + validation) ───────────────────────────
+async function fetchYahooInfo(sym) {
+  const ysym = toYahoo(sym);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  try {
+    const r = await fetch(proxy, {signal: AbortSignal.timeout(12000)});
+    if (!r.ok) return {valid: false};
+    const d = await r.json();
+    const parsed = JSON.parse(d.contents || '{}');
+    const meta = parsed?.chart?.result?.[0]?.meta;
+    if (!meta || !meta.regularMarketPrice) return {valid: false};
+    return {
+      valid: true,
+      price: meta.regularMarketPrice,
+      name: meta.longName || meta.shortName || sym
+    };
+  } catch(e) { return {valid: false}; }
+}
+
 // ── CSV UPLOAD ─────────────────────────────────────────────────────────────
 function csvDragOver(e) { e.preventDefault(); document.getElementById('csvDrop').classList.add('dragover'); }
 function csvDragLeave(e) { document.getElementById('csvDrop').classList.remove('dragover'); }
@@ -810,36 +835,101 @@ function handleCsvFile(file) {
 
 async function parseCsv(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-  if (!lines.length) { setCsvStatus('Empty file.','error'); return; }
+  if (!lines.length) { setCsvStatus('Empty file.', 'error'); return; }
+
+  // Parse rows — new format: Symbol, AvgCost, Quantity
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g,''));
-    if (cols.length < 4) continue;
-    // Skip header row
-    if (i === 0 && isNaN(parseFloat(cols[3]))) continue;
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+    if (!cols[0]) continue;
     const sym  = cols[0].toUpperCase();
-    const name = cols[1] || sym;
-    const ind  = cols[2] || '';
-    const cost = parseFloat(cols[3]);
-    const qty  = parseInt(cols[4]);
-    if (!sym || isNaN(cost) || isNaN(qty)) continue;
-    rows.push({symbol:sym, name, industry:ind, avgCost:cost, qty});
+    // Skip header row (first row where col[1] is not a number)
+    if (i === 0 && isNaN(parseFloat(cols[1]))) continue;
+    const cost = parseFloat(cols[1]);
+    const qty  = parseInt(cols[2]) || 1;  // default qty = 1
+    if (!sym || isNaN(cost) || cost <= 0) continue;
+    rows.push({ symbol: sym, avgCost: cost, qty });
   }
-  if (!rows.length) { setCsvStatus('No valid rows found. Check format.','error'); return; }
-  setCsvStatus(`Found ${rows.length} stocks. Importing…`,'info');
+
+  if (!rows.length) {
+    setCsvStatus('No valid rows found. Expected format: Symbol, AvgCost, Quantity', 'error');
+    return;
+  }
+
+  // Validate symbols + fetch names from Yahoo Finance
+  setCsvStatus(`🔍 Validating ${rows.length} symbol${rows.length > 1 ? 's' : ''} with NSE/BSE…`, 'info');
+  const validRows = [], invalidSyms = [];
+  let checked = 0;
+
+  for (let i = 0; i < rows.length; i += 3) {
+    const batch = rows.slice(i, i + 3);
+    await Promise.all(batch.map(async row => {
+      setCsvStatus(`🔍 Validating ${++checked}/${rows.length}: ${row.symbol}…`, 'info');
+      const info = await fetchYahooInfo(row.symbol);
+      if (info.valid) {
+        row.name = info.name;
+        row.currentPrice = info.price;
+        validRows.push(row);
+      } else {
+        invalidSyms.push(row.symbol);
+      }
+    }));
+    if (i + 3 < rows.length) await delay(300);
+  }
+
+  if (!validRows.length) {
+    setCsvStatus(`❌ No valid NSE/BSE symbols found. Invalid: ${invalidSyms.join(', ')}`, 'error');
+    return;
+  }
+
+  if (invalidSyms.length) {
+    setCsvStatus(`⚠ Skipping invalid symbols: ${invalidSyms.join(', ')} — importing ${validRows.length} valid stocks…`, 'error');
+    await delay(2500);
+  }
+
+  // Import valid rows to Firestore
+  setCsvStatus(`⏳ Importing ${validRows.length} stocks…`, 'info');
   let added = 0;
-  for (const row of rows) {
+  for (const row of validRows) {
     try {
-      const doc = { ...row, currentPrice: null, pe: null, signal: null, recommendation: null,
-        addedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      const doc = {
+        symbol: row.symbol, name: row.name, industry: '',
+        avgCost: row.avgCost, qty: row.qty,
+        currentPrice: row.currentPrice || null,
+        pe: null, signal: null, recommendation: null,
+        addedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
       const ref = await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add(doc);
-      stocks.push({id: ref.id, ...doc, addedAt: new Date()});
+      stocks.push({ id: ref.id, ...doc, addedAt: new Date() });
       added++;
-    } catch(e) { /* skip errors */ }
+    } catch(e) { /* skip individual errors */ }
   }
-  renderTable(); updateStats();
-  setCsvStatus(`✅ Imported ${added} stocks successfully!`,'success');
-  showToast(`✅ ${added} stocks imported from CSV`,'success');
+
+  renderTable(); updateStats(); populateIndustryFilter();
+  const summary = invalidSyms.length
+    ? `✅ ${added} imported · ⚠ ${invalidSyms.length} skipped (${invalidSyms.join(', ')})`
+    : `✅ ${added} stocks imported successfully!`;
+  setCsvStatus(summary, 'success');
+  showToast(`✅ ${added} stocks imported from CSV`, 'success');
+}
+
+// ── DOWNLOAD CSV TEMPLATE ──────────────────────────────────────────────────
+function downloadCsvTemplate() {
+  const csv = [
+    'Symbol,AvgCost,Quantity',
+    'HDFCBANK,1800,10',
+    'INFY,1500,5',
+    'TCS,3500,2',
+    'RELIANCE,2400,8',
+    'ICICIBANK,1000,15'
+  ].join('\n');
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'fnikar_portfolio_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 Template downloaded — open in Excel/Sheets to fill in your stocks', 'success');
 }
 
 function setCsvStatus(msg, type) {
