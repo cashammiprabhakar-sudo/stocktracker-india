@@ -424,22 +424,49 @@ const YAHOO_OVERRIDES = {
   '531340':'531340.BO','RELIANCEP1':'RELIANCE.NS','UPLPP1':'UPL.NS',
   'IL&FSENGG':'ILFSENGG.NS','AIRTELPP':'AIRTELPP.NS',
   'MID150BEES':'MID150BEES.NS','SBISILVER':'SBISILVER.NS',
-  'TMPV':'TATAMTRDVR.NS','NSLNISP':'NSLNISP.NS'
+  'TMPV':'TATAMTRDVR.NS','NSLNISP':'NSLNISP.NS',
+  'ALOKINDS':'ALOKINDS.NS','UFBL':'UFBL.NS','RCOM':'RCOM.NS',
+  'HINDMOTORS':'HINDMOTORS.NS','JPPOWER':'JPPOWER.NS','GATEWAY':'GATEWAY.NS',
+  'NAUKRI':'NAUKRI.NS','JIOFIN':'JIOFIN.NS','ETERNAL':'ETERNAL.NS'
 };
-function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
+
+// ── MULTI-PROXY FETCH (corsproxy.io first → allorigins.win fallback) ──────
+async function fetchYahooRaw(ysym) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=1d`;
+  // 1st attempt: corsproxy.io — returns raw JSON directly
+  try {
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`,
+      { signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const j = await r.json();
+      const price = j?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (price) return j;
+    }
+  } catch(e) { /* fall through */ }
+  // 2nd attempt: allorigins.win — wraps JSON in {contents: "..."}
+  try {
+    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+      { signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.contents) return JSON.parse(d.contents);
+    }
+  } catch(e) { /* fall through */ }
+  return null;
+}
 
 // ── PRICE FETCHING ────────────────────────────────────────────────────────
 async function fetchYahooPrice(sym) {
-  const ysym = toYahoo(sym);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  try {
-    const r = await fetch(proxy, {signal: AbortSignal.timeout(10000)});
-    if (!r.ok) return null;
-    const d = await r.json();
-    const parsed = JSON.parse(d.contents || '{}');
-    return parsed?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
-  } catch(e) { return null; }
+  // Try override first, then .NS, then .BO
+  const candidates = YAHOO_OVERRIDES[sym]
+    ? [YAHOO_OVERRIDES[sym]]
+    : [sym + '.NS', sym + '.BO'];
+  for (const ysym of candidates) {
+    const j = await fetchYahooRaw(ysym);
+    const price = j?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (price) return price;
+  }
+  return null;
 }
 
 // ── AUTH GUARD ─────────────────────────────────────────────────────────────
@@ -716,9 +743,9 @@ async function refreshPrices() {
   let done = 0;
   document.getElementById('refreshNote').textContent = `0 / ${stocks.length}`;
 
-  // Fetch in batches of 5 to avoid rate limiting
-  for (let i = 0; i < stocks.length; i += 5) {
-    const batch = stocks.slice(i, i + 5);
+  // Fetch in batches of 3 with a generous delay to avoid Yahoo rate-limiting
+  for (let i = 0; i < stocks.length; i += 3) {
+    const batch = stocks.slice(i, i + 3);
     await Promise.all(batch.map(async s => {
       s.priceLoading = true;
       const price = await fetchYahooPrice(s.symbol);
@@ -728,8 +755,7 @@ async function refreshPrices() {
       document.getElementById('refreshNote').textContent = `${done} / ${stocks.length}`;
       renderTable();
     }));
-    // Small delay between batches
-    if (i + 5 < stocks.length) await delay(300);
+    if (i + 3 < stocks.length) await delay(700); // 700ms between batches prevents rate-limiting
   }
 
   // Save updated prices to Firestore
@@ -803,22 +829,18 @@ async function deleteStock(docId) {
 
 // ── FETCH YAHOO INFO (name + price + validation) ───────────────────────────
 async function fetchYahooInfo(sym) {
-  const ysym = toYahoo(sym);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ysym}?interval=1d&range=5d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  try {
-    const r = await fetch(proxy, {signal: AbortSignal.timeout(12000)});
-    if (!r.ok) return {valid: false};
-    const d = await r.json();
-    const parsed = JSON.parse(d.contents || '{}');
-    const meta = parsed?.chart?.result?.[0]?.meta;
-    if (!meta || !meta.regularMarketPrice) return {valid: false};
-    return {
-      valid: true,
-      price: meta.regularMarketPrice,
-      name: meta.longName || meta.shortName || sym
-    };
-  } catch(e) { return {valid: false}; }
+  const candidates = YAHOO_OVERRIDES[sym]
+    ? [YAHOO_OVERRIDES[sym]]
+    : [sym + '.NS', sym + '.BO'];
+  for (const ysym of candidates) {
+    const j = await fetchYahooRaw(ysym);
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (meta?.regularMarketPrice) {
+      return { valid: true, price: meta.regularMarketPrice,
+               name: meta.longName || meta.shortName || sym };
+    }
+  }
+  return { valid: false };
 }
 
 // ── CSV UPLOAD ─────────────────────────────────────────────────────────────
