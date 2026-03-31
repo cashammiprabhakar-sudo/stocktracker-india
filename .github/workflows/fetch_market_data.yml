@@ -2,10 +2,10 @@ name: Refresh Market Data
 
 on:
   schedule:
-    # Runs at 8:00 AM IST (2:30 AM UTC) on weekdays — pre-market snapshot
-    - cron: '30 2 * * 1-5'
     # Runs at 4:00 PM IST (10:30 AM UTC) on weekdays — end-of-day after NSE closes at 3:30 PM
     - cron: '30 10 * * 1-5'
+    # Saturday 10:00 AM IST (4:30 AM UTC) — fallback in case any weekday run failed
+    - cron: '30 4 * * 6'
   workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
 
 jobs:
@@ -33,15 +33,11 @@ jobs:
         run: |
           python scripts/fetch_market_data.py
 
-      - name: Move market_data.json to public/
-        run: |
-          mv market_data.json public/market_data.json
-
       - name: Commit updated market data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/market_data.json
+          git add market_data.json
           git diff --staged --quiet || git commit -m "chore: refresh market data $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
 
