@@ -1,536 +1,644 @@
-#!/usr/bin/env python3
-"""
-Fnikar — Market Data Fetcher
-Runs via GitHub Actions (or locally) to fetch complete stock fundamentals
-using yfinance (server-side, no CORS issues).
-Output: market_data.json (repo root)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockTracker India — Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; }
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.header-brand { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+.header-brand span { color: #4ecca3; }
+.header-user { display: flex; align-items: center; gap: 14px; font-size: 0.82rem; color: #ccc; }
+.header-user a { color: #4ecca3; text-decoration: none; cursor: pointer; }
+.header-user a:hover { text-decoration: underline; }
+.stats-strip { background: white; border-bottom: 1px solid #e8eaf6; display: flex; overflow-x: auto; }
+.stat-card { flex: 1; min-width: 140px; padding: 14px 20px; border-right: 1px solid #f0f2f5; }
+.stat-card:last-child { border-right: none; }
+.stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 4px; }
+.stat-value { font-size: 1.15rem; font-weight: 700; color: #1a1a2e; }
+.stat-value.green { color: #00897b; }
+.stat-value.red { color: #e53935; }
+.tabs { background: white; border-bottom: 2px solid #e8eaf6; display: flex; padding: 0 20px; }
+.tab-btn { padding: 12px 20px; font-size: 0.88rem; font-weight: 600; color: #888; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-top: none; border-left: none; border-right: none; transition: color 0.2s; }
+.tab-btn.active { color: #4ecca3; border-bottom-color: #4ecca3; }
+.tab-btn:hover { color: #4ecca3; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.toolbar { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: white; border-bottom: 1px solid #f0f2f5; flex-wrap: wrap; }
+.toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+.btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.84rem; font-weight: 600; transition: all 0.2s; }
+.btn-primary { background: #4ecca3; color: #1a1a2e; }
+.btn-primary:hover { background: #3db992; }
+.btn-secondary { background: #f0f2f5; color: #555; }
+.btn-secondary:hover { background: #e0e2e5; }
+.btn-danger { background: #ffebee; color: #e53935; }
+.btn-danger:hover { background: #ffcdd2; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.md-age { font-size: 0.72rem; color: #aaa; }
+.filter-bar { padding: 10px 20px; background: #fafafa; border-bottom: 1px solid #f0f2f5; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.filter-bar input { padding: 7px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.84rem; width: 230px; }
+.filter-bar input:focus { outline: none; border-color: #4ecca3; }
+.filter-bar select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.84rem; color: #555; background: white; }
+.result-count { font-size: 0.78rem; color: #999; margin-left: auto; }
+.table-wrap { overflow-x: auto; background: white; }
+table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+thead th { background: #f5f6fa; color: #666; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; padding: 10px 12px; text-align: left; white-space: nowrap; cursor: pointer; user-select: none; border-bottom: 2px solid #e8eaf6; }
+thead th:hover { background: #eef0f8; color: #4ecca3; }
+thead th.sorted { color: #4ecca3; }
+tbody tr { border-bottom: 1px solid #f5f6fa; cursor: pointer; transition: background 0.1s; }
+tbody tr:hover { background: #f8f9ff; }
+tbody td { padding: 10px 12px; white-space: nowrap; }
+.td-symbol { font-weight: 700; color: #1a1a2e; font-size: 0.88rem; }
+.td-company { color: #555; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.td-industry { color: #888; max-width: 160px; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
+.td-price { font-weight: 600; }
+.td-num { text-align: right; }
+.change-pos { color: #00897b; }
+.change-neg { color: #e53935; }
+.rec-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; }
+.rec-buy { background: #e8f5e9; color: #2e7d32; }
+.rec-sell { background: #ffebee; color: #c62828; }
+.rec-hold { background: #fff3e0; color: #e65100; }
+.rec-na { background: #f5f5f5; color: #9e9e9e; }
+.no-data { text-align: center; padding: 50px; color: #bbb; font-size: 0.9rem; }
+.dash { color: #ccc; }
+.panel { padding: 24px 20px; max-width: 520px; }
+.panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: 18px; color: #1a1a2e; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #555; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #4ecca3; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+.csv-panel { padding: 24px 20px; max-width: 680px; }
+.csv-panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+.csv-panel p { font-size: 0.84rem; color: #666; margin-bottom: 14px; line-height: 1.6; }
+.csv-panel pre { background: #f5f6fa; border-radius: 6px; padding: 12px; font-size: 0.8rem; color: #555; margin-bottom: 16px; overflow-x: auto; }
+.csv-panel textarea { width: 100%; height: 160px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.82rem; font-family: monospace; resize: vertical; }
+.csv-panel textarea:focus { outline: none; border-color: #4ecca3; }
+.detail-modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.detail-modal-bg.show { display: flex; }
+.detail-card { background: white; border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.detail-header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 20px 22px 16px; border-radius: 16px 16px 0 0; position: relative; }
+.detail-symbol { font-size: 1.4rem; font-weight: 800; color: #4ecca3; }
+.detail-name { font-size: 0.88rem; color: #ccc; margin-top: 4px; }
+.detail-industry-tag { display: inline-block; background: rgba(78,204,163,0.15); color: #4ecca3; border: 1px solid rgba(78,204,163,0.3); border-radius: 4px; font-size: 0.72rem; padding: 2px 8px; margin-top: 8px; }
+.detail-close { position: absolute; top: 14px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+.detail-close:hover { background: rgba(255,255,255,0.2); }
+.detail-body { padding: 20px 22px; }
+.detail-price-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f0f2f5; }
+.detail-price { font-size: 1.8rem; font-weight: 800; color: #1a1a2e; }
+.detail-change { font-size: 0.9rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; margin-bottom: 4px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.detail-item { background: #f8f9ff; border-radius: 8px; padding: 10px 14px; }
+.detail-item-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: #999; margin-bottom: 4px; }
+.detail-item-value { font-size: 0.96rem; font-weight: 700; color: #1a1a2e; }
+.detail-item-value.green { color: #00897b; }
+.detail-item-value.red { color: #e53935; }
+.detail-pnl-section { background: linear-gradient(135deg, #f8fffe 0%, #f0faf7 100%); border: 1px solid #e0f5ee; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px; }
+.detail-pnl-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.detail-pnl-row:last-child { margin-bottom: 0; }
+.detail-pnl-label { font-size: 0.78rem; color: #666; }
+.detail-pnl-value { font-size: 0.94rem; font-weight: 700; }
+.detail-rec-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.detail-commentary { background: #fafbff; border-left: 3px solid #4ecca3; border-radius: 0 8px 8px 0; padding: 14px 16px; margin-bottom: 16px; font-size: 0.85rem; color: #444; line-height: 1.7; }
+.detail-commentary strong { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: #4ecca3; margin-bottom: 6px; }
+.detail-footer { padding: 4px 22px 20px; }
+.detail-footer .btn-danger { width: 100%; padding: 10px; font-size: 0.86rem; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
+.modal-bg.show { display: flex; }
+.modal-box { background: white; border-radius: 12px; padding: 28px; width: 100%; max-width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+.modal-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+.loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.82); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+.loading-overlay.show { display: flex; }
+.spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: #4ecca3; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 0.88rem; color: #666; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a1a2e; color: white; padding: 10px 24px; border-radius: 24px; font-size: 0.84rem; z-index: 4000; transition: transform 0.3s ease; pointer-events: none; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: #00897b; }
+.toast.error { background: #e53935; }
+@media (max-width: 640px) {
+  .stat-card { min-width: 110px; padding: 10px 14px; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .tabs { padding: 0 8px; }
+  .tab-btn { padding: 10px 10px; font-size: 0.8rem; }
+  .filter-bar input { width: 100%; }
+}
+</style>
+</head>
+<body>
 
-Symbol Discovery (in priority order):
-  1. Firestore — reads every user's portfolio and collects all unique symbols.
-     Requires FIREBASE_SERVICE_ACCOUNT env var (JSON string of service account key).
-  2. Fallback   — uses the hardcoded FALLBACK_STOCKS dict below.
-"""
+<div class="header">
+  <div class="header-brand">&#x1F4C8; <span>StockTracker</span> India</div>
+  <div class="header-user">
+    <span id="userEmail"></span>
+    <a onclick="changePasswordModal()">Change Password</a>
+    <a onclick="doSignOut()">Sign Out</a>
+  </div>
+</div>
 
-import yfinance as yf
-import json
-import time
-import os
-from datetime import datetime
+<div class="stats-strip">
+  <div class="stat-card"><div class="stat-label">Stocks</div><div class="stat-value" id="statCount">&#x2014;</div></div>
+  <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value" id="statInvested">&#x2014;</div></div>
+  <div class="stat-card"><div class="stat-label">Current Value</div><div class="stat-value" id="statValue">&#x2014;</div></div>
+  <div class="stat-card"><div class="stat-label">P&amp;L</div><div class="stat-value" id="statPnl">&#x2014;</div></div>
+  <div class="stat-card"><div class="stat-label">P&amp;L %</div><div class="stat-value" id="statPnlPct">&#x2014;</div></div>
+</div>
 
-# ── YAHOO OVERRIDES ───────────────────────────────────────────────────────────
-# Maps portfolio symbols → Yahoo Finance tickers where they differ from SYMBOL.NS
-YAHOO_OVERRIDES = {
-    "532281":     "HCLTECH.NS",
-    "524715":     "SUNPHARMA.NS",
-    "533248":     "GPPL.NS",
-    "538567":     "GULFOILLUB.NS",
-    "538666":     "SHARDACROP.NS",
-    "513262":     "SSWL.NS",
-    "540124":     "GNA.NS",
-    "543300":     "SONACOMS.NS",
-    "544289":     "NTPCGREEN.NS",
-    "500285":     "SPICEJET.NS",
-    "500314":     "ORIENTHOT.NS",
-    "500400":     "TATAPOWER.NS",
-    "100312":     "ONGC.NS",
-    "100113":     "SAIL.NS",
-    "532699":     "ROYALHOTEL.NS",
-    "531340":     "531340.BO",
-    "RELIANCEP1": "RELIANCE.NS",
-    "UPLPP1":     "UPL.NS",
-    "AIRTELPP":   "BHARTIARTL.NS",   # rights entitlement → parent stock
-    "IL&FSENGG":  "ILFSENGG.NS",
-    "TMPV":       "TATAMTRDVR.NS",
-    "GATEWAY":    "GDL.NS",
-    "REC":        "RECLTD.NS",        # Yahoo Finance uses RECLTD not REC
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('portfolio',this)">&#x1F4CA; Portfolio</button>
+  <button class="tab-btn" onclick="switchTab('addstock',this)">&#x2795; Add Stock</button>
+  <button class="tab-btn" onclick="switchTab('csv',this)">&#x1F4E4; Upload CSV</button>
+</div>
+
+<!-- PORTFOLIO TAB -->
+<div class="tab-content active" id="tab-portfolio">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-primary" id="refreshBtn" onclick="refreshPrices()">&#x1F504; Refresh Prices</button>
+      <span class="md-age" id="mdAge"></span>
+    </div>
+    <span style="font-size:0.78rem;color:#aaa;" id="lastRefresh"></span>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="filterInput" placeholder="&#x1F50D; Search symbol, company, industry..." oninput="applyFilter()">
+    <select id="filterRec" onchange="applyFilter()">
+      <option value="">All Recommendations</option>
+      <option value="BUY">BUY</option>
+      <option value="HOLD">HOLD</option>
+      <option value="SELL">SELL</option>
+    </select>
+    <select id="sortSelect" onchange="applySortSelect(this.value)">
+      <option value="symbol_1">Symbol A&#x2192;Z</option>
+      <option value="symbol_-1">Symbol Z&#x2192;A</option>
+      <option value="pnlPct_-1">P&amp;L% High&#x2192;Low</option>
+      <option value="pnlPct_1">P&amp;L% Low&#x2192;High</option>
+      <option value="value_-1">Value High&#x2192;Low</option>
+      <option value="companyName_1">Company A&#x2192;Z</option>
+    </select>
+    <span class="result-count" id="resultCount"></span>
+  </div>
+  <div class="table-wrap">
+    <table id="stockTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('symbol')">Symbol</th>
+          <th onclick="sortBy('companyName')">Company</th>
+          <th onclick="sortBy('industry')">Industry</th>
+          <th onclick="sortBy('qty')" style="text-align:right">Qty</th>
+          <th onclick="sortBy('avgCost')" style="text-align:right">Avg Cost</th>
+          <th onclick="sortBy('currentPrice')" style="text-align:right">LTP</th>
+          <th onclick="sortBy('change')" style="text-align:right">Chg%</th>
+          <th onclick="sortBy('pnlPct')" style="text-align:right">P&amp;L%</th>
+          <th onclick="sortBy('value')" style="text-align:right">Curr Value</th>
+          <th onclick="sortBy('pe')" style="text-align:right">P/E</th>
+          <th onclick="sortBy('recommendation')">Rec</th>
+          <th onclick="sortBy('upside')" style="text-align:right">Upside%</th>
+        </tr>
+      </thead>
+      <tbody id="stockBody">
+        <tr><td colspan="12" class="no-data">Loading portfolio&#x2026;</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADD STOCK TAB -->
+<div class="tab-content" id="tab-addstock">
+  <div class="panel">
+    <h3>Add a Stock</h3>
+    <div class="form-group">
+      <label>NSE / BSE Symbol *</label>
+      <input type="text" id="addSymbol" placeholder="e.g. HDFCBANK" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="form-group">
+      <label>Company Name *</label>
+      <input type="text" id="addName" placeholder="e.g. HDFC Bank Limited">
+    </div>
+    <div class="form-group">
+      <label>Industry</label>
+      <input type="text" id="addIndustry" placeholder="e.g. Banking Services">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Avg Cost (&#x20B9;) *</label>
+        <input type="number" id="addCost" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Quantity *</label>
+        <input type="number" id="addQty" placeholder="0" min="1" step="1">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addStock()" style="width:100%;margin-top:6px;padding:11px;">Add to Portfolio</button>
+  </div>
+</div>
+
+<!-- CSV UPLOAD TAB -->
+<div class="tab-content" id="tab-csv">
+  <div class="csv-panel">
+    <h3>Bulk Upload via CSV</h3>
+    <p>Paste your CSV data below. First row can be a header (will be skipped). Columns: <strong>Symbol, CompanyName, Industry, AvgCost, Quantity</strong></p>
+    <pre>Symbol,CompanyName,Industry,AvgCost,Quantity
+HDFCBANK,HDFC Bank Limited,Banking Services,1500,10
+INFY,Infosys Limited,Software,1200,5</pre>
+    <textarea id="csvInput" placeholder="Paste CSV data here..."></textarea>
+    <div style="margin-top:12px;display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="uploadCsv()">&#x1F4E4; Import Stocks</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('csvInput').value=''">Clear</button>
+    </div>
+    <div id="csvStatus" style="margin-top:12px;font-size:0.84rem;color:#666;min-height:20px;"></div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="detail-modal-bg" id="detailModal" onclick="if(event.target===this)closeDetailCard()">
+  <div class="detail-card">
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-bg" id="pwModal">
+  <div class="modal-box">
+    <h3>&#x1F512; Change Password</h3>
+    <div class="form-group"><label>Current Password</label><input type="password" id="currentPw" placeholder="Current password"></div>
+    <div class="form-group"><label>New Password</label><input type="password" id="newPw" placeholder="New password (min 6 chars)"></div>
+    <div class="form-group"><label>Confirm New Password</label><input type="password" id="confirmPw" placeholder="Confirm new password"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('pwModal').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Loading&#x2026;</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey:            "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
+  authDomain:        "stocktracker-india.firebaseapp.com",
+  projectId:         "stocktracker-india",
+  storageBucket:     "stocktracker-india.firebasestorage.app",
+  messagingSenderId: "144829364145",
+  appId:             "1:144829364145:web:ef183ff4e3035dac272f90"
+};
+const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let stocks     = [];
+let marketData = {};
+let currentUser= null;
+let sortField  = 'symbol';
+let sortDir    = 1;
+let filterText = '';
+let filterRec  = '';
+
+const YAHOO_OVERRIDES = {
+  'AIRTELPP': 'BHARTIARTL.NS',
+  'REC':      'RECLTD.NS',
+  'TMPV':     'TATAMTRDVR.NS',
+  'GATEWAY':  'GDL.NS',
+  'M&M':      'M%26M.NS',
+  'L&T':      'LT.NS'
+};
+
+auth.onAuthStateChanged(user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) { window.location.href = 'admin.html'; return; }
+  currentUser = user;
+  document.getElementById('userEmail').textContent = user.email;
+  loadMarketData();
+  loadPortfolio();
+});
+
+async function loadMarketData() {
+  try {
+    const resp = await fetch('market_data.json?_=' + Date.now());
+    if (!resp.ok) return;
+    const data = await resp.json();
+    marketData = data;
+    const timestamps = Object.values(data).map(v => v.timestamp).filter(Boolean);
+    if (timestamps.length) {
+      const latest = new Date(timestamps.sort().reverse()[0]);
+      const ageEl  = document.getElementById('mdAge');
+      if (ageEl) {
+        const diffH = Math.round((Date.now() - latest) / 3600000);
+        const diffM = Math.round((Date.now() - latest) / 60000);
+        const label = diffH >= 1 ? diffH + 'h ago' : diffM + 'm ago';
+        const ts = latest.toLocaleString('en-IN', { timeZone:'Asia/Kolkata', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true });
+        ageEl.textContent = 'Data: ' + ts + ' IST (' + label + ')';
+      }
+    }
+    applyMarketData();
+  } catch(e) { console.log('market_data.json not loaded:', e.message); }
 }
 
-# ── FALLBACK SYMBOL LIST ──────────────────────────────────────────────────────
-FALLBACK_STOCKS = {
-    "ADANIPORTS": "ADANIPORTS.NS",
-    "ADANIGREEN": "ADANIGREEN.NS",
-    "IMAGICAA":   "IMAGICAA.NS",
-    "ADVANIHOTR": "ADVANIHOTR.NS",
-    "AEGISLOG":   "AEGISLOG.NS",
-    "ALOKINDS":   "ALOKINDS.NS",
-    "ARVIND":     "ARVIND.NS",
-    "AXISBANK":   "AXISBANK.NS",
-    "BAJAJHIND":  "BAJAJHIND.NS",
-    "BANDHANBNK": "BANDHANBNK.NS",
-    "BANKBARODA": "BANKBARODA.NS",
-    "BANKINDIA":  "BANKINDIA.NS",
-    "UFBL":       "UFBL.NS",
-    "531340":     "531340.BO",
-    "AIRTELPP":   "BHARTIARTL.NS",
-    "BIKAJI":     "BIKAJI.NS",
-    "ZYDUSLIFE":  "ZYDUSLIFE.NS",
-    "CANBK":      "CANBK.NS",
-    "CASTROLIND": "CASTROLIND.NS",
-    "COALINDIA":  "COALINDIA.NS",
-    "COCHINSHIP": "COCHINSHIP.NS",
-    "DAMCAPITAL": "DAMCAPITAL.NS",
-    "DCW":        "DCW.NS",
-    "DREAMFOLKS": "DREAMFOLKS.NS",
-    "DWARKESH":   "DWARKESH.NS",
-    "EKC":        "EKC.NS",
-    "FEDERALBNK": "FEDERALBNK.NS",
-    "NYKAA":      "NYKAA.NS",
-    "FRETAIL":    "FRETAIL.NS",
-    "GAIL":       "GAIL.NS",
-    "GATEWAY":    "GDL.NS",
-    "GESHIP":     "GESHIP.NS",
-    "GMRAIRPORT": "GMRAIRPORT.NS",
-    "540124":     "GNA.NS",
-    "533248":     "GPPL.NS",
-    "538567":     "GULFOILLUB.NS",
-    "532281":     "HCLTECH.NS",
-    "HDFCBANK":   "HDFCBANK.NS",
-    "HEROMOTOCO": "HEROMOTOCO.NS",
-    "HAL":        "HAL.NS",
-    "HINDMOTORS": "HINDMOTORS.NS",
-    "HYUNDAI":    "HYUNDAI.NS",
-    "ICICIBANK":  "ICICIBANK.NS",
-    "IDEA":       "IDEA.NS",
-    "IL&FSENGG":  "ILFSENGG.NS",
-    "INDUSINDBK": "INDUSINDBK.NS",
-    "INDIANB":    "INDIANB.NS",
-    "IOC":        "IOC.NS",
-    "IPL":        "IPL.NS",
-    "IRCTC":      "IRCTC.NS",
-    "NAUKRI":     "NAUKRI.NS",
-    "INFY":       "INFY.NS",
-    "ITC":        "ITC.NS",
-    "ITCHOTELS":  "ITCHOTELS.NS",
-    "JPPOWER":    "JPPOWER.NS",
-    "JAMNAAUTO":  "JAMNAAUTO.NS",
-    "JETAIRWAYS": "JETAIRWAYS.NS",
-    "JIOFIN":     "JIOFIN.NS",
-    "JUSTDIAL":   "JUSTDIAL.NS",
-    "KPIL":       "KPIL.NS",
-    "LEMONTREE":  "LEMONTREE.NS",
-    "LICI":       "LICI.NS",
-    "LTFOODS":    "LTFOODS.NS",
-    "LUPIN":      "LUPIN.NS",
-    "POONAWALLA": "POONAWALLA.NS",
-    "MAWANASUG":  "MAWANASUG.NS",
-    "MAXHEALTH":  "MAXHEALTH.NS",
-    "MAZDOCK":    "MAZDOCK.NS",
-    "MOIL":       "MOIL.NS",
-    "MSTCLTD":    "MSTCLTD.NS",
-    "MUKTAARTS":  "MUKTAARTS.NS",
-    "NSLNISP":    "NSLNISP.NS",
-    "NDTV":       "NDTV.NS",
-    "NTPC":       "NTPC.NS",
-    "544289":     "NTPCGREEN.NS",
-    "PAYTM":      "PAYTM.NS",
-    "100312":     "ONGC.NS",
-    "500314":     "ORIENTHOT.NS",
-    "PETRONET":   "PETRONET.NS",
-    "PNCINFRA":   "PNCINFRA.NS",
-    "PFC":        "PFC.NS",
-    "PRAJIND":    "PRAJIND.NS",
-    "PNB":        "PNB.NS",
-    "PVRINOX":    "PVRINOX.NS",
-    "RAJESHEXPO": "RAJESHEXPO.NS",
-    "MID150BEES": "MID150BEES.NS",
-    "RCOM":       "RCOM.NS",
-    "RELIGARE":   "RELIGARE.NS",
-    "RELIANCEP1": "RELIANCE.NS",
-    "RPOWER":     "RPOWER.NS",
-    "RENUKA":     "RENUKA.NS",
-    "532699":     "ROYALHOTEL.NS",
-    "REC":        "RECLTD.NS",
-    "100113":     "SAIL.NS",
-    "SBISILVER":  "SBISILVER.NS",
-    "538666":     "SHARDACROP.NS",
-    "543300":     "SONACOMS.NS",
-    "500285":     "SPICEJET.NS",
-    "SBIN":       "SBIN.NS",
-    "513262":     "SSWL.NS",
-    "524715":     "SUNPHARMA.NS",
-    "SUNTV":      "SUNTV.NS",
-    "TMPV":       "TATAMTRDVR.NS",
-    "500400":     "TATAPOWER.NS",
-    "TATASTEEL":  "TATASTEEL.NS",
-    "TATATECH":   "TATATECH.NS",
-    "TCS":        "TCS.NS",
-    "TRIDENT":    "TRIDENT.NS",
-    "UNIONBANK":  "UNIONBANK.NS",
-    "UPLPP1":     "UPL.NS",
-    "VBL":        "VBL.NS",
-    "VTL":        "VTL.NS",
-    "VEDL":       "VEDL.NS",
-    "WIPRO":      "WIPRO.NS",
-    "YESBANK":    "YESBANK.NS",
-    "ETERNAL":    "ETERNAL.NS",
+function applyMarketData() {
+  if (!stocks.length) return;
+  stocks.forEach(s => {
+    const md = marketData[s.symbol] || {};
+    if (md.price           != null) s.currentPrice   = md.price;
+    if (md.change          != null) s.change         = md.change;
+    if (md.pe              != null) s.pe             = md.pe;
+    if (md.high52w         != null) s.high52w        = md.high52w;
+    if (md.low52w          != null) s.low52w         = md.low52w;
+    if (md.targetPrice     != null) s.targetPrice    = md.targetPrice;
+    if (md.recommendation       )  s.recommendation = md.recommendation;
+    if (md.industry             )  s.industry       = s.industry || md.industry;
+    if (md.commentary           )  s.commentary     = md.commentary;
+  });
+  renderTable();
+  updateStats();
 }
 
+function loadPortfolio() {
+  showLoading('Loading portfolio\u2026');
+  db.collection('portfolios').doc(currentUser.uid)
+    .collection('stocks')
+    .onSnapshot(snap => {
+      stocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      applyMarketData();
+      hideLoading();
+    }, err => { hideLoading(); showToast('Error: ' + err.message, 'error'); });
+}
 
-# ── SYMBOL RESOLUTION ─────────────────────────────────────────────────────────
-def resolve_yahoo_symbol(symbol):
-    if symbol in YAHOO_OVERRIDES:
-        return YAHOO_OVERRIDES[symbol]
-    if symbol.isdigit():
-        return symbol + ".BO"
-    return symbol + ".NS"
+function renderTable() {
+  const txt = filterText.toLowerCase();
+  const rec = filterRec;
+  let rows = stocks.filter(s => {
+    if (txt && !((s.symbol||'').toLowerCase().includes(txt) ||
+                 (s.companyName||'').toLowerCase().includes(txt) ||
+                 (s.industry||'').toLowerCase().includes(txt))) return false;
+    if (rec && (s.recommendation||'') !== rec) return false;
+    return true;
+  });
+  rows.sort((a, b) => {
+    let av, bv;
+    if (sortField === 'pnlPct') {
+      const ai=(a.avgCost||0)*(a.qty||0), bi=(b.avgCost||0)*(b.qty||0);
+      av = (ai>0&&a.currentPrice!=null)?(a.currentPrice*a.qty-ai)/ai*100:null;
+      bv = (bi>0&&b.currentPrice!=null)?(b.currentPrice*b.qty-bi)/bi*100:null;
+    } else if (sortField==='value') {
+      av = a.currentPrice!=null?a.currentPrice*(a.qty||0):null;
+      bv = b.currentPrice!=null?b.currentPrice*(b.qty||0):null;
+    } else if (sortField==='upside') {
+      av = (a.targetPrice&&a.currentPrice)?(a.targetPrice-a.currentPrice)/a.currentPrice*100:null;
+      bv = (b.targetPrice&&b.currentPrice)?(b.targetPrice-b.currentPrice)/b.currentPrice*100:null;
+    } else { av=a[sortField]; bv=b[sortField]; }
+    if (av==null&&bv==null) return 0;
+    if (av==null) return 1; if (bv==null) return -1;
+    if (typeof av==='string') return av.localeCompare(bv)*sortDir;
+    return (av-bv)*sortDir;
+  });
+  document.getElementById('resultCount').textContent = rows.length + ' of ' + stocks.length + ' stocks';
+  const tbody = document.getElementById('stockBody');
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="12" class="no-data">No stocks found.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(s => {
+    const invested=(s.avgCost||0)*(s.qty||0);
+    const value=s.currentPrice!=null?s.currentPrice*(s.qty||0):null;
+    const pnl=value!=null?value-invested:null;
+    const pnlPct=(pnl!=null&&invested>0)?pnl/invested*100:null;
+    const ch=s.change!=null?s.change:null;
+    const tgt=s.targetPrice;
+    const upside=(tgt&&s.currentPrice)?(tgt-s.currentPrice)/s.currentPrice*100:null;
+    const rec=s.recommendation||'';
+    const rcls=rec==='BUY'?'rec-buy':rec==='SELL'?'rec-sell':rec==='HOLD'?'rec-hold':'rec-na';
+    return `<tr onclick="openDetailCard('${s.id}')">
+      <td class="td-symbol">${esc(s.symbol)}</td>
+      <td class="td-company">${esc(s.companyName||'\u2014')}</td>
+      <td class="td-industry">${esc(s.industry||'\u2014')}</td>
+      <td class="td-num">${s.qty!=null?s.qty:'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num">${s.avgCost!=null?'\u20b9'+fmt(s.avgCost):'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num td-price">${s.currentPrice!=null?'\u20b9'+fmt(s.currentPrice):'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num ${ch>0?'change-pos':ch<0?'change-neg':''}">${ch!=null?(ch>0?'+':'')+ch.toFixed(2)+'%':'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num ${pnlPct>0?'change-pos':pnlPct<0?'change-neg':''}">${pnlPct!=null?(pnlPct>0?'+':'')+pnlPct.toFixed(2)+'%':'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num">${value!=null?'\u20b9'+fmtL(value):'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num">${s.pe!=null?s.pe.toFixed(1):'<span class="dash">\u2014</span>'}</td>
+      <td>${rec?'<span class="rec-badge '+rcls+'">'+esc(rec)+'</span>':'<span class="dash">\u2014</span>'}</td>
+      <td class="td-num ${upside>0?'change-pos':upside<0?'change-neg':''}">${upside!=null?(upside>0?'+':'')+upside.toFixed(1)+'%':'<span class="dash">\u2014</span>'}</td>
+    </tr>`;
+  }).join('');
+}
 
+function updateStats() {
+  const all=stocks, priced=all.filter(s=>s.currentPrice!=null);
+  const totInv=all.reduce((a,s)=>a+(s.avgCost||0)*(s.qty||0),0);
+  const totVal=priced.reduce((a,s)=>a+s.currentPrice*(s.qty||0),0);
+  const invPriced=priced.reduce((a,s)=>a+(s.avgCost||0)*(s.qty||0),0);
+  const pnl=priced.length?totVal-invPriced:null;
+  const pnlPct=(pnl!=null&&invPriced>0)?pnl/invPriced*100:null;
+  document.getElementById('statCount').textContent=all.length;
+  document.getElementById('statInvested').textContent='\u20b9'+fmtL(totInv);
+  document.getElementById('statValue').textContent=priced.length?'\u20b9'+fmtL(totVal):'\u2014';
+  const pEl=document.getElementById('statPnl'), pPEl=document.getElementById('statPnlPct');
+  if (pnl!=null) {
+    pEl.textContent=(pnl>=0?'+':'-')+'\u20b9'+fmtL(Math.abs(pnl)); pEl.className='stat-value '+(pnl>=0?'green':'red');
+    pPEl.textContent=(pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%'; pPEl.className='stat-value '+(pnlPct>=0?'green':'red');
+  } else { pEl.textContent='\u2014'; pEl.className='stat-value'; pPEl.textContent='\u2014'; pPEl.className='stat-value'; }
+}
 
-# ── FIRESTORE SYMBOL DISCOVERY ────────────────────────────────────────────────
-def get_symbols_from_firestore():
-    sa_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
-    if not sa_json:
-        return None
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore as fs
-        if not firebase_admin._apps:
-            sa_dict = json.loads(sa_json)
-            cred = credentials.Certificate(sa_dict)
-            firebase_admin.initialize_app(cred)
-        db = fs.client()
-        symbols = set()
-        for portfolio_doc in db.collection("portfolios").stream():
-            uid = portfolio_doc.id
-            for stock_doc in db.collection("portfolios").document(uid).collection("stocks").stream():
-                sym = (stock_doc.to_dict().get("symbol") or "").strip().upper()
-                if sym:
-                    symbols.add(sym)
-        if not symbols:
-            print("  Warning: Firestore returned 0 symbols, using fallback list.")
-            return None
-        print(f"  Found {len(symbols)} unique symbols across all Firestore portfolios.")
-        return {sym: resolve_yahoo_symbol(sym) for sym in sorted(symbols)}
-    except Exception as e:
-        print(f"  Firestore error: {e}")
-        return None
+function openDetailCard(docId) {
+  const s=stocks.find(x=>x.id===docId); if (!s) return;
+  const md=marketData[s.symbol]||{};
+  const invested=(s.avgCost||0)*(s.qty||0);
+  const value=s.currentPrice!=null?s.currentPrice*(s.qty||0):null;
+  const pnl=value!=null?value-invested:null;
+  const pnlPct=(pnl!=null&&invested>0)?pnl/invested*100:null;
+  const tgt=s.targetPrice||md.targetPrice;
+  const upside=(tgt&&s.currentPrice)?(tgt-s.currentPrice)/s.currentPrice*100:null;
+  const rec=s.recommendation||md.recommendation||'';
+  const rcls=rec==='BUY'?'rec-buy':rec==='SELL'?'rec-sell':rec==='HOLD'?'rec-hold':'rec-na';
+  const commentary=s.commentary||md.commentary||null;
+  const ch=s.change!=null?s.change:null;
+  const chBg=ch>0?'#e8f5e9':ch<0?'#ffebee':'#f5f5f5';
+  const chCol=ch>0?'#2e7d32':ch<0?'#c62828':'#666';
+  const pnlStyle=pnl==null?'#666':pnl>=0?'#00897b':'#e53935';
+  const pnlStr=pnl!=null?(pnl>=0?'+':'-')+'\u20b9'+fmtL(Math.abs(pnl))+(pnlPct!=null?' ('+(pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%)':''):'\u2014';
+  document.getElementById('detailContent').innerHTML=`
+    <div class="detail-header">
+      <button class="detail-close" onclick="closeDetailCard()">&times;</button>
+      <div class="detail-symbol">${esc(s.symbol)}</div>
+      <div class="detail-name">${esc(s.companyName||'')}</div>
+      ${s.industry?`<div class="detail-industry-tag">${esc(s.industry)}</div>`:''}
+    </div>
+    <div class="detail-body">
+      <div class="detail-price-row">
+        <div class="detail-price">${s.currentPrice!=null?'\u20b9'+fmt(s.currentPrice):'\u2014'}</div>
+        ${ch!=null?`<div class="detail-change" style="background:${chBg};color:${chCol}">${ch>0?'+':''}${ch.toFixed(2)}%</div>`:''}
+      </div>
+      <div class="detail-pnl-section">
+        <div class="detail-pnl-row"><span class="detail-pnl-label">Qty &times; Avg Cost</span><span class="detail-pnl-value">${s.qty||0} &times; &#x20b9;${fmt(s.avgCost||0)} = &#x20b9;${fmtL(invested)}</span></div>
+        <div class="detail-pnl-row"><span class="detail-pnl-label">Current Value</span><span class="detail-pnl-value">${value!=null?'\u20b9'+fmtL(value):'\u2014'}</span></div>
+        <div class="detail-pnl-row"><span class="detail-pnl-label">P&amp;L</span><span class="detail-pnl-value" style="color:${pnlStyle}">${pnlStr}</span></div>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-item-label">P/E Ratio</div><div class="detail-item-value">${s.pe!=null?s.pe.toFixed(1)+'x':'\u2014'}</div></div>
+        <div class="detail-item"><div class="detail-item-label">52W High</div><div class="detail-item-value">${s.high52w?'\u20b9'+fmt(s.high52w):'\u2014'}</div></div>
+        <div class="detail-item"><div class="detail-item-label">52W Low</div><div class="detail-item-value">${s.low52w?'\u20b9'+fmt(s.low52w):'\u2014'}</div></div>
+        <div class="detail-item"><div class="detail-item-label">Target Price</div><div class="detail-item-value ${upside!=null?(upside>=0?'green':'red'):''}">${tgt?'\u20b9'+fmt(tgt)+(upside!=null?' ('+(upside>=0?'+':'')+upside.toFixed(1)+'%)':''):'\u2014'}</div></div>
+      </div>
+      ${rec?`<div class="detail-rec-row"><span style="font-size:0.78rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Analyst Consensus</span><span class="rec-badge ${rcls}" style="font-size:0.82rem;padding:4px 12px;">${esc(rec)}</span></div>`:''}
+      ${commentary?`<div class="detail-commentary"><strong>Investment Commentary</strong>${esc(commentary)}</div>`:''}
+    </div>
+    <div class="detail-footer">
+      <button class="btn btn-danger" onclick="deleteStock('${s.id}','${esc(s.symbol)}')">\uD83D\uDDD1 Remove from Portfolio</button>
+    </div>`;
+  document.getElementById('detailModal').classList.add('show');
+}
 
+function closeDetailCard() { document.getElementById('detailModal').classList.remove('show'); }
 
-# ── COMMENTARY GENERATOR ──────────────────────────────────────────────────────
-def generate_commentary(name, industry, rec, pe, change_52w, rec_key, vs_50dma):
-    """
-    Generates a 2-3 sentence investment commentary combining:
-    - Stock's own performance (52w change, valuation)
-    - Macro theme relevant to its industry (Iran war, AI penetration, etc.)
-    - Analyst recommendation context
-    """
-    parts = []
-    ind = (industry or "").lower()
+async function refreshPrices() {
+  const btn=document.getElementById('refreshBtn');
+  btn.disabled=true; btn.textContent='\u23f3 Refreshing\u2026';
+  showToast('Fetching live prices\u2026');
+  const syms=[...new Set(stocks.map(s=>s.symbol))];
+  if (!syms.length) { btn.disabled=false; btn.textContent='\u1F504 Refresh Prices'; return; }
+  try {
+    const results={}, BSZ=8;
+    for (let i=0;i<syms.length;i+=BSZ) {
+      await Promise.all(syms.slice(i,i+BSZ).map(async sym => { const q=await proxyFetch(sym); if(q) results[sym]=q; }));
+      if (i+BSZ<syms.length) await new Promise(r=>setTimeout(r,400));
+    }
+    let updated=0;
+    const bRef=db.collection('portfolios').doc(currentUser.uid).collection('stocks');
+    const batch=db.batch();
+    stocks.forEach(s => {
+      const q=results[s.symbol];
+      if (q&&q.price!=null) { s.currentPrice=q.price; s.change=q.change||null; updated++; batch.update(bRef.doc(s.id),{currentPrice:q.price,change:q.change||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); }
+    });
+    await batch.commit();
+    renderTable(); updateStats();
+    document.getElementById('lastRefresh').textContent='Last refresh: '+new Date().toLocaleTimeString('en-IN');
+    showToast('Updated '+updated+' / '+syms.length+' stocks','success');
+  } catch(e) { showToast('Refresh error: '+e.message,'error'); }
+  btn.disabled=false; btn.textContent='\u1F504 Refresh Prices';
+}
 
-    # ── 1. Performance context ────────────────────────────────────────────────
-    if change_52w is not None:
-        if change_52w > 30:
-            parts.append(f"{name} has been a strong performer, delivering {change_52w:.1f}% returns over the past year and significantly outpacing the broader market.")
-        elif change_52w > 10:
-            parts.append(f"{name} has posted healthy gains of {change_52w:.1f}% over the past year, broadly in line with or ahead of the Nifty.")
-        elif change_52w > -10:
-            parts.append(f"{name} has traded largely sideways over the past year, returning {change_52w:+.1f}%, reflecting a period of consolidation.")
-        elif change_52w > -30:
-            parts.append(f"{name} has underperformed over the past year, declining {abs(change_52w):.1f}%, which may reflect sector headwinds or company-specific challenges.")
-        else:
-            parts.append(f"{name} has faced significant pressure, falling {abs(change_52w):.1f}% over the past year — a sharp underperformance that warrants close scrutiny of fundamentals.")
+async function proxyFetch(symbol) {
+  const ticker=YAHOO_OVERRIDES[symbol]||(encodeURIComponent(symbol)+'.NS');
+  for (const base of ['query1','query2']) {
+    try {
+      const r=await fetch(`https://${base}.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`,{headers:{Accept:'application/json'}});
+      if (!r.ok) continue;
+      const d=await r.json();
+      const meta=d?.chart?.result?.[0]?.meta;
+      if (meta?.regularMarketPrice) return {price:meta.regularMarketPrice,change:meta.regularMarketChangePercent||null};
+    } catch(e) {}
+  }
+  try {
+    const r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}.BO?interval=1d&range=1d`);
+    if (r.ok) { const d=await r.json(); const meta=d?.chart?.result?.[0]?.meta; if(meta?.regularMarketPrice) return {price:meta.regularMarketPrice,change:meta.regularMarketChangePercent||null}; }
+  } catch(e) {}
+  return null;
+}
 
-    # ── 2. Valuation context ──────────────────────────────────────────────────
-    if pe is not None and pe > 0:
-        if pe < 8:
-            parts.append(f"At a trailing P/E of just {pe:.1f}x, the stock is trading at a deep discount, suggesting the market may be pricing in persistent earnings risk or it is significantly undervalued.")
-        elif pe < 15:
-            parts.append(f"A trailing P/E of {pe:.1f}x makes the stock attractively valued relative to most peers, offering a reasonable margin of safety.")
-        elif pe < 25:
-            parts.append(f"Trading at {pe:.1f}x trailing earnings, the valuation is fair and reflects steady but not spectacular growth expectations.")
-        elif pe < 45:
-            parts.append(f"The premium valuation of {pe:.1f}x P/E suggests the market is pricing in strong earnings growth ahead — execution will be key to sustaining this multiple.")
-        else:
-            parts.append(f"At {pe:.1f}x trailing P/E, the stock carries a rich valuation that leaves little room for earnings disappointment.")
+async function addStock() {
+  const symbol=(document.getElementById('addSymbol').value||'').trim().toUpperCase();
+  const name=(document.getElementById('addName').value||'').trim();
+  const industry=(document.getElementById('addIndustry').value||'').trim();
+  const cost=parseFloat(document.getElementById('addCost').value);
+  const qty=parseInt(document.getElementById('addQty').value);
+  if (!symbol||!name||isNaN(cost)||cost<=0||isNaN(qty)||qty<=0) { showToast('Fill Symbol, Company, Cost and Qty','error'); return; }
+  showLoading('Adding '+symbol+'\u2026');
+  try {
+    await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add({
+      symbol,companyName:name,industry:industry||'',avgCost:cost,qty,
+      currentPrice:null,change:null,pe:null,high52w:null,low52w:null,targetPrice:null,recommendation:null,commentary:null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    ['addSymbol','addName','addIndustry','addCost','addQty'].forEach(id=>document.getElementById(id).value='');
+    showToast(symbol+' added!','success'); switchTab('portfolio');
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+  hideLoading();
+}
 
-    # ── 3. Macro theme by industry ────────────────────────────────────────────
+async function deleteStock(docId,symbol) {
+  if (!confirm('Remove '+symbol+' from your portfolio?')) return;
+  closeDetailCard(); showLoading('Removing\u2026');
+  try { await db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(docId).delete(); showToast(symbol+' removed','success'); }
+  catch(e) { showToast('Error: '+e.message,'error'); }
+  hideLoading();
+}
 
-    # Oil, Gas, Energy — Iran war tailwind
-    if any(x in ind for x in ["oil", "gas", "energy", "petro", "refin", "lpg"]):
-        parts.append(
-            "Geopolitical tensions in the Middle East — particularly escalating Iran-related risks — "
-            "are keeping Brent crude elevated above $85/bbl, a direct tailwind for upstream E&P "
-            "and oilfield services companies. Downstream refiners face margin compression from high "
-            "feedstock costs, though marketing margins on petrol and diesel provide a partial buffer."
-        )
+async function uploadCsv() {
+  let raw=(document.getElementById('csvInput').value||'').trim();
+  if (!raw) { showToast('Paste CSV data first','error'); return; }
+  raw=raw.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const lines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const startIdx=lines[0].toLowerCase().includes('symbol')?1:0;
+  const dataLines=lines.slice(startIdx);
+  if (!dataLines.length) { showToast('No data rows','error'); return; }
+  showLoading('Importing '+dataLines.length+' stocks\u2026');
+  const statusEl=document.getElementById('csvStatus');
+  let added=0,errors=0;
+  const base=db.collection('portfolios').doc(currentUser.uid).collection('stocks');
+  for (const line of dataLines) {
+    const cols=line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+    if (cols.length<5) { errors++; continue; }
+    const [sym,name,industry,costStr,qtyStr]=cols;
+    const cost=parseFloat(costStr),qty=parseInt(qtyStr);
+    if (!sym||isNaN(cost)||isNaN(qty)) { errors++; continue; }
+    try {
+      await base.add({symbol:sym.toUpperCase(),companyName:name||sym,industry:industry||'',avgCost:cost,qty,currentPrice:null,change:null,pe:null,high52w:null,low52w:null,targetPrice:null,recommendation:null,commentary:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      added++; statusEl.textContent='Imported '+added+'/'+dataLines.length+'\u2026';
+    } catch(e) { errors++; }
+  }
+  hideLoading();
+  statusEl.textContent='\u2705 Done: '+added+' stocks added'+(errors?' ('+errors+' errors)':'')+'.';
+  if (added) { showToast(added+' stocks imported!','success'); document.getElementById('csvInput').value=''; }
+}
 
-    # Aviation / Logistics — Iran war headwind
-    elif any(x in ind for x in ["aviation", "airline", "airport"]):
-        parts.append(
-            "Elevated crude oil prices driven by Middle East geopolitical risk are a meaningful headwind "
-            "for aviation, where fuel accounts for 25-35% of operating costs. However, strong domestic "
-            "air travel demand post-pandemic and improving load factors help offset the fuel cost pressure."
-        )
-
-    elif any(x in ind for x in ["logistics", "shipping", "freight", "transport"]):
-        parts.append(
-            "Middle East tensions are disrupting Red Sea shipping routes, pushing freight rates higher "
-            "and benefiting Indian shipping and port companies. Longer voyage distances are increasing "
-            "ton-mile demand, supporting fleet utilisation and charter rates."
-        )
-
-    # IT / Software — AI penetration
-    elif any(x in ind for x in ["software", "information tech", "it service", "computer", "tech"]):
-        parts.append(
-            "AI penetration is the defining theme for Indian IT — large-cap players are investing "
-            "heavily in GenAI service lines and proprietary platforms to capture the next wave of "
-            "enterprise digital transformation spend. Companies that successfully transition from "
-            "traditional outsourcing to AI-augmented delivery will command superior margin profiles "
-            "and higher deal win rates over the medium term."
-        )
-
-    # Banking / Finance — AI + rate cycle
-    elif any(x in ind for x in ["bank", "banking", "finance", "nbfc", "financial service", "insurance", "capital market"]):
-        parts.append(
-            "Indian banks are deploying AI across credit underwriting, fraud detection, and hyper-personalised "
-            "cross-selling, meaningfully reducing cost-to-income ratios. With the RBI beginning its rate "
-            "easing cycle, NIM pressure may emerge near-term, but improving asset quality and "
-            "AI-driven operating leverage support a constructive medium-term outlook."
-        )
-
-    # Pharma / Healthcare — AI drug discovery
-    elif any(x in ind for x in ["pharma", "health", "hospital", "medical", "drug", "biotech"]):
-        parts.append(
-            "AI-driven drug discovery is compressing R&D timelines and costs for Indian pharma companies, "
-            "while strong US generics demand and a healthy domestic prescription market provide dual "
-            "revenue engines. India's CDMO opportunity is also expanding as global innovators diversify "
-            "manufacturing away from China."
-        )
-
-    # Telecom — 5G + AI
-    elif any(x in ind for x in ["telecom", "communication", "wireless"]):
-        parts.append(
-            "5G monetisation and AI-powered network management are the key re-rating triggers for Indian "
-            "telecom. The sector's consolidation into a two-and-a-half player market has restored pricing "
-            "discipline, with ARPU expansion likely as users migrate to premium data plans. Enterprise "
-            "5G use cases in manufacturing and logistics add a longer-term growth layer."
-        )
-
-    # Auto — EV transition + input costs
-    elif any(x in ind for x in ["auto", "vehicle", "motor", "tyre", "automobile"]):
-        parts.append(
-            "Indian auto is navigating two simultaneous transitions: the EV shift, which is compressing "
-            "near-term margins as companies invest in new platforms and supply chains, and higher commodity "
-            "input costs linked to elevated energy prices from Middle East uncertainty. Domestic demand "
-            "remains robust, particularly in the premium and SUV segments, providing volume support."
-        )
-
-    # Infrastructure / Construction / Cement
-    elif any(x in ind for x in ["infrastructure", "construction", "cement", "engineer", "epc", "road", "highway"]):
-        parts.append(
-            "India's government capex supercycle — with record spending on roads, railways, ports, and "
-            "urban infrastructure — is driving strong and sustained order inflows for EPC players and "
-            "cement companies. AI-based project monitoring and resource optimisation are emerging as "
-            "competitive differentiators among the larger infrastructure firms."
-        )
-
-    # Metals / Steel / Mining
-    elif any(x in ind for x in ["metal", "steel", "iron", "mining", "aluminum", "copper", "zinc"]):
-        parts.append(
-            "Global metal markets face a complex backdrop: China's stimulus-driven demand recovery "
-            "supports steel and base metals, while Middle East supply disruptions add volatility to "
-            "energy-linked inputs. Indian steel producers benefit from domestic infrastructure demand "
-            "but remain exposed to cheap import pressures and coking coal price swings."
-        )
-
-    # Consumer / FMCG / Retail
-    elif any(x in ind for x in ["consumer", "retail", "fmcg", "food", "beverage", "packaged"]):
-        parts.append(
-            "A recovering rural economy and moderating food inflation are tailwinds for FMCG volume "
-            "growth after two subdued years. AI-driven demand forecasting and supply chain optimisation "
-            "are helping consumer companies reduce working capital and improve on-shelf availability. "
-            "The key risk is margin pressure from a weaker rupee inflating imported input costs."
-        )
-
-    # Power / Utilities / Renewables
-    elif any(x in ind for x in ["power", "utility", "electric", "renewable", "solar", "wind"]):
-        parts.append(
-            "India's power sector is at an inflection point — surging electricity demand from data centres "
-            "(driven by AI workloads), EV charging, and industrial expansion is straining the grid and "
-            "creating a supercycle for both conventional and renewable generation capacity. Middle East "
-            "tensions add urgency to India's energy security strategy, accelerating domestic renewable deployment."
-        )
-
-    # Real Estate
-    elif any(x in ind for x in ["real estate", "realty", "property", "housing"]):
-        parts.append(
-            "Indian residential real estate is in a multi-year upcycle supported by rising incomes, "
-            "urbanisation, and the end of the distress cycle post-RERA. AI-powered sales analytics and "
-            "dynamic pricing are helping developers optimise inventory turns. Lower interest rates in "
-            "the coming quarters could provide an additional demand catalyst."
-        )
-
-    # Default macro
-    else:
-        parts.append(
-            "India's macro fundamentals remain among the strongest globally — GDP growth of 6.5-7%, "
-            "a structural domestic consumption story, and a government committed to capital formation "
-            "provide a resilient backdrop. Geopolitical risks from the Middle East and global trade "
-            "uncertainty are the key external variables to watch, alongside the pace of AI adoption "
-            "reshaping competitive dynamics across industries."
-        )
-
-    # ── 4. Recommendation summary ─────────────────────────────────────────────
-    if rec == "BUY":
-        parts.append(
-            "Analyst consensus is BUY — the current price is seen as offering an attractive risk-reward "
-            "for medium-to-long-term investors willing to look through near-term volatility."
-        )
-    elif rec == "SELL":
-        parts.append(
-            "Analyst consensus leans SELL at current levels, suggesting the risk-reward has deteriorated "
-            "and patient investors may find a better entry point after further consolidation."
-        )
-    elif rec == "HOLD":
-        parts.append(
-            "Analyst consensus is HOLD — existing investors are advised to stay the course while "
-            "awaiting a clearer earnings catalyst or a more compelling valuation entry point."
-        )
-
-    return " ".join(parts) if parts else None
-
-
-# ── HELPERS ───────────────────────────────────────────────────────────────────
-def safe_float(val, decimals=2):
-    try:
-        if val is None or (isinstance(val, float) and str(val) in ("nan", "inf", "-inf")):
-            return None
-        return round(float(val), decimals)
-    except Exception:
-        return None
-
-def safe_int(val):
-    try:
-        return None if val is None else int(val)
-    except Exception:
-        return None
-
-def rec_key_to_label(key):
-    k = (key or "").lower()
-    if k in ("strong_buy", "buy"):                   return "BUY"
-    if k in ("hold", "neutral"):                     return "HOLD"
-    if k in ("underperform", "sell", "strong_sell"): return "SELL"
-    return None
-
-def derive_signal(rec_key, vs_50dma):
-    k = (rec_key or "").lower()
-    d = vs_50dma or 0
-    if k == "strong_buy":              return "\u25b2 Strong Buy"
-    if k == "buy"     and d >= 0:      return "\u25b2 Bullish"
-    if k == "buy":                     return "\u25b2 Buy"
-    if k in ("sell", "strong_sell"):   return "\u25bc Bearish"
-    if k == "underperform" and d < -5: return "\u25bc Weak"
-    if d >  5:                         return "\u25b2 Above 50DMA"
-    if d < -5:                         return "\u25bc Below 50DMA"
-    return "\u25c4 Neutral"
-
-
-# ── FETCH ONE STOCK (with .BO fallback) ───────────────────────────────────────
-def fetch_stock(symbol, yahoo_sym):
-    """Try primary ticker, then .BO fallback if no price found."""
-    data = _fetch_ticker(symbol, yahoo_sym)
-    # If primary failed and it was a .NS ticker, try .BO as fallback
-    if not data.get("available") and yahoo_sym.endswith(".NS"):
-        bo_sym = yahoo_sym.replace(".NS", ".BO")
-        print(f"    (.NS failed, retrying as {bo_sym}) ", end="", flush=True)
-        data = _fetch_ticker(symbol, bo_sym)
-    return data
-
-
-def _fetch_ticker(symbol, yahoo_sym):
-    try:
-        t    = yf.Ticker(yahoo_sym)
-        info = t.info or {}
-        price = info.get("regularMarketPrice") or info.get("currentPrice")
-        if not price:
-            return {"available": False, "reason": "no_price"}
-
-        pe        = safe_float(info.get("trailingPE"))
-        industry  = info.get("industry") or info.get("sector")
-        name      = info.get("longName") or info.get("shortName") or symbol
-        rec_key   = info.get("recommendationKey") or ""
-        rec       = rec_key_to_label(rec_key)
-        fifty_dma = info.get("fiftyDayAverage")
-        vs_50dma  = safe_float((price - fifty_dma) / fifty_dma * 100) if fifty_dma else None
-        signal    = derive_signal(rec_key, vs_50dma)
-        raw_52w   = info.get("52WeekChange")
-        change_52w = safe_float(raw_52w * 100) if raw_52w is not None else None
-
-        buy_recs = sell_recs = None
-        try:
-            recs_df = t.recommendations
-            if recs_df is not None and not recs_df.empty:
-                row = recs_df.iloc[0]
-                buy_recs  = safe_int((row.get("strongBuy") or 0)  + (row.get("buy")       or 0))
-                sell_recs = safe_int((row.get("strongSell") or 0) + (row.get("sell")      or 0))
-        except Exception:
-            n    = info.get("numberOfAnalystOpinions")
-            mean = info.get("recommendationMean")
-            if n and mean:
-                buy_recs  = round(n * max(0.0, 1.0 - (mean - 1) / 4))
-                sell_recs = round(n * max(0.0, (mean - 1) / 4 * 0.5))
-
-        # Generate commentary
-        commentary = generate_commentary(
-            name, industry, rec, pe, change_52w, rec_key, vs_50dma
-        )
-
-        return {
-            "available":      True,
-            "name":           name,
-            "industry":       industry,
-            "price":          safe_float(price),
-            "pe":             pe,
-            "recommendation": rec,
-            "signal":         signal,
-            "buyRecs":        buy_recs,
-            "sellRecs":       sell_recs,
-            "targetPrice":    safe_float(info.get("targetMeanPrice")),
-            "change52w":      change_52w,
-            "marketCap":      info.get("marketCap"),
-            "commentary":     commentary,
-        }
-    except Exception as e:
-        return {"available": False, "reason": str(e)}
-
-
-# ── MAIN ──────────────────────────────────────────────────────────────────────
-def main():
-    print(f"Fnikar Market Data Fetch — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    print("=" * 60)
-
-    print("\nDiscovering symbols...")
-    stocks = get_symbols_from_firestore()
-    if stocks:
-        print(f"  Source: Firestore ({len(stocks)} symbols)\n")
-    else:
-        stocks = FALLBACK_STOCKS
-        print(f"  Source: Hardcoded fallback ({len(stocks)} symbols)\n")
-
-    print(f"Fetching data for {len(stocks)} symbols...\n")
-    result   = {"generatedAt": datetime.now().isoformat(), "stocks": {}}
-    ok_count = 0
-
-    for i, (symbol, yahoo_sym) in enumerate(stocks.items(), 1):
-        print(f"  [{i:3}/{len(stocks)}] {symbol:15} ({yahoo_sym}) ... ", end="", flush=True)
-        data = fetch_stock(symbol, yahoo_sym)
-        result["stocks"][symbol] = data
-        if data.get("available"):
-            ok_count += 1
-            print(f"OK  price={data.get('price')}  {(data.get('industry') or '')[:28]}")
-        else:
-            print(f"SKIP  {data.get('reason', '')}")
-        time.sleep(0.4)
-
-    # Write to repo root (script lives in scripts/, so go one level up)
-    out_path = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "market_data.json")
-    )
-    with open(out_path, "w") as f:
-        json.dump(result, f, indent=2, default=str)
-
-    print(f"\n{'=' * 60}")
-    print(f"Done — {ok_count}/{len(stocks)} stocks fetched.")
-    print(f"Written to {out_path}")
-
-if __name__ == "__main__":
-    main()
+function sortBy(field) { sortDir=sortField===field?sortDir*-1:1; sortField=field; renderTable(); }
+function applySortSelect(val) { const p=val.split('_'); sortField=p[0]; sortDir=parseInt(p[1]); renderTable(); }
+function applyFilter() { filterText=(document.getElementById('filterInput').value||'').toLowerCase(); filterRec=document.getElementById('filterRec').value||''; renderTable(); }
+function switchTab(id,btn) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('tab-'+id); if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+function changePasswordModal() { ['currentPw','newPw','confirmPw'].forEach(id=>document.getElementById(id).value=''); document.getElementById('pwModal').classList.add('show'); }
+async function changePassword() {
+  const curr=document.getElementById('currentPw').value, nw=document.getElementById('newPw').value, cn=document.getElementById('confirmPw').value;
+  if (!curr||!nw||!cn) { showToast('Fill all fields','error'); return; }
+  if (nw!==cn) { showToast('Passwords do not match','error'); return; }
+  if (nw.length<6) { showToast('Password min 6 characters','error'); return; }
+  try {
+    const cred=firebase.auth.EmailAuthProvider.credential(currentUser.email,curr);
+    await currentUser.reauthenticateWithCredential(cred);
+    await currentUser.updatePassword(nw);
+    document.getElementById('pwModal').classList.remove('show');
+    showToast('Password updated!','success');
+  } catch(e) { showToast(e.code==='auth/wrong-password'?'Current password incorrect':'Error: '+e.message,'error'); }
+}
+async function doSignOut() { await auth.signOut(); window.location.href='index.html'; }
+function showLoading(msg) { document.getElementById('loadingText').textContent=msg||'Loading\u2026'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+let _tt;
+function showToast(msg,type) { const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(type?' '+type:''); clearTimeout(_tt); _tt=setTimeout(()=>{t.className='toast';},3200); }
+function fmt(n) { if(n==null) return '\u2014'; return Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtL(n) { if(n==null) return '\u2014'; const a=Math.abs(n); if(a>=10000000) return (n/10000000).toFixed(2)+' Cr'; if(a>=100000) return (n/100000).toFixed(2)+' L'; return Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function esc(s) { if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>
