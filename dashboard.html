@@ -627,7 +627,7 @@ function renderTable() {
       <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
       <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'—'}</td>
       <td><span class="${recClass}">${s.recommendation||'—'}</span></td>
-      <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4">${s.reason||'—'}</td>
+      <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${s.reason||'—'}</td>
       <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
     </tr>`;
   }).join('');
