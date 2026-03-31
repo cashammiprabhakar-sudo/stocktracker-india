@@ -420,13 +420,15 @@ async function loadMarketData() {
   try {
     const resp = await fetch('market_data.json?_=' + Date.now());
     if (!resp.ok) return;
-    const data = await resp.json();
-    marketData = data;
+    const raw = await resp.json();
+    // Script outputs { generatedAt: "...", stocks: { SYMBOL: {...} } }
+    // Support both that format and a flat { SYMBOL: {...} } format
+    marketData = raw.stocks || raw;
     applyMarketData();
-    // Show data age in toolbar
-    const timestamps = Object.values(data).map(v => v.timestamp).filter(Boolean);
-    if (timestamps.length) {
-      const latest = new Date(timestamps.sort().reverse()[0]);
+    // Show data age using top-level generatedAt timestamp
+    const generatedAt = raw.generatedAt || raw.timestamp;
+    if (generatedAt) {
+      const latest = new Date(generatedAt);
       const diffH = Math.round((Date.now() - latest) / 3600000);
       const diffM = Math.round((Date.now() - latest) / 60000);
       const label = diffH >= 1 ? diffH + 'h ago' : diffM + 'm ago';
@@ -441,16 +443,16 @@ function applyMarketData() {
   if (!stocks.length) return;
   stocks.forEach(s => {
     const md = marketData[s.symbol];
-    if (!md) return;
+    if (!md || !md.available) return;
+    // md.price — latest price from yfinance
     if (md.price        != null) s.currentPrice  = md.price;
     if (md.pe           != null) s.pe            = md.pe;
     if (md.recommendation    )   s.recommendation = md.recommendation;
     if (md.industry          )   s.industry      = md.industry;
     if (md.commentary        )   s.reason        = md.commentary;
     if (md.signal            )   s.signal        = md.signal;
-    if (md.change       != null) s.change12w     = md.change;
-    if (md.high52w      != null) s.high52w       = md.high52w;
-    if (md.low52w       != null) s.low52w        = md.low52w;
+    // Script uses change52w (52-week % change), not change
+    if (md.change52w    != null) s.change12w     = md.change52w;
     if (md.targetPrice  != null) s.targetPrice   = md.targetPrice;
     if (md.buyRecs      != null) s.buyRecs       = md.buyRecs;
     if (md.sellRecs     != null) s.sellRecs      = md.sellRecs;
