@@ -186,6 +186,7 @@
       <div class="table-toolbar">
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
+        <span id="mdAge" style="font-size:0.76rem;color:#888;margin-left:8px;"></span>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
           🔄 Refresh Prices
         </button>
@@ -413,6 +414,51 @@ const db   = firebase.firestore();
 
 let currentUser = null;
 let stocks = [];  // in-memory cache of portfolio
+let marketData = {};  // cache of market_data.json
+
+async function loadMarketData() {
+  try {
+    const resp = await fetch('market_data.json?_=' + Date.now());
+    if (!resp.ok) return;
+    const data = await resp.json();
+    marketData = data;
+    applyMarketData();
+    // Show data age in toolbar
+    const timestamps = Object.values(data).map(v => v.timestamp).filter(Boolean);
+    if (timestamps.length) {
+      const latest = new Date(timestamps.sort().reverse()[0]);
+      const diffH = Math.round((Date.now() - latest) / 3600000);
+      const diffM = Math.round((Date.now() - latest) / 60000);
+      const label = diffH >= 1 ? diffH + 'h ago' : diffM + 'm ago';
+      const ts = latest.toLocaleString('en-IN', {timeZone:'Asia/Kolkata', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true});
+      const el = document.getElementById('mdAge');
+      if (el) el.textContent = 'Market data: ' + ts + ' IST (' + label + ')';
+    }
+  } catch(e) { console.log('market_data.json not available'); }
+}
+
+function applyMarketData() {
+  if (!stocks.length) return;
+  stocks.forEach(s => {
+    const md = marketData[s.symbol];
+    if (!md) return;
+    if (md.price        != null) s.currentPrice  = md.price;
+    if (md.pe           != null) s.pe            = md.pe;
+    if (md.recommendation    )   s.recommendation = md.recommendation;
+    if (md.industry          )   s.industry      = md.industry;
+    if (md.commentary        )   s.reason        = md.commentary;
+    if (md.signal            )   s.signal        = md.signal;
+    if (md.change       != null) s.change12w     = md.change;
+    if (md.high52w      != null) s.high52w       = md.high52w;
+    if (md.low52w       != null) s.low52w        = md.low52w;
+    if (md.targetPrice  != null) s.targetPrice   = md.targetPrice;
+    if (md.buyRecs      != null) s.buyRecs       = md.buyRecs;
+    if (md.sellRecs     != null) s.sellRecs      = md.sellRecs;
+  });
+  renderTable();
+  updateStats();
+  populateIndustryFilter();
+}
 
 // ── YAHOO FINANCE SYMBOL MAPPING ──────────────────────────────────────────
 const YAHOO_OVERRIDES = {
@@ -474,6 +520,7 @@ async function loadPortfolio() {
     renderTable();
     updateStats();
     populateIndustryFilter();
+    await loadMarketData(); // enrich with market_data.json (P/E, industry, signal, commentary)
     checkAutoRefresh(); // auto-refresh every 12h
   } catch(e) { showToast('Error loading portfolio.','error'); }
   hideOverlay();
@@ -741,6 +788,9 @@ async function refreshPrices() {
     }
   });
   try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
+
+  // Re-load market data to refresh P/E, industry, signal, commentary after price update
+  await loadMarketData();
 
   // Save refresh timestamp to Firestore so auto-refresh timer resets
   try {
