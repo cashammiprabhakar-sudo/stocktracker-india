@@ -112,6 +112,40 @@
     .btn-modal-save:hover{background:#0d47a1}
     .btn-modal-cancel{flex:1;background:#f0f4f8;color:#444;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
     .btn-chg-pwd{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;margin-right:6px}
+    .btn-manage-users{background:rgba(255,200,0,0.22);border:1px solid rgba(255,220,0,0.45);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;margin-right:6px;font-weight:600}
+    .btn-manage-users:hover{background:rgba(255,200,0,0.35)}
+    /* MANAGE USERS MODAL */
+    .mu-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;align-items:center;justify-content:center;padding:16px}
+    .mu-modal-bg.show{display:flex}
+    .mu-box{background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,0.22)}
+    .mu-header{background:#1565c0;color:#fff;padding:18px 22px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center}
+    .mu-header h2{font-size:1rem;font-weight:700;margin:0}
+    .mu-tabs{display:flex;gap:0;padding:0 16px;background:#f5f8ff;border-bottom:2px solid #e0e8f5}
+    .mu-tab{padding:10px 18px;font-size:0.85rem;font-weight:600;color:#888;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
+    .mu-tab.active{color:#1565c0;border-bottom-color:#1565c0}
+    .mu-body{overflow-y:auto;flex:1;padding:16px}
+    .mu-user-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1px solid #e8edf2;margin-bottom:10px;background:#fff}
+    .mu-user-row:hover{background:#fafbff}
+    .mu-avatar{width:38px;height:38px;border-radius:50%;background:#e3f2fd;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:#1565c0;flex-shrink:0}
+    .mu-info{flex:1;min-width:0}
+    .mu-info .mu-name{font-weight:600;font-size:0.88rem;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mu-info .mu-email{font-size:0.77rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mu-badge{padding:3px 9px;border-radius:10px;font-size:0.74rem;font-weight:700;flex-shrink:0}
+    .mu-badge.admin{background:#fff8e1;color:#f57f17}
+    .mu-badge.user{background:#e8f5e9;color:#2e7d32}
+    .mu-badge.pending{background:#fff3e0;color:#e65100}
+    .mu-badge.superadmin{background:#ede7f6;color:#6200ea}
+    .mu-btn{border:none;padding:7px 13px;border-radius:7px;font-size:0.8rem;font-weight:600;cursor:pointer;flex-shrink:0}
+    .mu-btn.grant{background:#e3f2fd;color:#1565c0}
+    .mu-btn.grant:hover{background:#bbdefb}
+    .mu-btn.revoke{background:#fff8e1;color:#e65100}
+    .mu-btn.revoke:hover{background:#ffe0b2}
+    .mu-btn.approve{background:#e8f5e9;color:#2e7d32}
+    .mu-btn.approve:hover{background:#c8e6c9}
+    .mu-btn.reject{background:#ffebee;color:#c62828}
+    .mu-btn.reject:hover{background:#ffcdd2}
+    .mu-empty{text-align:center;padding:32px;color:#aaa;font-size:0.88rem}
+    .mu-loading{text-align:center;padding:32px;color:#999;font-size:0.88rem}
     /* FILTER BAR */
     .filter-bar{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #e8edf2;background:#fafbff}
     .filter-bar input[type=text]{padding:7px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.85rem;outline:none;min-width:180px;flex:1}
@@ -171,6 +205,7 @@
   <div class="header-right">
     <span class="user-name" id="userName"></span>
     <span id="adminLink" style="display:none"><a href="admin.html" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;text-decoration:none;margin-right:6px">⚙ Admin</a></span>
+    <button class="btn-manage-users" id="manageUsersBtn" style="display:none" onclick="openManageUsers()">👥 Manage Users</button>
     <button class="btn-chg-pwd" onclick="openChangePwd()">🔑 Change Password</button>
     <button class="btn-logout" onclick="doSignOut()">Sign Out</button>
   </div>
@@ -395,6 +430,23 @@
     <div class="modal-btns">
       <button class="btn-modal-cancel" onclick="closeChangePwd()">Cancel</button>
       <button class="btn-modal-save" onclick="saveNewPassword()">Save Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE USERS MODAL (super admin only) -->
+<div class="mu-modal-bg" id="muModal">
+  <div class="mu-box">
+    <div class="mu-header">
+      <h2>👥 Manage Users</h2>
+      <button onclick="closeManageUsers()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:1.2rem;cursor:pointer;border-radius:6px;padding:2px 10px;line-height:1.4">✕</button>
+    </div>
+    <div class="mu-tabs">
+      <button class="mu-tab active" id="muTab0" onclick="switchMuTab(0)">✅ Active Users</button>
+      <button class="mu-tab" id="muTab1" onclick="switchMuTab(1)">⏳ Pending Approval</button>
+    </div>
+    <div class="mu-body" id="muBody">
+      <div class="mu-loading">Loading users…</div>
     </div>
   </div>
 </div>
@@ -896,6 +948,7 @@ auth.onAuthStateChanged(async user => {
     currentUser = user;
     document.getElementById('userName').textContent = user.displayName || user.email;
     document.getElementById('adminLink').style.display = 'inline';
+    document.getElementById('manageUsersBtn').style.display = 'inline';
     loadPortfolio();
     return;
   }
@@ -1255,6 +1308,25 @@ async function refreshPrices() {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ── DOWNLOAD CSV TEMPLATE ──────────────────────────────────────────────────
+function downloadCsvTemplate() {
+  const rows = [
+    'Symbol,Name,AvgCost,Quantity',
+    'HDFCBANK,HDFC Bank Ltd,1800,10',
+    'RELIANCE,Reliance Industries,2500,5',
+    'TCS,Tata Consultancy Services,3800,3',
+    'INFY,Infosys Ltd,1600,8',
+    'WIPRO,Wipro Ltd,500,20'
+  ];
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fnikar_portfolio_template.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ── ADD STOCK ──────────────────────────────────────────────────────────────
 async function addStock() {
   const sym  = document.getElementById('fSym').value.trim().toUpperCase();
@@ -1431,6 +1503,103 @@ async function saveNewPassword() {
   } catch(e) {
     if (e.code === 'auth/wrong-password') showToast('❌ Current password is incorrect.', 'error');
     else showToast('❌ Error: ' + (e.message || e), 'error');
+  }
+}
+
+// ── MANAGE USERS (super admin only) ───────────────────────────────────────
+let muCurrentTab = 0;
+
+function openManageUsers() {
+  document.getElementById('muModal').classList.add('show');
+  loadMuTab(0);
+}
+function closeManageUsers() {
+  document.getElementById('muModal').classList.remove('show');
+}
+document.getElementById('muModal').addEventListener('click', function(e) {
+  if (e.target === this) closeManageUsers();
+});
+
+function switchMuTab(idx) {
+  muCurrentTab = idx;
+  document.querySelectorAll('.mu-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  loadMuTab(idx);
+}
+
+async function loadMuTab(tab) {
+  const body = document.getElementById('muBody');
+  body.innerHTML = '<div class="mu-loading">Loading…</div>';
+  try {
+    const status = tab === 0 ? 'approved' : 'pending';
+    const snap = await db.collection('users').where('status','==',status).get();
+    if (snap.empty) {
+      body.innerHTML = `<div class="mu-empty">${tab===0 ? 'No active users yet.' : '🎉 No pending approvals!'}</div>`;
+      return;
+    }
+    body.innerHTML = '';
+    snap.docs.forEach(doc => {
+      const u = doc.data();
+      const uid = doc.id;
+      const initial = (u.displayName || u.email || '?')[0].toUpperCase();
+      const isAdmin = u.role === 'admin';
+      const isSuperAdmin = u.email === ADMIN_EMAIL;
+      const badgeClass = isSuperAdmin ? 'superadmin' : isAdmin ? 'admin' : 'user';
+      const badgeLabel = isSuperAdmin ? '⭐ Super Admin' : isAdmin ? '🔑 Admin' : '👤 User';
+      const actionBtns = isSuperAdmin ? '' : (tab === 0
+        ? `<button class="mu-btn ${isAdmin ? 'revoke' : 'grant'}" onclick="toggleAdminRole('${uid}','${u.role||'user'}','${u.email||''}')">
+             ${isAdmin ? '↩ Revoke Admin' : '⬆ Make Admin'}
+           </button>`
+        : `<button class="mu-btn approve" onclick="approveUser('${uid}','${u.email||''}')">✅ Approve</button>
+           <button class="mu-btn reject" onclick="rejectUser('${uid}','${u.email||''}')">🗑 Reject</button>`);
+      body.innerHTML += `
+        <div class="mu-user-row" id="mu-row-${uid}">
+          <div class="mu-avatar">${initial}</div>
+          <div class="mu-info">
+            <div class="mu-name">${u.displayName || '(no name)'}</div>
+            <div class="mu-email">${u.email || uid}</div>
+          </div>
+          <span class="mu-badge ${badgeClass}">${badgeLabel}</span>
+          ${actionBtns}
+        </div>`;
+    });
+  } catch(e) {
+    body.innerHTML = `<div class="mu-empty" style="color:#c62828">Error loading users: ${e.message}</div>`;
+  }
+}
+
+async function toggleAdminRole(uid, currentRole, email) {
+  const makeAdmin = currentRole !== 'admin';
+  const confirmMsg = makeAdmin
+    ? `Grant admin rights to ${email}?`
+    : `Revoke admin rights from ${email}?`;
+  if (!confirm(confirmMsg)) return;
+  try {
+    await db.collection('users').doc(uid).update({ role: makeAdmin ? 'admin' : 'user' });
+    showToast(makeAdmin ? `✅ ${email} is now an Admin` : `✅ Admin rights removed from ${email}`, 'success');
+    loadMuTab(muCurrentTab);
+  } catch(e) {
+    showToast('❌ Error updating role: ' + e.message, 'error');
+  }
+}
+
+async function approveUser(uid, email) {
+  try {
+    await db.collection('users').doc(uid).update({ status: 'approved', role: 'user' });
+    showToast(`✅ ${email} approved`, 'success');
+    loadMuTab(muCurrentTab);
+  } catch(e) {
+    showToast('❌ Error: ' + e.message, 'error');
+  }
+}
+
+async function rejectUser(uid, email) {
+  if (!confirm(`Remove ${email} from the system? This cannot be undone.`)) return;
+  try {
+    await db.collection('users').doc(uid).delete();
+    showToast(`🗑 ${email} removed`, 'success');
+    loadMuTab(muCurrentTab);
+  } catch(e) {
+    showToast('❌ Error: ' + e.message, 'error');
   }
 }
 </script>
