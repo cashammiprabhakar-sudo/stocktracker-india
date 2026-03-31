@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>StockTracker India — Admin</title>
+  <title>Fnikar — Admin</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
@@ -80,7 +80,7 @@
 </head>
 <body>
 <div class="header">
-  <h1>📈 StockTracker India <span class="admin-badge">ADMIN</span></h1>
+  <h1>📈 Fnikar <span class="admin-badge">SUPER ADMIN</span></h1>
   <button class="btn-logout" onclick="doSignOut()">Sign Out</button>
 </div>
 
@@ -98,6 +98,7 @@
     <button class="tab active" onclick="showTab('users')">👥 Users</button>
     <button class="tab" onclick="showTab('portfolios')">📊 View Portfolios</button>
     <button class="tab" onclick="showTab('seed')">🌱 Seed My Portfolio</button>
+    <button class="tab" onclick="showTab('database')">🗄 Database</button>
   </div>
 
   <!-- USERS TAB -->
@@ -132,6 +133,40 @@
       </div>
       <div id="portfolioViewer">
         <div class="empty">Select a user above to view their portfolio.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATABASE TAB -->
+  <div id="tabDatabase" class="hidden">
+    <div class="panel">
+      <div class="seed-section">
+        <h3>🗄 Direct Database Access</h3>
+        <p>
+          View and manage all data directly in the Firebase Console — no app login needed.<br/>
+          <strong>To approve/reject users without opening the app:</strong><br/>
+          Go to Firestore → users collection → click a user document → change the <code>status</code> field from <code>pending</code> to <code>approved</code> or <code>rejected</code>.
+        </p>
+        <a href="https://console.firebase.google.com/project/stocktracker-india/firestore/data/~2Fusers" target="_blank" class="btn-seed" style="display:inline-block;text-decoration:none;margin-bottom:12px">
+          👥 Open Users Database
+        </a>
+        &nbsp;
+        <a href="https://console.firebase.google.com/project/stocktracker-india/firestore/data/~2Fportfolios" target="_blank" class="btn-seed" style="display:inline-block;text-decoration:none;margin-bottom:12px;background:#2e7d32">
+          📊 Open Portfolios Database
+        </a>
+        &nbsp;
+        <a href="https://console.firebase.google.com/project/stocktracker-india/authentication/users" target="_blank" class="btn-seed" style="display:inline-block;text-decoration:none;margin-bottom:12px;background:#e65100">
+          🔐 Open Auth Users
+        </a>
+
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid #eee">
+          <h3 style="margin-bottom:8px">📥 Export All Portfolio Data</h3>
+          <p style="margin-bottom:14px">Download all users and their complete portfolio data as a CSV file — opens in Excel or Google Sheets.</p>
+          <button class="btn-seed" id="exportBtn" onclick="exportAllData()">⬇ Export All Data to CSV</button>
+          <div class="seed-progress" id="exportProgress">
+            <span id="exportStatus">Fetching data…</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -184,14 +219,30 @@ let currentUser = null;
 let allUsers = [];
 
 // ── AUTH GUARD ─────────────────────────────────────────────────────────────
+let _adminInit = false;
 auth.onAuthStateChanged(async user => {
+  if (_adminInit) return; // prevent loop from multiple firings
   if (!user) { window.location.href = 'index.html'; return; }
-  const snap = await db.collection('users').doc(user.uid).get();
-  if (!snap.exists || (snap.data().role !== 'admin' && user.email !== ADMIN_EMAIL)) {
-    window.location.href = 'dashboard.html'; return;
+  // Admin email always gets access — no Firestore check needed for them
+  if (user.email === ADMIN_EMAIL) {
+    _adminInit = true;
+    currentUser = user;
+    loadUsers();
+    return;
   }
-  currentUser = user;
-  loadUsers();
+  // For others, check role in Firestore
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (!snap.exists || snap.data().role !== 'admin') {
+      window.location.href = 'index.html'; return; // not admin → go to login
+    }
+    _adminInit = true;
+    currentUser = user;
+    loadUsers();
+  } catch(e) {
+    // On permission error, redirect to login not dashboard (avoids loop)
+    window.location.href = 'index.html';
+  }
 });
 
 // ── LOAD USERS ─────────────────────────────────────────────────────────────
@@ -494,11 +545,11 @@ function fmt(v) {
 }
 
 function showTab(tab) {
-  ['tabUsers','tabPortfolios','tabSeed'].forEach((id,i) => {
+  ['tabUsers','tabPortfolios','tabSeed','tabDatabase'].forEach(id => {
     document.getElementById(id).classList.toggle('hidden', id !== 'tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
   });
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['users','portfolios','seed'][i] === tab);
+    t.classList.toggle('active', ['users','portfolios','seed','database'][i] === tab);
   });
 }
 
@@ -512,7 +563,73 @@ function showToast(msg, type='') {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ── EXPORT ALL DATA ───────────────────────────────────────────────────────
+async function exportAllData() {
+  const btn = document.getElementById('exportBtn');
+  const progress = document.getElementById('exportProgress');
+  const status = document.getElementById('exportStatus');
+  btn.disabled = true;
+  progress.style.display = 'block';
+  status.textContent = 'Fetching users…';
+
+  try {
+    const usersSnap = await db.collection('users').get();
+    const rows = [['User Name','Email','Phone','Status','Role','Registered','Symbol','Company','Industry','Avg Cost','Qty','Invested','Current Price','Current Value','P&L','P&L%','P/E','Signal','Recommendation','Reason']];
+
+    let userCount = 0;
+    for (const uDoc of usersSnap.docs) {
+      const u = uDoc.data();
+      if (u.email === ADMIN_EMAIL) continue;
+      userCount++;
+      status.textContent = `Processing user ${userCount}: ${u.displayName || u.email}…`;
+
+      const stocksSnap = await db.collection('portfolios').doc(uDoc.id).collection('stocks').get();
+      if (stocksSnap.empty) {
+        rows.push([u.displayName||'', u.email||'', u.phone||'', u.status||'', u.role||'', u.createdAt ? new Date(u.createdAt.seconds*1000).toLocaleDateString() : '', '(no stocks)', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+      } else {
+        stocksSnap.docs.forEach(sDoc => {
+          const s = sDoc.data();
+          const inv = (s.avgCost||0)*(s.qty||0);
+          const val = s.currentPrice != null ? s.currentPrice * s.qty : '';
+          const pl  = (val !== '' && inv > 0) ? val - inv : '';
+          const plp = (pl !== '' && inv > 0) ? ((pl/inv)*100).toFixed(2)+'%' : '';
+          rows.push([
+            u.displayName||'', u.email||'', u.phone||'', u.status||'', u.role||'',
+            u.createdAt ? new Date(u.createdAt.seconds*1000).toLocaleDateString() : '',
+            s.symbol||'', s.name||'', s.industry||'',
+            s.avgCost||'', s.qty||'', inv.toFixed(2),
+            s.currentPrice != null ? s.currentPrice.toFixed(2) : '',
+            val !== '' ? val.toFixed(2) : '',
+            pl !== '' ? pl.toFixed(2) : '', plp,
+            s.pe != null ? s.pe : '', s.signal||'', s.recommendation||'', (s.reason||'').replace(/,/g,';')
+          ]);
+        });
+      }
+    }
+
+    // Convert to CSV
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `StockTracker_AllPortfolios_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    status.textContent = `✅ Exported ${userCount} users with all portfolio data!`;
+    btn.disabled = false;
+  } catch(e) {
+    status.textContent = '❌ Export failed: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+// ── SHOW TAB HELPER (updated) ──────────────────────────────────────────────
+
 async function doSignOut() { await auth.signOut(); window.location.href = 'index.html'; }
 </script>
+<div style="text-align:center;padding:12px 0 8px;color:#888;font-size:0.78rem;">
+  Support: <a href="mailto:admin@fnikar.com" style="color:#1976d2;">admin@fnikar.com</a>
+</div>
 </body>
 </html>
+           

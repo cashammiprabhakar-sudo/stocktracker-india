@@ -3,251 +3,426 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>StockTracker India — Login</title>
+  <title>Fnikar — Login</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#1565c0 0%,#0d47a1 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
     .logo{color:#fff;text-align:center;margin-bottom:24px}
     .logo h1{font-size:1.8rem;font-weight:700;letter-spacing:-0.5px}
     .logo p{font-size:0.9rem;opacity:0.85;margin-top:4px}
-    .card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);width:100%;max-width:420px;overflow:hidden}
+    .card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);width:100%;max-width:440px;overflow:hidden}
     .tabs{display:flex;border-bottom:2px solid #e3e8f0}
     .tab{flex:1;padding:14px;text-align:center;cursor:pointer;font-weight:600;font-size:0.95rem;color:#888;transition:all 0.2s;border:none;background:none}
     .tab.active{color:#1565c0;border-bottom:2px solid #1565c0;margin-bottom:-2px}
-    .form-body{padding:28px 24px}
-    .form-group{margin-bottom:18px}
-    label{display:block;font-size:0.82rem;font-weight:600;color:#444;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px}
-    input{width:100%;padding:12px 14px;border:1.5px solid #dde3ec;border-radius:8px;font-size:0.95rem;outline:none;transition:border-color 0.2s}
+    .form-body{padding:24px}
+    .form-group{margin-bottom:15px}
+    label{display:block;font-size:0.78rem;font-weight:700;color:#444;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px}
+    .required{color:#e53935;margin-left:2px}
+    input{width:100%;padding:11px 13px;border:1.5px solid #dde3ec;border-radius:8px;font-size:0.93rem;outline:none;transition:border-color 0.2s}
     input:focus{border-color:#1565c0}
+    input.valid{border-color:#2e7d32}
+    input.invalid{border-color:#e53935}
+    .field-hint{font-size:0.72rem;color:#999;margin-top:3px}
+    .field-error{font-size:0.72rem;color:#e53935;margin-top:3px;display:none}
+    .field-error.show{display:block}
+    /* PASSWORD STRENGTH */
+    .pw-strength{margin-top:6px}
+    .pw-bar{height:4px;border-radius:2px;background:#eee;margin-bottom:5px;overflow:hidden}
+    .pw-bar-fill{height:100%;border-radius:2px;width:0%;transition:all 0.3s}
+    .pw-rules{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+    .pw-rule{font-size:0.7rem;color:#bbb;display:flex;align-items:center;gap:4px}
+    .pw-rule.ok{color:#2e7d32}
+    .pw-rule::before{content:'○';font-size:0.65rem}
+    .pw-rule.ok::before{content:'●';color:#2e7d32}
+    /* BUTTONS */
     .btn{width:100%;padding:13px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:4px}
     .btn:hover{background:#0d47a1}
     .btn:disabled{background:#9ab;cursor:not-allowed}
-    .msg{margin-top:14px;padding:11px 14px;border-radius:8px;font-size:0.88rem;text-align:center;display:none}
+    .btn-secondary{background:#fff;color:#1565c0;border:1.5px solid #1565c0;margin-top:8px}
+    .btn-secondary:hover{background:#e3f2fd}
+    /* MESSAGES */
+    .msg{margin-top:12px;padding:10px 13px;border-radius:8px;font-size:0.87rem;text-align:center;display:none}
     .msg.success{background:#e8f5e9;color:#2e7d32;display:block}
     .msg.error{background:#ffebee;color:#c62828;display:block}
     .msg.info{background:#e3f2fd;color:#1565c0;display:block}
-    .divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:#aaa;font-size:0.82rem}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e3e8f0}
-    .pending-box{padding:28px 24px;text-align:center}
-    .pending-box .icon{font-size:3rem;margin-bottom:12px}
-    .pending-box h2{color:#f57f17;font-size:1.1rem;margin-bottom:8px}
-    .pending-box p{color:#666;font-size:0.9rem;line-height:1.5}
-    .pending-box .btn-sm{padding:10px 20px;width:auto;font-size:0.85rem;margin-top:16px;background:#666}
-    .rejected-box{padding:28px 24px;text-align:center}
-    .rejected-box .icon{font-size:3rem;margin-bottom:12px}
-    .rejected-box h2{color:#c62828;font-size:1.1rem;margin-bottom:8px}
-    .hidden{display:none!important}
-    .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.5);border-top:2px solid #fff;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
+    /* STATUS BOXES */
+    .status-box{padding:28px 24px;text-align:center}
+    .status-box .icon{font-size:3rem;margin-bottom:12px}
+    .status-box h2{font-size:1.1rem;margin-bottom:8px}
+    .status-box p{color:#666;font-size:0.88rem;line-height:1.6}
+    .status-box .btn{margin-top:16px;width:auto;padding:10px 24px}
+    .verify-email h2{color:#f57f17}
+    .pending-box h2{color:#f57f17}
+    .rejected-box h2{color:#c62828}
+    /* SPINNER */
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top:2px solid #fff;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
+    .hidden{display:none!important}
     .footer{margin-top:20px;color:rgba(255,255,255,0.6);font-size:0.78rem;text-align:center}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:400px){.two-col{grid-template-columns:1fr}}
+    .phone-wrap{display:flex;gap:8px}
+    .phone-prefix{padding:11px 10px;border:1.5px solid #dde3ec;border-radius:8px;font-size:0.93rem;color:#444;background:#f8f9fa;white-space:nowrap}
+    .phone-wrap input{flex:1}
   </style>
 </head>
 <body>
-  <div class="logo">
-    <h1>📈 StockTracker India</h1>
-    <p>NSE &amp; BSE Portfolio Intelligence</p>
+<div class="logo">
+  <h1>📈 Fnikar</h1>
+  <p>NSE &amp; BSE Portfolio Intelligence</p>
+</div>
+
+<div class="card" id="authCard">
+  <div class="tabs" id="tabsRow">
+    <button class="tab active" onclick="showTab('signin')">Sign In</button>
+    <button class="tab" onclick="showTab('signup')">Sign Up</button>
   </div>
 
-  <div class="card" id="authCard">
-    <!-- TABS -->
-    <div class="tabs" id="tabsRow">
-      <button class="tab active" onclick="showTab('signin')">Sign In</button>
-      <button class="tab" onclick="showTab('signup')">Sign Up</button>
+  <!-- SIGN IN -->
+  <div class="form-body" id="signinForm">
+    <div class="form-group">
+      <label>Email Address <span class="required">*</span></label>
+      <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email"/>
+      <div class="field-error" id="siEmailErr"></div>
     </div>
-
-    <!-- SIGN IN -->
-    <div class="form-body" id="signinForm">
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email"/>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="siPass" placeholder="••••••••" autocomplete="current-password"/>
-      </div>
-      <button class="btn" id="siBtn" onclick="doSignIn()">Sign In</button>
-      <div class="msg" id="siMsg"></div>
+    <div class="form-group">
+      <label>Password <span class="required">*</span></label>
+      <input type="password" id="siPass" placeholder="••••••••" autocomplete="current-password"/>
+      <div class="field-error" id="siPassErr"></div>
     </div>
-
-    <!-- SIGN UP -->
-    <div class="form-body hidden" id="signupForm">
-      <div class="form-group">
-        <label>Your Name</label>
-        <input type="text" id="suName" placeholder="Full name"/>
-      </div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email"/>
-      </div>
-      <div class="form-group">
-        <label>Password <span style="font-weight:400;text-transform:none">(min 6 chars)</span></label>
-        <input type="password" id="suPass" placeholder="Choose a password" autocomplete="new-password"/>
-      </div>
-      <button class="btn" id="suBtn" onclick="doSignUp()">Create Account</button>
-      <div class="msg" id="suMsg"></div>
-    </div>
-
-    <!-- PENDING APPROVAL -->
-    <div class="pending-box hidden" id="pendingBox">
-      <div class="icon">⏳</div>
-      <h2>Awaiting Approval</h2>
-      <p>Your account has been created and is pending admin approval.<br/><br/>
-      You'll be able to access your portfolio once the admin approves your account. Please check back later.</p>
-      <button class="btn btn-sm" onclick="doSignOut()">Sign Out</button>
-    </div>
-
-    <!-- REJECTED -->
-    <div class="rejected-box hidden" id="rejectedBox">
-      <div class="icon">❌</div>
-      <h2>Access Denied</h2>
-      <p>Your account request was not approved. Please contact the administrator.</p>
-      <button class="btn btn-sm" onclick="doSignOut()" style="background:#c62828">Sign Out</button>
-    </div>
+    <button class="btn" id="siBtn" onclick="doSignIn()">Sign In</button>
+    <div class="msg" id="siMsg"></div>
   </div>
 
-  <div class="footer">Secure login powered by Firebase &nbsp;|&nbsp; Data from Yahoo Finance</div>
+  <!-- SIGN UP -->
+  <div class="form-body hidden" id="signupForm">
+    <div class="two-col">
+      <div class="form-group">
+        <label>First Name <span class="required">*</span></label>
+        <input type="text" id="suFirst" placeholder="First name"/>
+        <div class="field-error" id="suFirstErr"></div>
+      </div>
+      <div class="form-group">
+        <label>Last Name <span class="required">*</span></label>
+        <input type="text" id="suLast" placeholder="Last name"/>
+        <div class="field-error" id="suLastErr"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email Address <span class="required">*</span></label>
+      <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email" oninput="validateEmail(this,'suEmailErr')"/>
+      <div class="field-error" id="suEmailErr"></div>
+    </div>
+    <div class="form-group">
+      <label>Mobile Number <span class="required">*</span></label>
+      <div class="phone-wrap">
+        <span class="phone-prefix">🇮🇳 +91</span>
+        <input type="tel" id="suPhone" placeholder="9876543210" maxlength="10" oninput="this.value=this.value.replace(/\D/g,''); validatePhone()"/>
+      </div>
+      <div class="field-hint">10-digit Indian mobile number</div>
+      <div class="field-error" id="suPhoneErr"></div>
+    </div>
+    <div class="form-group">
+      <label>Password <span class="required">*</span></label>
+      <input type="password" id="suPass" placeholder="Min 8 chars with A-Z, a-z, 0-9, @#$" autocomplete="new-password" oninput="updatePwStrength(this.value)"/>
+      <div class="pw-strength" id="pwStrength">
+        <div class="pw-bar"><div class="pw-bar-fill" id="pwBarFill"></div></div>
+        <div class="pw-rules">
+          <span class="pw-rule" id="r1">8+ characters</span>
+          <span class="pw-rule" id="r2">Uppercase (A-Z)</span>
+          <span class="pw-rule" id="r3">Lowercase (a-z)</span>
+          <span class="pw-rule" id="r4">Number (0-9)</span>
+          <span class="pw-rule" id="r5">Special (@#$!%)</span>
+          <span class="pw-rule" id="r6">No spaces</span>
+        </div>
+      </div>
+      <div class="field-error" id="suPassErr"></div>
+    </div>
+    <div class="form-group">
+      <label>Confirm Password <span class="required">*</span></label>
+      <input type="password" id="suPass2" placeholder="Re-enter password" oninput="validateConfirm()"/>
+      <div class="field-error" id="suPass2Err"></div>
+    </div>
+    <button class="btn" id="suBtn" onclick="doSignUp()">Create Account</button>
+    <div class="msg" id="suMsg"></div>
+  </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+  <!-- EMAIL VERIFICATION PENDING -->
+  <div class="status-box verify-email hidden" id="verifyBox">
+    <div class="icon">📧</div>
+    <h2>Verify Your Email</h2>
+    <p>We've sent a verification email from <strong>Fnikar</strong> to:<br/><strong id="verifyEmailAddr"></strong><br/><br/>
+    Please click the link in your email to verify your account, then come back and sign in.</p>
+    <button class="btn" style="background:#f57f17" onclick="resendVerification()">Resend Email</button>
+    <button class="btn btn-secondary" onclick="doSignOut()">Back to Sign In</button>
+    <div class="msg" id="verifyMsg"></div>
+  </div>
 
-  <script>
-  // ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
-  // STEP: Replace ALL values below with your Firebase project settings
-  // (Get these from Firebase Console → Project Settings → Your Apps)
-  const firebaseConfig = {
-      	apiKey: "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
-  	authDomain: "stocktracker-india.firebaseapp.com",
-  	projectId: "stocktracker-india",
- 	storageBucket: "stocktracker-india.firebasestorage.app",
-  	messagingSenderId: "144829364145",
-  	appId: "1:144829364145:web:ef183ff4e3035dac272f90"
-  };
-  const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
-  // ──────────────────────────────────────────────────────────────────────────
+  <!-- AWAITING ADMIN APPROVAL -->
+  <div class="status-box pending-box hidden" id="pendingBox">
+    <div class="icon">⏳</div>
+    <h2>Awaiting Approval</h2>
+    <p>Your email is verified and account is created.<br/><br/>
+    You're now waiting for admin approval to access your portfolio. You'll receive access once approved.</p>
+    <button class="btn" style="background:#666" onclick="doSignOut()">Sign Out</button>
+  </div>
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
+  <!-- REJECTED -->
+  <div class="status-box rejected-box hidden" id="rejectedBox">
+    <div class="icon">❌</div>
+    <h2>Access Denied</h2>
+    <p>Your account request was not approved.<br/>Please contact the administrator.</p>
+    <button class="btn" style="background:#c62828" onclick="doSignOut()">Sign Out</button>
+  </div>
+</div>
 
-  // Check if already logged in
-  auth.onAuthStateChanged(async user => {
-    if (!user) return; // not logged in, stay on this page
-    await routeUser(user);
+<div class="footer">fnikar.com &nbsp;|&nbsp; Secure login powered by Firebase &nbsp;|&nbsp; Data: Yahoo Finance NSE/BSE<br/>Support: <a href="mailto:admin@fnikar.com" style="color:rgba(255,255,255,0.8);text-decoration:underline;">admin@fnikar.com</a></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyDUO_EukePdzWOYzBklbVFtcu4oovRrAAQ",
+  authDomain:        "stocktracker-india.firebaseapp.com",
+  projectId:         "stocktracker-india",
+  storageBucket:     "stocktracker-india.firebasestorage.app",
+  messagingSenderId: "144829364145",
+  appId:             "1:144829364145:web:ef183ff4e3035dac272f90"
+};
+const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+// ──────────────────────────────────────────────────────────────────────────
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── PASSWORD RULES ─────────────────────────────────────────────────────────
+const PW_RULES = [
+  {id:'r1', test: p => p.length >= 8,              label:'8+ characters'},
+  {id:'r2', test: p => /[A-Z]/.test(p),             label:'Uppercase (A-Z)'},
+  {id:'r3', test: p => /[a-z]/.test(p),             label:'Lowercase (a-z)'},
+  {id:'r4', test: p => /[0-9]/.test(p),             label:'Number (0-9)'},
+  {id:'r5', test: p => /[^A-Za-z0-9]/.test(p),     label:'Special (@#$!%)'},
+  {id:'r6', test: p => !/\s/.test(p) && p.length>0, label:'No spaces'},
+];
+
+function updatePwStrength(pw) {
+  const passed = PW_RULES.filter(r => r.test(pw)).length;
+  PW_RULES.forEach(r => {
+    const el = document.getElementById(r.id);
+    el.classList.toggle('ok', r.test(pw));
   });
+  const fill = document.getElementById('pwBarFill');
+  const pct = (passed / PW_RULES.length) * 100;
+  fill.style.width = pct + '%';
+  fill.style.background = pct <= 33 ? '#e53935' : pct <= 66 ? '#ff9800' : '#2e7d32';
+  validateConfirm();
+}
 
-  async function routeUser(user) {
-    if (user.email === ADMIN_EMAIL) {
+function isPasswordStrong(pw) {
+  return PW_RULES.every(r => r.test(pw));
+}
+
+// ── VALIDATION ─────────────────────────────────────────────────────────────
+function validateEmail(input, errId) {
+  const v = input.value.trim();
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+  input.classList.toggle('valid', ok && v.length > 0);
+  input.classList.toggle('invalid', !ok && v.length > 0);
+  showFieldErr(errId, !ok && v.length > 0 ? 'Please enter a valid email address.' : '');
+  return ok;
+}
+
+function validatePhone() {
+  const v = document.getElementById('suPhone').value.trim();
+  const ok = /^[6-9]\d{9}$/.test(v);
+  document.getElementById('suPhone').classList.toggle('valid', ok);
+  document.getElementById('suPhone').classList.toggle('invalid', !ok && v.length > 0);
+  showFieldErr('suPhoneErr', !ok && v.length > 0 ? 'Enter valid 10-digit Indian mobile number starting with 6-9.' : '');
+  return ok;
+}
+
+function validateConfirm() {
+  const p1 = document.getElementById('suPass').value;
+  const p2 = document.getElementById('suPass2').value;
+  if (p2.length === 0) return;
+  const ok = p1 === p2;
+  document.getElementById('suPass2').classList.toggle('valid', ok);
+  document.getElementById('suPass2').classList.toggle('invalid', !ok);
+  showFieldErr('suPass2Err', !ok ? 'Passwords do not match.' : '');
+}
+
+function showFieldErr(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+
+// ── AUTH STATE ─────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) return;
+  await routeUser(user);
+});
+
+async function routeUser(user) {
+  // Admin bypasses all checks
+  if (user.email === ADMIN_EMAIL) { window.location.href = 'admin.html'; return; }
+
+  // Check email verification (skip for admin)
+  if (!user.emailVerified) {
+    document.getElementById('verifyEmailAddr').textContent = user.email;
+    showBox('verifyBox'); return;
+  }
+
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (!snap.exists) { doSignOut(); return; }
+    const data = snap.data();
+    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
+    if (data.status === 'approved') { window.location.href = 'dashboard.html'; return; }
+    if (data.status === 'rejected') { showBox('rejectedBox'); return; }
+    showBox('pendingBox');
+  } catch(e) {
+    showMsg('siMsg', 'Connection error. Please try again.', 'error');
+  }
+}
+
+// ── SIGN IN ─────────────────────────────────────────────────────────────────
+async function doSignIn() {
+  const email = document.getElementById('siEmail').value.trim();
+  const pass  = document.getElementById('siPass').value;
+  if (!email) { showFieldErr('siEmailErr','Email is required.'); return; }
+  if (!pass)  { showFieldErr('siPassErr','Password is required.'); return; }
+  setLoading('siBtn', true, 'Signing in…');
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    await routeUser(cred.user);
+  } catch(e) {
+    setLoading('siBtn', false, 'Sign In');
+    const msgs = {
+      'auth/user-not-found':'No account found with this email.',
+      'auth/wrong-password':'Incorrect password. Please try again.',
+      'auth/invalid-credential':'Incorrect email or password.',
+      'auth/invalid-email':'Invalid email address format.',
+      'auth/too-many-requests':'Too many attempts. Please wait a few minutes.',
+      'auth/user-disabled':'This account has been disabled.',
+    };
+    showMsg('siMsg', msgs[e.code] || 'Sign in failed. Please try again.', 'error');
+  }
+}
+
+// ── SIGN UP ─────────────────────────────────────────────────────────────────
+async function doSignUp() {
+  const first = document.getElementById('suFirst').value.trim();
+  const last  = document.getElementById('suLast').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const phone = document.getElementById('suPhone').value.trim();
+  const pass  = document.getElementById('suPass').value;
+  const pass2 = document.getElementById('suPass2').value;
+
+  // Validate all fields
+  let valid = true;
+  if (!first)  { showFieldErr('suFirstErr','First name is required.'); valid=false; }
+  if (!last)   { showFieldErr('suLastErr','Last name is required.'); valid=false; }
+  if (!validateEmail(document.getElementById('suEmail'),'suEmailErr')) valid=false;
+  if (!validatePhone()) valid=false;
+  if (!isPasswordStrong(pass)) { showFieldErr('suPassErr','Password must meet all requirements above.'); valid=false; }
+  if (pass !== pass2) { showFieldErr('suPass2Err','Passwords do not match.'); valid=false; }
+  if (!valid) return;
+
+  setLoading('suBtn', true, 'Creating account…');
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const fullName = first + ' ' + last;
+    await cred.user.updateProfile({ displayName: fullName });
+
+    const role   = (email === ADMIN_EMAIL) ? 'admin' : 'user';
+    const status = (email === ADMIN_EMAIL) ? 'approved' : 'pending';
+    await db.collection('users').doc(cred.user.uid).set({
+      uid: cred.user.uid, email, displayName: fullName,
+      firstName: first, lastName: last,
+      phone: '+91' + phone, role, status,
+      emailVerified: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    if (email === ADMIN_EMAIL) {
       window.location.href = 'admin.html'; return;
     }
-    try {
-      const snap = await db.collection('users').doc(user.uid).get();
-      if (!snap.exists) { doSignOut(); return; }
-      const data = snap.data();
-      if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
-      if (data.status === 'approved') { window.location.href = 'dashboard.html'; return; }
-      if (data.status === 'rejected') { showBox('rejectedBox'); return; }
-      showBox('pendingBox');
-    } catch(e) {
-      showMsg('siMsg', 'Connection error. Please try again.', 'error');
-    }
-  }
 
-  function showBox(id) {
-    document.getElementById('tabsRow').classList.add('hidden');
-    document.getElementById('signinForm').classList.add('hidden');
-    document.getElementById('signupForm').classList.add('hidden');
-    document.getElementById('pendingBox').classList.add('hidden');
-    document.getElementById('rejectedBox').classList.add('hidden');
-    document.getElementById(id).classList.remove('hidden');
-  }
+    // Send email verification OTP
+    await cred.user.sendEmailVerification();
+    document.getElementById('verifyEmailAddr').textContent = email;
+    showBox('verifyBox');
+    showMsg('verifyMsg','✅ Verification email sent! Check your inbox.','success');
 
-  function showTab(tab) {
-    document.getElementById('signinForm').classList.toggle('hidden', tab !== 'signin');
-    document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
-    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='signin')||(i===1&&tab==='signup')));
-    clearMsgs();
+  } catch(e) {
+    setLoading('suBtn', false, 'Create Account');
+    const msgs = {
+      'auth/email-already-in-use':'An account with this email already exists. Please sign in.',
+      'auth/invalid-email':'Invalid email address.',
+      'auth/weak-password':'Password is too weak.',
+    };
+    showMsg('suMsg', msgs[e.code] || 'Sign up failed: ' + e.message, 'error');
   }
+}
 
-  function clearMsgs() {
-    ['siMsg','suMsg'].forEach(id => { const el=document.getElementById(id); el.className='msg'; el.textContent=''; });
+// ── RESEND VERIFICATION ────────────────────────────────────────────────────
+async function resendVerification() {
+  const user = auth.currentUser;
+  if (!user) { showBox('signinForm'); return; }
+  try {
+    await user.sendEmailVerification();
+    showMsg('verifyMsg','✅ Verification email resent! Check your inbox.','success');
+  } catch(e) {
+    showMsg('verifyMsg','Could not resend email. Try again in a minute.','error');
   }
+}
 
-  function showMsg(id, text, type) {
-    const el = document.getElementById(id);
-    el.textContent = text; el.className = 'msg ' + type;
-  }
-
-  function setLoading(btnId, loading) {
-    const btn = document.getElementById(btnId);
-    if (loading) { btn.innerHTML = '<span class="spinner"></span>Please wait…'; btn.disabled = true; }
-    else { btn.innerHTML = btnId === 'siBtn' ? 'Sign In' : 'Create Account'; btn.disabled = false; }
-  }
-
-  async function doSignIn() {
-    const email = document.getElementById('siEmail').value.trim();
-    const pass  = document.getElementById('siPass').value;
-    if (!email || !pass) { showMsg('siMsg','Please enter email and password.','error'); return; }
-    setLoading('siBtn', true);
-    try {
-      const cred = await auth.signInWithEmailAndPassword(email, pass);
-      await routeUser(cred.user);
-    } catch(e) {
-      setLoading('siBtn', false);
-      const msgs = {
-        'auth/user-not-found': 'No account found with this email.',
-        'auth/wrong-password': 'Incorrect password.',
-        'auth/invalid-email': 'Invalid email address.',
-        'auth/too-many-requests': 'Too many attempts. Please wait a moment.',
-      };
-      showMsg('siMsg', msgs[e.code] || 'Sign in failed: ' + e.message, 'error');
-    }
-  }
-
-  async function doSignUp() {
-    const name  = document.getElementById('suName').value.trim();
-    const email = document.getElementById('suEmail').value.trim();
-    const pass  = document.getElementById('suPass').value;
-    if (!name)  { showMsg('suMsg','Please enter your name.','error'); return; }
-    if (!email) { showMsg('suMsg','Please enter your email.','error'); return; }
-    if (pass.length < 6) { showMsg('suMsg','Password must be at least 6 characters.','error'); return; }
-    setLoading('suBtn', true);
-    try {
-      const cred = await auth.createUserWithEmailAndPassword(email, pass);
-      await cred.user.updateProfile({ displayName: name });
-      const role = (email === ADMIN_EMAIL) ? 'admin' : 'user';
-      const status = (email === ADMIN_EMAIL) ? 'approved' : 'pending';
-      await db.collection('users').doc(cred.user.uid).set({
-        uid: cred.user.uid, email, displayName: name,
-        role, status, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      if (email === ADMIN_EMAIL) { window.location.href = 'admin.html'; return; }
-      showMsg('suMsg', '✅ Account created! Awaiting admin approval.', 'success');
-      showBox('pendingBox');
-    } catch(e) {
-      setLoading('suBtn', false);
-      const msgs = {
-        'auth/email-already-in-use': 'An account with this email already exists.',
-        'auth/invalid-email': 'Invalid email address.',
-        'auth/weak-password': 'Password is too weak.',
-      };
-      showMsg('suMsg', msgs[e.code] || 'Sign up failed: ' + e.message, 'error');
-    }
-  }
-
-  async function doSignOut() {
-    await auth.signOut();
-    location.reload();
-  }
-
-  // Allow Enter key
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      if (!document.getElementById('signinForm').classList.contains('hidden')) doSignIn();
-      else if (!document.getElementById('signupForm').classList.contains('hidden')) doSignUp();
-    }
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+function showBox(id) {
+  ['tabsRow','signinForm','signupForm','verifyBox','pendingBox','rejectedBox'].forEach(x => {
+    const el = document.getElementById(x);
+    if (el) el.classList.add('hidden');
   });
-  </script>
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function showTab(tab) {
+  document.getElementById('signinForm').classList.toggle('hidden', tab !== 'signin');
+  document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',(i===0&&tab==='signin')||(i===1&&tab==='signup')));
+  clearMsgs();
+}
+
+function clearMsgs() {
+  ['siMsg','suMsg'].forEach(id => { const el=document.getElementById(id); if(el){el.className='msg';el.textContent='';} });
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text; el.className = 'msg ' + type;
+}
+
+function setLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  if (loading) { btn.innerHTML = `<span class="spinner"></span>${label}`; btn.disabled = true; }
+  else { btn.textContent = label; btn.disabled = false; }
+}
+
+async function doSignOut() { await auth.signOut(); location.reload(); }
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (!document.getElementById('signinForm').classList.contains('hidden')) doSignIn();
+  else if (!document.getElementById('signupForm').classList.contains('hidden')) doSignUp();
+});
+</script>
 </body>
 </html>
