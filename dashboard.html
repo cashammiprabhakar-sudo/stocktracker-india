@@ -19,7 +19,7 @@
     .main{max-width:1400px;margin:0 auto;padding:16px}
     /* STATS STRIP */
     .stats-strip{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
-    @media(min-width:700px){.stats-strip{grid-template-columns:repeat(4,1fr)}}
+    @media(min-width:700px){.stats-strip{grid-template-columns:repeat(5,1fr)}}
     .stat-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
     .stat-card .label{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px}
     .stat-card .value{font-size:1.25rem;font-weight:700;color:#1565c0}
@@ -214,9 +214,49 @@
     .sym-item:hover,.sym-item.active{background:#eef4ff}
     .sym-item .si-ticker{font-weight:700;font-size:0.88rem;color:#1565c0}
     .sym-item .si-name{font-size:0.78rem;color:#666}
+    /* ANALYTICS TAB */
+    .analytics-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
+    @media(min-width:900px){.analytics-grid{grid-template-columns:2fr 1fr}}
+    .chart-panel{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);padding:20px}
+    .chart-panel h3{font-size:0.9rem;font-weight:700;color:#333;margin-bottom:4px}
+    .chart-panel .chart-sub{font-size:0.76rem;color:#888;margin-bottom:14px}
+    .chart-range-btns{display:flex;gap:6px;margin-bottom:14px}
+    .chart-range-btn{background:#f0f4f8;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;color:#555}
+    .chart-range-btn.active{background:#1565c0;color:#fff}
+    .chart-empty{text-align:center;padding:40px 20px;color:#aaa;font-size:0.85rem}
+    /* TARGET PRICE ALERTS */
+    .tgt-hit{background:#e8f5e9!important}.tgt-near{background:#fffde7!important}
+    .tgt-badge{display:inline-block;font-size:0.7rem;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px}
+    .tgt-badge.hit{background:#c8e6c9;color:#1b5e20}
+    .tgt-badge.near{background:#fff9c4;color:#e65100}
+    /* NOTES */
+    .notes-section{margin-top:14px;padding-top:14px;border-top:1px solid #eee}
+    .notes-section h4{font-size:0.85rem;font-weight:700;color:#555;margin-bottom:8px}
+    .notes-textarea{width:100%;border:1.5px solid #dde3ec;border-radius:7px;padding:10px 12px;font-size:0.85rem;resize:vertical;min-height:72px;font-family:inherit;outline:none;box-sizing:border-box}
+    .notes-textarea:focus{border-color:#1565c0}
+    .btn-save-notes{background:#1565c0;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:6px}
+    .btn-save-notes:disabled{background:#90a4ae;cursor:not-allowed}
+    /* DIVIDENDS */
+    .div-log{margin-top:14px;padding-top:14px;border-top:1px solid #eee}
+    .div-log h4{font-size:0.85rem;font-weight:700;color:#555;margin-bottom:8px}
+    .div-entry-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+    .div-entry-form input{padding:7px 10px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.82rem;outline:none;width:130px}
+    .div-entry-form input:focus{border-color:#2e7d32}
+    .div-entry-form label{font-size:0.73rem;font-weight:600;color:#666;display:block;margin-bottom:3px}
+    .btn-log-div{background:#2e7d32;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap}
+    .div-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#e8f5e9;border-radius:6px;margin-bottom:4px;font-size:0.8rem}
+    .div-item .div-del{background:none;border:none;color:#c62828;cursor:pointer;font-size:0.78rem;padding:0 4px}
+    .div-total{font-size:0.82rem;font-weight:700;color:#2e7d32;margin-top:6px}
+    /* EXPORT BUTTON */
+    .btn-export{background:#fff;border:1.5px solid #1565c0;color:#1565c0;padding:7px 14px;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:5px}
+    .btn-export:hover{background:#e3f2fd}
+    /* STATS STRIP EXTENDED */
+    .stat-card .stat-sub{font-size:0.72rem;color:#888;margin-top:2px}
   </style>
 <!-- SheetJS for Excel support -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Chart.js for portfolio performance and sector charts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -236,14 +276,16 @@
   <div class="stats-strip">
     <div class="stat-card"><div class="label">Total Invested</div><div class="value" id="statInvested">—</div></div>
     <div class="stat-card"><div class="label">Current Value</div><div class="value" id="statValue">—</div></div>
-    <div class="stat-card"><div class="label">Gain / Loss</div><div class="value" id="statGainLoss">—</div></div>
+    <div class="stat-card"><div class="label">Gain / Loss</div><div class="value" id="statGainLoss">—</div><div class="stat-sub" id="statRealized" style="display:none"></div></div>
     <div class="stat-card"><div class="label">Return %</div><div class="value" id="statReturn">—</div></div>
+    <div class="stat-card"><div class="label">Dividend Income</div><div class="value" id="statDividends" style="color:#2e7d32">—</div><div class="stat-sub" id="statDivYield"></div></div>
   </div>
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="showTab('portfolio')">📊 My Portfolio</button>
-    <button class="tab" onclick="showTab('add')">➕ Add Stocks</button>
+    <button class="tab active" id="tab-portfolio" onclick="showTab('portfolio')">📊 My Portfolio</button>
+    <button class="tab" id="tab-add" onclick="showTab('add')">➕ Add Stocks</button>
+    <button class="tab" id="tab-analytics" onclick="showTab('analytics')">📈 Analytics</button>
   </div>
 
   <!-- PORTFOLIO TAB -->
@@ -253,6 +295,7 @@
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
         <span id="mdAge" style="font-size:0.76rem;color:#888;margin-left:8px;"></span>
+        <button class="btn-export" onclick="exportToExcel()" title="Export portfolio to Excel">📥 Export</button>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
           🔄 Refresh Prices
         </button>
@@ -294,6 +337,7 @@
               <th class="num sortable" onclick="sortBy('change12w')">12w Chg% <span class="sort-arrow" id="sort-change12w">⇅</span></th>
               <th class="num">Buy Recs</th>
               <th class="num">Sell Recs</th>
+              <th class="num sortable" onclick="sortBy('targetPrice')">Target ₹ <span class="sort-arrow" id="sort-targetPrice">⇅</span></th>
               <th class="sortable" onclick="sortBy('signal')">Signal <span class="sort-arrow" id="sort-signal">⇅</span></th>
               <th class="sortable" onclick="sortBy('recommendation')">Rec. <span class="sort-arrow" id="sort-recommendation">⇅</span></th>
               <th>Commentary</th>
@@ -307,6 +351,38 @@
       <div class="empty-state" id="emptyState" style="display:none">
         <div class="icon">📭</div>
         <p>No stocks added yet.<br/>Click <strong>Add Stocks</strong> to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS TAB -->
+  <div id="tabAnalytics" style="display:none">
+    <div class="analytics-grid">
+      <div class="chart-panel">
+        <h3>📈 Portfolio Value Over Time</h3>
+        <p class="chart-sub">Snapshots saved each time you refresh prices</p>
+        <div class="chart-range-btns">
+          <button class="chart-range-btn active" id="rangeBtn30" onclick="setChartRange(30,this)">1M</button>
+          <button class="chart-range-btn" id="rangeBtn90" onclick="setChartRange(90,this)">3M</button>
+          <button class="chart-range-btn" id="rangeBtn180" onclick="setChartRange(180,this)">6M</button>
+          <button class="chart-range-btn" id="rangeBtn365" onclick="setChartRange(365,this)">1Y</button>
+          <button class="chart-range-btn" id="rangeBtn9999" onclick="setChartRange(9999,this)">All</button>
+        </div>
+        <div style="position:relative;height:280px"><canvas id="performanceChart"></canvas></div>
+        <div class="chart-empty" id="perfChartEmpty" style="display:none">📸 No snapshots yet.<br/>Refresh prices to start tracking portfolio value.</div>
+      </div>
+      <div class="chart-panel">
+        <h3>🥧 Sector Breakdown</h3>
+        <p class="chart-sub">By invested capital (active positions)</p>
+        <div style="position:relative;height:280px"><canvas id="sectorChart"></canvas></div>
+        <div class="chart-empty" id="sectorChartEmpty" style="display:none">No sector data available yet.</div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h3>🎯 Target Price Alerts</h3>
+      <p class="chart-sub">Stocks where current price is within 10% of or above analyst target</p>
+      <div id="alertsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:4px">
+        <div style="color:#aaa;font-size:0.85rem;padding:8px">No alerts — refresh prices to check targets.</div>
       </div>
     </div>
   </div>
@@ -420,7 +496,25 @@
         <h3>💬 Commentary</h3>
         <div class="detail-commentary" id="dc-reason">—</div>
       </div>
-      <div style="text-align:right;margin-top:8px">
+      <!-- DIVIDENDS LOG -->
+      <div class="div-log">
+        <h4>💰 Dividend Log</h4>
+        <div class="div-entry-form">
+          <div><label>Amount / Share (₹)</label><input type="number" id="divAmount" placeholder="e.g. 18.50" step="0.01" min="0"/></div>
+          <div><label>Shares (default: held qty)</label><input type="number" id="divQty" placeholder="auto" step="1" min="1"/></div>
+          <div><label>Date</label><input type="date" id="divDate"/></div>
+          <button class="btn-log-div" onclick="addDividend()">+ Log Dividend</button>
+        </div>
+        <div id="dc-divList"></div>
+        <div class="div-total" id="dc-divTotal" style="display:none"></div>
+      </div>
+      <!-- NOTES -->
+      <div class="notes-section">
+        <h4>📝 My Notes</h4>
+        <textarea class="notes-textarea" id="dc-notes" placeholder="Add your investment thesis, reminders, or notes here…"></textarea>
+        <br/><button class="btn-save-notes" id="dc-notesBtn" onclick="saveNotes()">💾 Save Notes</button>
+      </div>
+      <div style="text-align:right;margin-top:14px">
         <button onclick="closeDetailCard()" class="btn-modal-cancel" style="min-width:100px">Close</button>
       </div>
     </div>
@@ -1970,7 +2064,7 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('adminLink').style.display = 'inline';
     document.getElementById('manageUsersBtn').style.display = 'inline';
     ensureAdminFirestoreDoc(user);  // ensure admin appears in User Management
-    loadPortfolio();
+    loadPortfolioWithExtras();
     return;
   }
   // Regular users: check approval
@@ -1981,7 +2075,7 @@ auth.onAuthStateChanged(async user => {
   currentUser = user;
   document.getElementById('userName').textContent = user.displayName || user.email;
   if (snap.data().role === 'admin') document.getElementById('adminLink').style.display='inline';
-  loadPortfolio();
+  loadPortfolioWithExtras();
 });
 
 // ── LOAD PORTFOLIO ─────────────────────────────────────────────────────────
@@ -2118,6 +2212,13 @@ function renderTable() {
       <td class="num">${chgDisp}</td>
       <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
       <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
+      ${(()=>{
+        if (!s.targetPrice||isSoldOut) return `<td class="num">—</td>`;
+        const pct = s.currentPrice!=null ? (s.currentPrice/s.targetPrice*100) : null;
+        const cls = pct!=null&&pct>=100?'tgt-hit':pct!=null&&pct>=90?'tgt-near':'';
+        const badge = pct!=null&&pct>=100?'<span class="tgt-badge hit">🎯 HIT</span>':pct!=null&&pct>=90?'<span class="tgt-badge near">🔔 NEAR</span>':'';
+        return `<td class="num ${cls}">₹${fmt(s.targetPrice)}${badge}</td>`;
+      })()}
       <td class="${signalClass}" style="font-size:0.78rem">${isSoldOut?'—':s.signal||'—'}</td>
       <td><span class="${recClass}">${recNorm&&!isSoldOut?recNorm.replace('strong_','').toUpperCase():'—'}</span></td>
       <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${s.reason||'—'}</td>
@@ -2311,6 +2412,16 @@ function updateStats() {
   } else {
     glEl.textContent = '—'; retEl.textContent = '—';
   }
+  // Realized P&L sub-label
+  const realSub = document.getElementById('statRealized');
+  if (realSub && totalRealizedPnL !== 0) {
+    realSub.textContent = `Realized: ${totalRealizedPnL>=0?'+':''}₹${fmt(totalRealizedPnL)}`;
+    realSub.style.display = '';
+  } else if (realSub) { realSub.style.display = 'none'; }
+  // Dividend income stat
+  updateDividendStat();
+  // Save portfolio snapshot (fire-and-forget)
+  if (hasValue && currentUser) savePortfolioSnapshot(totalCurrentValue);
 }
 
 // ── PRICE FETCHING VIA CLOUDFLARE WORKER ─────────────────────────────────────
@@ -2631,9 +2742,14 @@ function setCsvStatus(msg, type) {
 
 // ── UI HELPERS ─────────────────────────────────────────────────────────────
 function showTab(tab) {
-  document.getElementById('tabPortfolio').style.display = tab==='portfolio' ? '' : 'none';
-  document.getElementById('tabAdd').style.display = tab==='add' ? '' : 'none';
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',(i===0&&tab==='portfolio')||(i===1&&tab==='add')));
+  document.getElementById('tabPortfolio').style.display  = tab==='portfolio'  ? '' : 'none';
+  document.getElementById('tabAdd').style.display        = tab==='add'        ? '' : 'none';
+  document.getElementById('tabAnalytics').style.display  = tab==='analytics'  ? '' : 'none';
+  ['portfolio','add','analytics'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.classList.toggle('active', t===tab);
+  });
+  if (tab==='analytics') loadAnalytics();
 }
 
 let toastTimer;
@@ -2791,6 +2907,477 @@ async function rejectUser(uid, email) {
     showToast('❌ Error: ' + e.message, 'error');
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── FEATURE 1: PORTFOLIO PERFORMANCE CHART ──────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+let _snapshots = [];       // { date: 'YYYY-MM-DD', value: number }
+let _perfChart = null;
+let _sectorChart = null;
+let _chartRange = 30;      // days shown in performance chart
+let _snapshotSaveThrottle = null;
+
+async function savePortfolioSnapshot(totalValue) {
+  if (!currentUser || !totalValue || totalValue <= 0) return;
+  // Throttle: only save once per 5 minutes per session to avoid hammering Firestore
+  if (_snapshotSaveThrottle) return;
+  _snapshotSaveThrottle = setTimeout(() => { _snapshotSaveThrottle = null; }, 5 * 60 * 1000);
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    await db.collection('portfolios').doc(currentUser.uid)
+      .collection('snapshots').doc(today)
+      .set({ date: today, value: Math.round(totalValue * 100) / 100,
+             savedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    // Update local cache
+    const existing = _snapshots.find(s => s.date === today);
+    if (existing) existing.value = totalValue;
+    else _snapshots.push({ date: today, value: totalValue });
+  } catch(e) { /* non-critical */ }
+}
+
+async function loadSnapshots() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.collection('portfolios').doc(currentUser.uid)
+      .collection('snapshots').orderBy('date', 'asc').get();
+    _snapshots = snap.docs.map(d => ({ date: d.data().date, value: d.data().value }));
+  } catch(e) { _snapshots = []; }
+}
+
+function setChartRange(days, btn) {
+  _chartRange = days;
+  document.querySelectorAll('.chart-range-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderPerformanceChart();
+}
+
+function renderPerformanceChart() {
+  const canvas = document.getElementById('performanceChart');
+  const empty  = document.getElementById('perfChartEmpty');
+  if (!canvas) return;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - _chartRange);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const data = _chartRange < 9999
+    ? _snapshots.filter(s => s.date >= cutoffStr)
+    : _snapshots;
+
+  if (!data.length) {
+    canvas.style.display = 'none'; empty.style.display = '';
+    return;
+  }
+  canvas.style.display = ''; empty.style.display = 'none';
+
+  const labels = data.map(s => {
+    const d = new Date(s.date + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  });
+  const values = data.map(s => s.value);
+  const first  = values[0] || 0;
+  const last   = values[values.length - 1] || 0;
+  const isGain = last >= first;
+  const lineColor = isGain ? '#2e7d32' : '#c62828';
+  const fillColor = isGain ? 'rgba(46,125,50,0.08)' : 'rgba(198,40,40,0.08)';
+
+  if (_perfChart) { _perfChart.destroy(); _perfChart = null; }
+  _perfChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Portfolio Value (₹)',
+        data: values,
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        borderWidth: 2.5,
+        pointRadius: data.length > 60 ? 0 : 3,
+        pointHoverRadius: 5,
+        fill: true,
+        tension: 0.3,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => '₹' + ctx.parsed.y.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxTicksLimit: 8 }, grid: { display: false } },
+        y: {
+          ticks: { font: { size: 10 }, callback: v => '₹' + (v >= 100000 ? (v/100000).toFixed(1)+'L' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v) },
+          grid: { color: '#f0f4f8' },
+        },
+      },
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── FEATURE 5: SECTOR BREAKDOWN PIE CHART ────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+const SECTOR_COLORS = [
+  '#1565c0','#2e7d32','#c62828','#e65100','#6a1b9a','#00838f',
+  '#558b2f','#ad1457','#4527a0','#ef6c00','#00695c','#283593',
+  '#1b5e20','#b71c1c','#4a148c','#006064','#33691e',
+];
+
+function renderSectorChart() {
+  const canvas = document.getElementById('sectorChart');
+  const empty  = document.getElementById('sectorChartEmpty');
+  if (!canvas) return;
+
+  const active  = stocks.filter(s => s.qty > 0 && s.avgCost > 0);
+  const byInd   = {};
+  active.forEach(s => {
+    const ind = s.industry || 'Other';
+    byInd[ind] = (byInd[ind] || 0) + (s.avgCost * s.qty);
+  });
+
+  const entries = Object.entries(byInd).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    canvas.style.display = 'none'; empty.style.display = ''; return;
+  }
+  canvas.style.display = ''; empty.style.display = 'none';
+
+  if (_sectorChart) { _sectorChart.destroy(); _sectorChart = null; }
+  _sectorChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(e => e[0]),
+      datasets: [{
+        data: entries.map(e => Math.round(e[1])),
+        backgroundColor: SECTOR_COLORS.slice(0, entries.length),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 14, padding: 8 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct   = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+              return ` ₹${ctx.parsed.toLocaleString('en-IN')} (${pct}%)`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── FEATURE 3: TARGET PRICE ALERT CARDS ──────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+function renderAlerts() {
+  const container = document.getElementById('alertsList');
+  if (!container) return;
+
+  const alerts = stocks
+    .filter(s => s.qty > 0 && s.targetPrice > 0 && s.currentPrice != null)
+    .map(s => ({ ...s, pct: s.currentPrice / s.targetPrice * 100 }))
+    .filter(s => s.pct >= 90)
+    .sort((a, b) => b.pct - a.pct);
+
+  if (!alerts.length) {
+    container.innerHTML = '<div style="color:#aaa;font-size:0.85rem;padding:8px">No alerts — all prices are below 90% of analyst targets.</div>';
+    return;
+  }
+
+  container.innerHTML = alerts.map(s => {
+    const pct       = s.pct.toFixed(1);
+    const isHit     = s.pct >= 100;
+    const barColor  = isHit ? '#2e7d32' : '#f57f17';
+    const barPct    = Math.min(100, s.pct);
+    const upside    = ((s.targetPrice - s.currentPrice) / s.currentPrice * 100);
+    const uptxt     = isHit ? `<span style="color:#c62828;font-weight:600">🔻 ${Math.abs(upside).toFixed(1)}% above target</span>`
+                            : `<span style="color:#f57f17;font-weight:600">🔔 ${upside.toFixed(1)}% to target</span>`;
+    return `<div style="background:${isHit?'#e8f5e9':'#fffde7'};border-radius:10px;padding:14px 16px;border:1px solid ${isHit?'#a5d6a7':'#fff176'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div><strong>${s.name||s.symbol}</strong><span style="font-size:0.78rem;color:#888;margin-left:6px">${s.symbol}</span></div>
+        <span style="font-size:1.1rem">${isHit?'🎯':'🔔'}</span>
+      </div>
+      <div style="font-size:0.82rem;margin-bottom:8px">
+        Current: <strong>₹${fmt(s.currentPrice)}</strong> &nbsp;·&nbsp; Target: <strong>₹${fmt(s.targetPrice)}</strong>
+      </div>
+      <div style="background:#e0e0e0;border-radius:4px;height:6px;margin-bottom:6px">
+        <div style="background:${barColor};width:${barPct}%;height:100%;border-radius:4px;transition:width 0.4s"></div>
+      </div>
+      <div style="font-size:0.8rem">${uptxt} &nbsp;·&nbsp; <span style="color:#555">${pct}% of target</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── LOAD ANALYTICS TAB ───────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+let _analyticsLoaded = false;
+async function loadAnalytics() {
+  if (!_analyticsLoaded) {
+    await loadSnapshots();
+    _analyticsLoaded = true;
+  }
+  renderPerformanceChart();
+  renderSectorChart();
+  renderAlerts();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── FEATURE 2: DIVIDEND TRACKER ───────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+let _dividends = [];       // all dividend records from Firestore
+let _activeDivSymbol = ''; // symbol open in detail card
+
+async function loadDividends() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.collection('portfolios').doc(currentUser.uid)
+      .collection('dividends').orderBy('date', 'asc').get();
+    _dividends = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { _dividends = []; }
+  updateDividendStat();
+}
+
+function updateDividendStat() {
+  const total = _dividends.reduce((s, d) => s + (d.totalAmount || 0), 0);
+  const divEl = document.getElementById('statDividends');
+  const yldEl = document.getElementById('statDivYield');
+  if (!divEl) return;
+  if (!_dividends.length) { divEl.textContent = '—'; if (yldEl) yldEl.textContent = ''; return; }
+  divEl.textContent = '₹' + fmt(total);
+  // Yield = total dividends / total invested × 100
+  const totalInvested = stocks.filter(s=>s.qty>0).reduce((s,st) => s + (st.avgCost||0)*(st.qty||0), 0);
+  if (yldEl && totalInvested > 0) yldEl.textContent = 'Yield: ' + (total/totalInvested*100).toFixed(2) + '%';
+}
+
+async function addDividend() {
+  const sym  = _activeDivSymbol;
+  const amt  = parseFloat(document.getElementById('divAmount').value);
+  const dateVal = document.getElementById('divDate').value;
+  const s    = stocks.find(x => x.symbol === sym);
+  if (!sym || !s)             { showToast('Open a stock detail card first.', 'error'); return; }
+  if (isNaN(amt) || amt <= 0) { showToast('Enter a valid amount per share.', 'error'); return; }
+  const qty  = parseInt(document.getElementById('divQty').value) || s.qty || 0;
+  const date = dateVal || new Date().toISOString().slice(0, 10);
+  const totalAmount = amt * qty;
+  try {
+    const doc = { symbol: sym, name: s.name||sym, amountPerShare: amt, qty, totalAmount, date,
+      addedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    const ref = await db.collection('portfolios').doc(currentUser.uid)
+      .collection('dividends').add(doc);
+    _dividends.push({ id: ref.id, ...doc });
+    document.getElementById('divAmount').value = '';
+    document.getElementById('divQty').value = '';
+    renderDivList(sym);
+    updateDividendStat();
+    showToast(`✅ Dividend logged: ₹${fmt(totalAmount)} for ${sym}`, 'success');
+  } catch(e) { showToast('Error saving dividend: ' + e.message, 'error'); }
+}
+
+async function deleteDividend(divId) {
+  if (!confirm('Remove this dividend entry?')) return;
+  try {
+    await db.collection('portfolios').doc(currentUser.uid)
+      .collection('dividends').doc(divId).delete();
+    _dividends = _dividends.filter(d => d.id !== divId);
+    renderDivList(_activeDivSymbol);
+    updateDividendStat();
+    showToast('Dividend entry removed.', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function renderDivList(symbol) {
+  const list   = document.getElementById('dc-divList');
+  const totEl  = document.getElementById('dc-divTotal');
+  if (!list) return;
+  const divs   = _dividends.filter(d => d.symbol === symbol);
+  if (!divs.length) {
+    list.innerHTML = '<div style="font-size:0.8rem;color:#aaa;padding:4px 0">No dividends logged yet.</div>';
+    if (totEl) totEl.style.display = 'none';
+    return;
+  }
+  const total  = divs.reduce((s, d) => s + (d.totalAmount || 0), 0);
+  list.innerHTML = divs.map(d =>
+    `<div class="div-item">
+       <span>₹${d.amountPerShare}/share × ${d.qty} = <strong>₹${fmt(d.totalAmount)}</strong></span>
+       <span>${d.date}&nbsp;<button class="div-del" onclick="deleteDividend('${d.id}')">✕</button></span>
+     </div>`
+  ).join('');
+  if (totEl) { totEl.textContent = `Total dividends: ₹${fmt(total)}`; totEl.style.display = ''; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── FEATURE 6: NOTES PER STOCK ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+let _activeNoteSymbol = '';
+
+async function saveNotes() {
+  const sym   = _activeNoteSymbol;
+  const notes = document.getElementById('dc-notes').value;
+  const s     = stocks.find(x => x.symbol === sym);
+  if (!s) return;
+  const btn   = document.getElementById('dc-notesBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await db.collection('portfolios').doc(currentUser.uid)
+      .collection('stocks').doc(s.id)
+      .update({ notes });
+    // Update in-memory
+    s.notes = notes;
+    rawTransactions.filter(t => t.symbol === sym).forEach(t => t.notes = notes);
+    showToast('✅ Notes saved', 'success');
+  } catch(e) { showToast('Error saving notes: ' + e.message, 'error'); }
+  btn.disabled = false; btn.textContent = '💾 Save Notes';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── FEATURE 4: EXPORT TO EXCEL ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+function exportToExcel() {
+  if (!stocks.length) { showToast('No stocks to export.', 'error'); return; }
+
+  const headers = [
+    'Symbol','Company','Industry','Avg Cost (₹)','Qty','Invested (₹)',
+    'Current Price (₹)','Current Value (₹)','P&L (₹)','P&L (%)','P/E',
+    '12W Change (%)','Target Price (₹)','Buy Recs','Sell Recs',
+    'Signal','Recommendation','Commentary','Notes',
+  ];
+
+  const rows = stocks.map(s => {
+    const invested  = (s.avgCost||0) * (s.qty||0);
+    const value     = s.qty > 0 && s.currentPrice != null ? s.currentPrice * s.qty : null;
+    const pnl       = value != null ? value - invested : null;
+    const pnlPct    = pnl != null && invested > 0 ? pnl / invested * 100 : null;
+    return [
+      s.symbol, s.name||'', s.industry||'',
+      s.avgCost!=null ? +s.avgCost.toFixed(2) : '',
+      s.qty||0,
+      invested > 0 ? +invested.toFixed(2) : '',
+      s.currentPrice!=null ? +s.currentPrice.toFixed(2) : '',
+      value!=null ? +value.toFixed(2) : '',
+      pnl!=null ? +pnl.toFixed(2) : '',
+      pnlPct!=null ? +pnlPct.toFixed(2) : '',
+      s.pe!=null ? +s.pe.toFixed(2) : '',
+      s.change12w!=null ? +s.change12w.toFixed(2) : '',
+      s.targetPrice!=null ? +s.targetPrice.toFixed(2) : '',
+      s.buyRecs!=null ? s.buyRecs : '',
+      s.sellRecs!=null ? s.sellRecs : '',
+      s.signal||'', s.recommendation||'', s.reason||'', s.notes||'',
+    ];
+  });
+
+  const wsData = [headers, ...rows];
+  const ws     = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:12},{wch:28},{wch:20},{wch:14},{wch:6},{wch:14},
+    {wch:14},{wch:14},{wch:12},{wch:10},{wch:8},
+    {wch:12},{wch:14},{wch:10},{wch:10},
+    {wch:14},{wch:14},{wch:40},{wch:30},
+  ];
+
+  // Header row styling (bold, blue bg)
+  const hdrRange = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = hdrRange.s.c; c <= hdrRange.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c })];
+    if (cell) {
+      cell.s = { font: { bold: true, color: { rgb: 'FFFFFF' } },
+                 fill: { fgColor: { rgb: '1565C0' } },
+                 alignment: { horizontal: 'center' } };
+    }
+  }
+
+  // Color P&L cells
+  rows.forEach((row, i) => {
+    const pnl = row[8];
+    if (pnl === '') return;
+    const cell = ws[XLSX.utils.encode_cell({ r: i + 1, c: 8 })];
+    const pctCell = ws[XLSX.utils.encode_cell({ r: i + 1, c: 9 })];
+    const color = pnl >= 0 ? '1B5E20' : 'B71C1C';
+    if (cell) cell.s = { font: { bold: true, color: { rgb: color } } };
+    if (pctCell) pctCell.s = { font: { bold: true, color: { rgb: color } } };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Portfolio');
+
+  // Summary sheet
+  const totalInv = stocks.reduce((s,st) => s+(st.avgCost||0)*(st.qty||0), 0);
+  const totalVal = stocks.filter(s=>s.currentPrice!=null&&s.qty>0).reduce((s,st)=>s+st.currentPrice*st.qty,0);
+  const totalDiv = _dividends.reduce((s,d)=>s+(d.totalAmount||0),0);
+  const summaryData = [
+    ['Fnikar Portfolio Summary', ''],
+    ['Generated On', new Date().toLocaleDateString('en-IN')],
+    [''],
+    ['Total Active Stocks', stocks.filter(s=>s.qty>0).length],
+    ['Total Invested (₹)', +totalInv.toFixed(2)],
+    ['Current Value (₹)', totalVal > 0 ? +totalVal.toFixed(2) : 'N/A'],
+    ['Total P&L (₹)', totalVal > 0 ? +(totalVal - totalInv).toFixed(2) : 'N/A'],
+    ['Total Dividend Income (₹)', totalDiv > 0 ? +totalDiv.toFixed(2) : 0],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{wch:28},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  // Dividends sheet
+  if (_dividends.length) {
+    const divData = [
+      ['Symbol','Company','Date','Amount/Share (₹)','Qty','Total (₹)'],
+      ..._dividends.map(d => [d.symbol, d.name||'', d.date, d.amountPerShare, d.qty, d.totalAmount]),
+    ];
+    const wsDivs = XLSX.utils.aoa_to_sheet(divData);
+    wsDivs['!cols'] = [{wch:12},{wch:26},{wch:12},{wch:16},{wch:8},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, wsDivs, 'Dividends');
+  }
+
+  const filename = `Fnikar_Portfolio_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast(`📥 ${filename} downloaded`, 'success');
+}
+
+// ── LOAD ALL SUPPLEMENTARY DATA AT LOGIN ──────────────────────────────────
+// Loads dividends and notes alongside the portfolio
+const _origLoadPortfolio = loadPortfolio;
+async function loadPortfolioWithExtras() {
+  await loadPortfolio();
+  await loadDividends();
+  // Notes are stored on stock docs — already loaded via rawTransactions → consolidateBySymbol
+  // Propagate notes field to consolidated stocks
+  stocks.forEach(s => {
+    const t = rawTransactions.find(t => t.symbol === s.symbol && t.notes);
+    if (t) s.notes = t.notes;
+  });
+}
+
+// ── PATCH openDetailCard TO WIRE UP NOTES + DIVIDENDS ─────────────────────
+const _origOpenDetailCard = openDetailCard;
+function openDetailCard(symbol) {
+  _origOpenDetailCard(symbol);
+  // Set active symbol for notes + dividends
+  _activeDivSymbol  = symbol;
+  _activeNoteSymbol = symbol;
+  // Pre-fill divDate to today
+  const dateEl = document.getElementById('divDate');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+  // Fill notes
+  const s = stocks.find(x => x.symbol === symbol);
+  const notesEl = document.getElementById('dc-notes');
+  if (notesEl) notesEl.value = s && s.notes ? s.notes : '';
+  // Fill dividends
+  renderDivList(symbol);
+}
+
 </script>
 <div style="text-align:center;padding:12px 0 8px;color:#888;font-size:0.78rem;">
   Support: <a href="mailto:admin@fnikar.com" style="color:#1976d2;">admin@fnikar.com</a>
