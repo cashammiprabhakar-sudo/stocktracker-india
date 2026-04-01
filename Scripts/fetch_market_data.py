@@ -56,6 +56,8 @@ YAHOO_OVERRIDES = {
     "DRLA":       "LALPATHLAB.NS",
     "NH":         "NH.NS",
     "NARAYANHRUD":"NH.NS",
+    # Renamed companies — old NSE symbol → new Yahoo Finance ticker
+    "AMARAJABAT": "ARE&M.NS",   # Amara Raja Batteries → Amara Raja Energy & Mobility
 }
 
 # ── COMPREHENSIVE FALLBACK (~700 NSE EQ stocks) ───────────────────────────────
@@ -376,7 +378,7 @@ COMPREHENSIVE_STOCKS = {
     # ── EXISTING USER PORTFOLIO STOCKS (legacy fallback) ──────────────────────
     "ADVANIHOTR":  "ADVANIHOTR.NS",
     "ALOKINDS":    "ALOKINDS.NS",
-    "AMARAJABAT":  "AMARAJABAT.NS",
+    "AMARAJABAT":  "ARE&M.NS",
     "ARVIND":      "ARVIND.NS",
     "BAJAJHIND":   "BAJAJHIND.NS",
     "BANDHANBNK":  "BANDHANBNK.NS",
