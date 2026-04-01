@@ -1016,6 +1016,55 @@ async function loadNseStockList() {
   }
 }
 
+// ── BSE FULL EQUITY LIST (fetched at login, ~4000+ stocks) ───────────────
+// Loaded dynamically from BSE API via proxy. On success, replaces / extends
+// the hardcoded BSE_STOCKS object. Falls back to BSE_STOCKS silently on error.
+let bseListLoaded = false;
+let bseStockList = {};   // scripCode → {name, industry}
+
+async function loadBseStockList() {
+  if (bseListLoaded) return;
+  // Try multiple proxies in order until one works
+  const bseApiUrl = 'https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=&Scripcode=&industry=&segment=Equity&status=Active';
+  const proxies = [
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(bseApiUrl),
+    'https://corsproxy.io/?' + encodeURIComponent(bseApiUrl),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(bseApiUrl),
+  ];
+  for (const proxy of proxies) {
+    try {
+      const resp = await fetch(proxy, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      if (!text || text.length < 100) continue;
+      let data = JSON.parse(text);
+      // BSE API returns { Table: [...] } or array directly
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        data = data.Table || data.data || data.Data || [];
+      }
+      if (!Array.isArray(data) || data.length < 100) continue;
+      let parsed = 0;
+      for (const item of data) {
+        const scripCode = String(item.SCRIP_CD || item.Scripcode || item.scripcode || '').trim();
+        const scripId   = String(item.Scrip_Id || item.SCRIP_ID || item.scrip_id || '').trim().toUpperCase();
+        const name      = String(item.SCRIP_NAME || item.scrip_name || item.ScripName || item.Companyname || '').trim();
+        if (!scripCode || !name) continue;
+        // Skip if NSE symbol already covers this company (same scripId in nseStockList)
+        if (scripId && nseStockList[scripId]) continue;
+        bseStockList[scripCode] = { name, industry: item.INDUSTRY || item.industry || '' };
+        parsed++;
+      }
+      bseListLoaded = true;
+      console.log(`BSE equity list loaded: ${parsed} stocks via proxy`);
+      return;   // success — stop trying proxies
+    } catch(e) {
+      console.log('BSE proxy attempt failed:', e.message);
+    }
+  }
+  // All proxies failed — bseStockList stays empty; BSE_STOCKS hardcoded fallback used instead
+  console.log('BSE equity list unavailable, using hardcoded BSE_STOCKS fallback');
+}
+
 // ── SYMBOL AUTOCOMPLETE ───────────────────────────────────────────────────
 let acHighlight = -1;
 
@@ -1034,16 +1083,22 @@ function getStockSuggestions(query) {
     combined[sym] = { name: NSE_STOCKS[sym].n, industry: NSE_STOCKS[sym].i, isBse: false };
   });
   // Layer 2.5 — BSE stocks (BSE-only + stocks accessed via BSE scrip code).
-  // Name-dedup: skip if a non-numeric (NSE) symbol with the same company name
-  // already exists — this prevents Reliance showing as "RELIANCE" AND "500325".
+  // Uses live bseStockList (~4000+ stocks, loaded at login) if available,
+  // or falls back to the hardcoded BSE_STOCKS (~306 curated stocks).
+  // Name-dedup: skip if an NSE symbol with the same company name already exists
+  // (prevents "Reliance Industries" appearing as both RELIANCE and 500325).
   const nseNameSet = new Set(
     Object.values(combined).map(v => v.name.toLowerCase().replace(/\s+ltd\.?$|\s+limited\.?$/i,'').trim())
   );
-  Object.keys(BSE_STOCKS).forEach(scrip => {
-    const bseName = BSE_STOCKS[scrip].n;
+  const bseSource = bseListLoaded ? bseStockList : BSE_STOCKS;
+  const isLiveBse = bseListLoaded;
+  Object.keys(bseSource).forEach(scrip => {
+    const entry   = isLiveBse ? bseSource[scrip] : { name: bseSource[scrip].n, industry: bseSource[scrip].i };
+    const bseName = entry.name || entry.n || '';
+    if (!bseName) return;
     const nameKey = bseName.toLowerCase().replace(/\s+ltd\.?$|\s+limited\.?$/i,'').trim();
     if (!nseNameSet.has(nameKey)) {
-      combined[scrip] = { name: bseName, industry: BSE_STOCKS[scrip].i, isBse: true };
+      combined[scrip] = { name: bseName, industry: entry.industry || entry.i || '', isBse: true };
     }
   });
   // Layer 3 — live marketData (most accurate: real name + industry from Yahoo)
@@ -1274,6 +1329,7 @@ auth.onAuthStateChanged(async user => {
 async function loadPortfolio() {
   showOverlay('Loading portfolio…');
   loadNseStockList();   // background — no await, populates autocomplete while portfolio loads
+  loadBseStockList();   // background — fetches full BSE equity list (~4000+ stocks) for autocomplete
   try {
     const snap = await db.collection('portfolios').doc(currentUser.uid)
       .collection('stocks').orderBy('addedAt','asc').get();
