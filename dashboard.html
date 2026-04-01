@@ -2919,8 +2919,8 @@ function openDetailCard(symbol) {
   document.getElementById('dc-value').textContent = value != null ? dcCur+fmt(value) : (s.qty === 0 ? 'Fully sold' : '—');
 
   // ── Holding period + tax category ────────────────────────────────────────
-  const txns = s._transactions || [];
-  const buyTxns = txns.filter(t => !t.transactionType || t.transactionType === 'buy');
+  const allTxns = s._transactions || [];
+  const buyTxns = allTxns.filter(t => !t.transactionType || t.transactionType === 'buy');
   const earliest = buyTxns.reduce((min, t) => {
     const d = t.addedAt?.toDate?.() || (t.addedAt ? new Date(t.addedAt) : null);
     return d && (!min || d < min) ? d : min;
