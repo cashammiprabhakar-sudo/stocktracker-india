@@ -192,7 +192,7 @@
 
     /* AUTOCOMPLETE DROPDOWN */
     .sym-wrap{position:relative}
-    .sym-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #1565c0;border-top:none;border-radius:0 0 8px 8px;z-index:999;max-height:260px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+    .sym-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #1565c0;border-top:none;border-radius:0 0 8px 8px;z-index:999;max-height:400px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
     .sym-item{padding:9px 13px;cursor:pointer;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #f0f4f8}
     .sym-item:last-child{border-bottom:none}
     .sym-item:hover,.sym-item.active{background:#eef4ff}
@@ -1606,8 +1606,8 @@ function getStockSuggestions(query) {
   });
   symMatch.sort((a,b) => a.sym.localeCompare(b.sym));
   nameMatch.sort((a,b) => a.name.localeCompare(b.name));
-  // Cap symMatch at 5 so name matches always get at least 4 slots
-  return [...symMatch.slice(0,5), ...nameMatch].slice(0, 9);
+  // Show up to 10 symbol matches + up to 10 name matches = max 20 results
+  return [...symMatch.slice(0, 10), ...nameMatch.slice(0, 10)];
 }
 
 function showSymbolSuggestions(query) {
@@ -1743,10 +1743,35 @@ const YAHOO_OVERRIDES = {
 };
 function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
 
-// ── NOTE: Client-side Yahoo Finance API calls are CORS-blocked from this domain.
-// All market data is served from market_data.json, generated server-side by
-// the GitHub Actions Python script (scripts/fetch_market_data.py) twice daily.
-// The Refresh button force-reloads market_data.json to pick up the latest run.
+// ── YAHOO FINANCE DIRECT FETCH ───────────────────────────────────────────────
+// Prices are fetched directly from Yahoo Finance in the browser.
+// market_data.json (GitHub Actions) is used as a supplement for P/E, sector, etc.
+// This means prices always work — no GitHub Actions setup required.
+
+// Fetch up to 20 Yahoo Finance symbols in one API call, with proxy fallbacks.
+async function fetchYahooBatch(yahooSymbols) {
+  if (!yahooSymbols.length) return [];
+  const syms = yahooSymbols.join(',');
+  const fields = 'regularMarketPrice,shortName,trailingPE,recommendationKey,fiftyTwoWeekChangePercent,regularMarketChangePercent,sector';
+  const base = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=${fields}&formatted=false&lang=en-US`;
+  const base2 = base.replace('query1', 'query2');
+  const proxied1 = `https://corsproxy.io/?${encodeURIComponent(base)}`;
+  const proxied2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`;
+
+  for (const url of [base, base2, proxied1, proxied2]) {
+    try {
+      const resp = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const results = data?.quoteResponse?.result;
+      if (results && results.length > 0) return results;
+    } catch(e) { /* try next */ }
+  }
+  return [];
+}
 
 // ── SIGNAL DERIVATION ──────────────────────────────────────────────────────
 function deriveSignal(recKey) {
@@ -2122,19 +2147,59 @@ function updateStats() {
 }
 
 // ── REFRESH ─────────────────────────────────────────────────────────────────
-// Reloads market_data.json (generated server-side by GitHub Actions twice daily).
-// All stock data — prices, P/E, industry, signal, commentary — comes from this file.
-// Client-side Yahoo Finance API calls are CORS-blocked from this domain and are not used.
+// Fetch prices directly from Yahoo Finance in the browser — no GitHub Actions needed.
+// P/E, sector, analyst recommendations also fetched live from Yahoo Finance.
+// market_data.json (if available from GitHub Actions) supplements missing fields.
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '⏳ Loading market data…';
-  document.getElementById('refreshNote').textContent = 'Fetching latest data…';
+  btn.disabled = true;
+  btn.textContent = '⏳ Fetching prices…';
+  document.getElementById('refreshNote').textContent = 'Contacting Yahoo Finance…';
 
-  // Force-reload market_data.json with cache-busting to pick up latest GitHub Actions run
-  await loadMarketData();
+  // Build reverse map: Yahoo symbol → stock object
+  const reverseMap = {};
+  stocks.forEach(s => { reverseMap[toYahoo(s.symbol)] = s; });
 
-  // Save enriched data to Firestore so it persists across sessions and devices
+  // Deduplicate Yahoo symbols (multiple portfolio stocks may map to same Yahoo sym)
+  const allYahooSyms = [...new Set(stocks.map(s => toYahoo(s.symbol)))];
+
+  let fetched = 0;
+  const BATCH = 15; // Yahoo Finance handles up to ~20 per request reliably
+
+  for (let i = 0; i < allYahooSyms.length; i += BATCH) {
+    const batchSyms = allYahooSyms.slice(i, i + BATCH);
+    const pct = Math.round(((i + BATCH) / allYahooSyms.length) * 100);
+    btn.textContent = `⏳ ${Math.min(pct, 99)}% — fetching prices…`;
+
+    const quotes = await fetchYahooBatch(batchSyms);
+    quotes.forEach(q => {
+      const stock = reverseMap[q.symbol];
+      if (!stock) return;
+      if (q.regularMarketPrice != null)        stock.currentPrice  = q.regularMarketPrice;
+      if (q.trailingPE         != null)        stock.pe            = q.trailingPE;
+      if (q.recommendationKey)                 stock.recommendation = q.recommendationKey;
+      if (q.fiftyTwoWeekChangePercent != null) stock.change12w     = q.fiftyTwoWeekChangePercent;
+      if (q.sector)                            stock.industry      = q.sector;
+      if (q.shortName && !stock.name)          stock.name          = q.shortName;
+      stock.signal = deriveSignal(q.recommendationKey);
+      fetched++;
+    });
+  }
+
+  // Supplement with market_data.json for any fields Yahoo didn't return (P/E, commentary, etc.)
+  btn.textContent = '⏳ Loading supplemental data…';
+  await loadMarketData(); // fills any remaining gaps from GitHub Actions data
+
+  // Derive signals and commentary for stocks that now have enough data
+  stocks.forEach(s => {
+    if (!s.signal && s.recommendation) s.signal = deriveSignal(s.recommendation);
+    if (!s.reason && s.name && s.industry && s.recommendation) {
+      s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
+    }
+  });
+
+  // Save all enriched data to Firestore (persists across sessions and devices)
   btn.textContent = '⏳ Saving to cloud…';
   for (let i = 0; i < stocks.length; i += 400) {
     const batchWrite = db.batch();
@@ -2173,7 +2238,11 @@ async function refreshPrices() {
   const enriched = stocks.filter(s => s.currentPrice != null).length;
   document.getElementById('refreshNote').textContent =
     `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${enriched}/${stocks.length} stocks enriched`;
-  showToast(`✅ ${enriched}/${stocks.length} stocks updated`, 'success');
+  if (enriched === 0) {
+    showToast('⚠️ Could not reach Yahoo Finance. Check your connection and try again.', 'error');
+  } else {
+    showToast(`✅ ${enriched}/${stocks.length} stocks updated`, 'success');
+  }
 }
 
 // ── FILL MISSING DATA (priority refresh) ──────────────────────────────────
