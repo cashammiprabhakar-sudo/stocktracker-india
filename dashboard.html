@@ -835,7 +835,6 @@ const WORKER_URL = 'https://fnikar-prices.cashammiprabhakar.workers.dev';
 // ── NSE STOCK MASTER LIST (symbol → name, industry) ──────────────────────
 // Used as autocomplete source alongside live marketData
 const NSE_STOCKS = {
-  'AAKASH':{'n':'Aakash Educational Services Ltd','i':'Education'},
   'AARTIDRUGS':{'n':'Aarti Drugs Ltd','i':'Pharmaceuticals'},
   'AARTIIND':{'n':'Aarti Industries Ltd','i':'Specialty Chemicals'},
   'ABB':{'n':'ABB India Ltd','i':'Electrical Equipment'},
@@ -2615,9 +2614,10 @@ function renderTable() {
   count.textContent = indiaStocks.length ? `(${activeCount} active${indiaStocks.length > activeCount ? `, ${indiaStocks.length-activeCount} closed` : ''})` : '';
   if (!indiaStocks.length) { tbody.innerHTML=''; const mc=document.getElementById('mobileCardList'); if(mc)mc.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
-  const list = getFilteredSorted();
+  // Only India stocks (US/LSE go to the Global tab)
+  const list = getFilteredSorted().filter(s => !isUSStock(s.symbol) && !isLSEStock(s.symbol));
   document.getElementById('filterCount').textContent =
-    list.length < stocks.length ? `Showing ${list.length} of ${stocks.length}` : '';
+    list.length < indiaStocks.length ? `Showing ${list.length} of ${indiaStocks.length}` : '';
   // Also render mobile cards
   renderMobileCards();
   tbody.innerHTML = list.map((s, i) => {
@@ -2681,7 +2681,7 @@ function renderMobileCards() {
   if (!container) return;
   const indiaStocks = stocks.filter(s => !isUSStock(s.symbol) && !isLSEStock(s.symbol));
   if (!indiaStocks.length) { container.innerHTML = ''; return; }
-  const list = getFilteredSorted();
+  const list = getFilteredSorted().filter(s => !isUSStock(s.symbol) && !isLSEStock(s.symbol));
   container.innerHTML = list.map(s => {
     const isSoldOut = s.qty === 0;
     const invested  = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
@@ -2736,7 +2736,7 @@ function renderMobileCards() {
           <span class="mob-card-stat-value ${pnlClass}">${pnlDisp}</span>
         </div>
       </div>
-      ${(recNorm && !isSoldOut) || tgtBadge ? `
+      ${(recNorm && !isSoldOut) || tgtBadge || (isUSStock(s.symbol) && !isSoldOut) ? `
       <div class="mob-card-badges" style="margin-top:8px">
         ${recNorm && !isSoldOut ? `<span class="${recClass}">${recNorm.replace('strong_', '').toUpperCase()}</span>` : ''}
         ${s.signal && !isSoldOut ? `<span style="font-size:0.75rem;color:${s.signal.includes('▲') ? '#2e7d32' : s.signal.includes('▼') ? '#c62828' : '#888'};font-weight:600">${s.signal}</span>` : ''}
@@ -2804,6 +2804,58 @@ function populateRecFilter() {
 }
 
 // ── STOCK DETAIL CARD ──────────────────────────────────────────────────────
+// ── US STOCK COMMENTARY GENERATOR ────────────────────────────────────────
+// Generates context-aware commentary for US stocks based on sector & metrics
+function getUSStockCommentary(s) {
+  const meta   = US_STOCKS_META[s.symbol] || {};
+  const sector = (meta.i || s.industry || '').toLowerCase();
+  const pe     = s.pe;
+  const chg    = s.change12w;
+  const pnlPct = s._pnlPct;
+  const recNorm = (s.recommendation||'').toLowerCase();
+
+  // Sector-based context commentary (April 2026 market themes)
+  const SECTOR_CONTEXT = {
+    'technology': 'AI infrastructure buildout is driving strong cloud and software demand. Data center capex by hyperscalers remains elevated, benefiting software and hardware players. However, stretched valuations and antitrust scrutiny are key risks.',
+    'semiconductors': 'Semiconductor sector benefits from AI-driven chip demand — particularly for GPUs and HBM memory. US export controls on advanced chips to China remain a headwind. Taiwan Strait tensions and supply chain diversification are structural concerns.',
+    'consumer discretionary': 'US consumer spending remains resilient but is showing signs of softening at lower income brackets. Tariff impacts from trade tensions are pressuring margins for import-heavy retailers. E-commerce penetration continues to rise.',
+    'consumer staples': 'Defensive sector offering stability amid macro uncertainty. Pricing power is moderating as inflation cools, but volume growth has recovered. Key risk: private label substitution and trade tariff pass-through on imported goods.',
+    'financials': 'Fed rate cut cycle has begun, compressing net interest margins for banks. However, credit quality remains solid and investment banking activity is recovering. Watch for credit card and auto loan delinquency trends among consumers.',
+    'health care': 'GLP-1 obesity drug revolution (Ozempic/Wegovy/Zepbound) is reshaping the pharma and medical device landscape. Biotech valuations elevated on M&A expectations. Medicare drug price negotiations remain a structural headwind.',
+    'healthcare': 'GLP-1 obesity drug revolution (Ozempic/Wegovy/Zepbound) is reshaping the pharma and medical device landscape. Biotech valuations elevated on M&A expectations. Medicare drug price negotiations remain a structural headwind.',
+    'energy': 'Crude oil prices are volatile amid Middle East tensions (Iran sanctions, Strait of Hormuz risks) and OPEC+ production decisions. US shale production remains near record highs. Energy transition and ESG pressure weigh on long-term capex.',
+    'communication services': 'Digital advertising recovery driven by AI-enhanced targeting tools. Streaming wars entering a profitability phase. Social media platforms face regulatory pressure globally — EU DSA compliance and US data privacy concerns.',
+    'industrials': 'Reshoring and US infrastructure spending (CHIPS Act, IRA) are driving multi-year capex cycles for US industrial companies. Aerospace and defense orders elevated amid geopolitical tensions. Supply chain normalisation is positive for margins.',
+    'materials': 'Commodity prices driven by China demand outlook and USD strength. Mining and chemicals companies face margin pressure from energy costs. Critical minerals (lithium, cobalt, rare earths) in focus for EV and defense supply chains.',
+    'real estate': 'Rate-sensitive sector that benefits from Fed rate cuts. Office real estate continues to face structural headwinds from remote work. Data center and industrial REITs remain strong as AI infrastructure demand grows.',
+    'utilities': 'Utilities are prime AI beneficiaries — data centers driving unprecedented power demand growth. Nuclear energy is making a comeback. Regulatory lag on rate increases remains a profitability constraint.',
+    'electric vehicles': 'EV market growth is moderating from peak excitement — price wars are compressing margins industry-wide. Battery technology and charging infrastructure remain key challenges. Policy support under scrutiny.',
+    'e-commerce': 'E-commerce penetration stabilising post-pandemic. Last-mile delivery costs and returns management are key efficiency levers. AI-driven personalisation is improving conversion rates and customer lifetime value.',
+  };
+
+  // Find best matching sector context
+  let contextStr = '';
+  for (const [key, text] of Object.entries(SECTOR_CONTEXT)) {
+    if (sector.includes(key)) { contextStr = text; break; }
+  }
+  if (!contextStr) contextStr = 'US equity markets remain in focus amid AI-driven growth and geopolitical uncertainty. Fed monetary policy trajectory and trade tariff developments are the primary macro drivers for US stocks in 2026.';
+
+  // Stock-specific performance overlay
+  let perfStr = '';
+  if (pnlPct != null) {
+    if (pnlPct >= 30) perfStr = ` Your position is up ${pnlPct.toFixed(0)}% — consider reviewing if profit booking aligns with your target.`;
+    else if (pnlPct <= -20) perfStr = ` Your position is down ${Math.abs(pnlPct).toFixed(0)}% — assess whether the thesis is still intact or if this is a buying opportunity.`;
+  }
+  if (pe != null) {
+    if (pe > 50) perfStr += ` Trading at a high P/E of ${pe.toFixed(0)}x — priced for growth; any earnings miss could be punished.`;
+    else if (pe < 15 && pe > 0) perfStr += ` Trades at a reasonable ${pe.toFixed(0)}x P/E — relatively attractive valuation for a US large-cap.`;
+  }
+  if (recNorm === 'buy') perfStr += ' Analyst consensus remains bullish.';
+  else if (recNorm === 'sell') perfStr += ' Analyst consensus is cautious — review position sizing.';
+
+  return contextStr + perfStr;
+}
+
 function openDetailCard(symbol) {
   const s = stocks.find(x => x.symbol === symbol);
   if (!s) return;
@@ -2852,7 +2904,8 @@ function openDetailCard(symbol) {
   recEl.textContent = recNorm ? recNorm.replace('strong_','').toUpperCase() : '—';
   recEl.className = 'detail-rec-badge ' + recClass;
 
-  document.getElementById('dc-reason').textContent = s.reason || 'No commentary available.';
+  const reasonText = s.reason || (isUSStock(s.symbol) ? getUSStockCommentary(s) : 'No commentary available.');
+  document.getElementById('dc-reason').textContent = reasonText;
 
   // ── Transaction history section ──────────────────────────────────────────
   const txns = (s._transactions || []).sort((a,b) => {
@@ -3967,16 +4020,20 @@ async function loadMarketTicker() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
 
-    const ORDER = ['NIFTY','SENSEX','USDINR','GOLD','SILVER','SP500','NASDAQ','DOWJONES','CRUDE','BITCOIN'];
+    // Order: India indices → FX & USD Index → Commodities in INR → US indices → Crude
+    const ORDER = ['NIFTY','SENSEX','USDINR','DXY','GOLD','SILVER','CRUDE','SP500','NASDAQ'];
     const LABELS = {
-      NIFTY:'Nifty 50', SENSEX:'Sensex', USDINR:'USD/INR',
-      GOLD:'Gold', SILVER:'Silver', SP500:'S&P 500',
-      NASDAQ:'NASDAQ', DOWJONES:'Dow Jones', CRUDE:'Crude Oil', BITCOIN:'Bitcoin'
+      NIFTY:'Nifty 50', SENSEX:'Sensex', USDINR:'USD/INR', DXY:'USD Index',
+      GOLD:'Gold (10g)', SILVER:'Silver (kg)', CRUDE:'Crude Oil',
+      SP500:'S&P 500', NASDAQ:'NASDAQ'
     };
-    const PREFIX = {
-      NIFTY:'', SENSEX:'', USDINR:'₹', GOLD:'$', SILVER:'$',
-      SP500:'', NASDAQ:'', DOWJONES:'', CRUDE:'$', BITCOIN:'$'
+    // PREFIX: use data.prefix if available (worker sends ₹ for INR-converted items)
+    const FALLBACK_PREFIX = {
+      NIFTY:'', SENSEX:'', USDINR:'₹', DXY:'',
+      GOLD:'₹', SILVER:'₹', CRUDE:'$', SP500:'', NASDAQ:''
     };
+    // Number of decimal places per key
+    const DECIMALS = { USDINR:2, DXY:2, CRUDE:2, SP500:0, NASDAQ:0, NIFTY:0, SENSEX:0, GOLD:0, SILVER:0 };
 
     let html = '';
     for (const key of ORDER) {
@@ -3987,8 +4044,13 @@ async function loadMarketTicker() {
       const isUp     = pct != null ? pct >= 0 : null;
       const pctStr   = pct != null ? (isUp ? '▲' : '▼') + Math.abs(pct).toFixed(2) + '%' : '';
       const color    = isUp === null ? '#ccc' : isUp ? '#4caf50' : '#f44336';
-      const priceStr = PREFIX[key] + (price >= 1000 ? price.toLocaleString('en-IN', {maximumFractionDigits:2})
-                                                     : price.toFixed(price < 10 ? 4 : 2));
+      const prefix   = d.prefix || FALLBACK_PREFIX[key] || '';
+      const dec      = DECIMALS[key] ?? 2;
+      const priceStr = prefix + (price >= 10000
+        ? price.toLocaleString('en-IN', {maximumFractionDigits:0})
+        : price >= 100
+          ? price.toLocaleString('en-IN', {maximumFractionDigits:dec})
+          : price.toFixed(dec));
       html += `<span class="tick-item">
         <span class="tick-name">${LABELS[key]}</span>
         <span class="tick-price">${priceStr}</span>
