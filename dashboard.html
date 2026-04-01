@@ -1617,6 +1617,61 @@ let currentUser = null;
 let stocks = [];  // in-memory cache of portfolio
 let marketData = {};  // cache of market_data.json
 
+// ── SHARED MARKET DATA (written by GitHub Actions → Firestore) ───────────────
+// GitHub Actions fetches all NSE stocks daily and writes to sharedMarketData/{SYMBOL}.
+// This function reads those pre-fetched prices for the user's portfolio symbols.
+// Much faster than per-user refresh — data is already there when you open the app.
+async function loadSharedMarketData() {
+  if (!stocks.length) return;
+  try {
+    // Read only the symbols in the user's portfolio (efficient, no full collection scan)
+    const symbols = [...new Set(stocks.map(s => s.symbol))];
+    const snapshots = await Promise.all(
+      symbols.map(sym => db.collection('sharedMarketData').doc(sym).get())
+    );
+    let updated = 0;
+    snapshots.forEach((snap, i) => {
+      if (!snap.exists) return;
+      const md = snap.data();
+      const sym = symbols[i];
+      // Store in local marketData cache too (for autocomplete industry info)
+      if (!marketData[sym]) marketData[sym] = {};
+      Object.assign(marketData[sym], md);
+      // Apply to each portfolio stock with this symbol
+      stocks.filter(s => s.symbol === sym).forEach(s => {
+        if (md.price      != null && s.currentPrice == null) { s.currentPrice = md.price; updated++; }
+        if (md.pe         != null && s.pe           == null)   s.pe           = md.pe;
+        if (md.recommendation  && !s.recommendation         )  s.recommendation = md.recommendation;
+        if (md.industry        && !s.industry               )  s.industry     = md.industry;
+        if (md.change12w  != null && s.change12w    == null)   s.change12w    = md.change12w;
+        if (md.buyRecs    != null && s.buyRecs      == null)   s.buyRecs      = md.buyRecs;
+        if (md.sellRecs   != null && s.sellRecs     == null)   s.sellRecs     = md.sellRecs;
+        if (md.signal          && !s.signal                 )  s.signal       = md.signal;
+        if (md.reason          && !s.reason                 )  s.reason       = md.reason;
+        if (md.name            && !s.name                   )  s.name         = md.name;
+      });
+    });
+    if (updated > 0) {
+      renderTable();
+      updateStats();
+      populateIndustryFilter();
+      // Show when shared data was last updated
+      const metaSnap = await db.collection('sharedMarketData').doc('__meta__').get();
+      if (metaSnap.exists && metaSnap.data().updatedAt) {
+        const ts = metaSnap.data().updatedAt.toDate();
+        const diffH = Math.round((Date.now() - ts) / 3600000);
+        const label = diffH < 1 ? 'just now' : diffH === 1 ? '1h ago' : diffH + 'h ago';
+        const fmtTs = ts.toLocaleString('en-IN', {timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+        const el = document.getElementById('mdAge');
+        if (el) el.textContent = `Market data: ${fmtTs} IST (${label}) · ${updated}/${stocks.length} pre-loaded`;
+      }
+      console.log(`sharedMarketData: ${updated}/${stocks.length} portfolio stocks pre-loaded`);
+    }
+  } catch(e) {
+    console.log('sharedMarketData not available yet:', e.message);
+  }
+}
+
 async function loadMarketData() {
   try {
     const resp = await fetch('market_data.json?_=' + Date.now());
@@ -1805,8 +1860,9 @@ async function loadPortfolio() {
     renderTable();
     updateStats();
     populateIndustryFilter();
-    await loadMarketData(); // enrich with market_data.json (P/E, industry, signal, commentary)
-    checkAutoRefresh();    // auto-refresh every 12h
+    await loadSharedMarketData(); // pre-loaded prices from GitHub Actions → Firestore
+    await loadMarketData();        // fallback: market_data.json (P/E, industry, signal, commentary)
+    checkAutoRefresh();            // auto-refresh stale prices every 12h
   } catch(e) { showToast('Error loading portfolio.','error'); }
   hideOverlay();
 }
@@ -2170,37 +2226,9 @@ async function refreshPrices() {
       s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
   });
 
-  // ── Step 4: Save enriched data to Firestore ───────────────────────────────
-  btn.textContent = '⏳ Saving to cloud…';
-  for (let i = 0; i < stocks.length; i += 400) {
-    const batchWrite = db.batch();
-    stocks.slice(i, i + 400).forEach(s => {
-      const upd = {};
-      if (s.currentPrice != null) { upd.currentPrice = s.currentPrice; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
-      if (s.pe           != null) upd.pe            = s.pe;
-      if (s.industry         )    upd.industry      = s.industry;
-      if (s.recommendation   )    upd.recommendation = s.recommendation;
-      if (s.change12w   != null)  upd.change12w     = s.change12w;
-      if (s.targetPrice != null)  upd.targetPrice   = s.targetPrice;
-      if (s.buyRecs     != null)  upd.buyRecs       = s.buyRecs;
-      if (s.sellRecs    != null)  upd.sellRecs      = s.sellRecs;
-      if (s.signal          )     upd.signal        = s.signal;
-      if (s.reason          )     upd.reason        = s.reason;
-      if (Object.keys(upd).length > 0)
-        batchWrite.update(
-          db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
-    });
-    try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
-  }
-  try {
-    await db.collection('portfolios').doc(currentUser.uid)
-      .collection('meta').doc('refresh')
-      .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  } catch(e) { /* non-critical */ }
-
+  // ── Step 4: Update UI immediately — don't wait for Firestore ────────────────
   updateStats();
   renderTable();
-  updateMissingDataBtn();
   btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
   const now = new Date();
   const enriched = stocks.filter(s => s.currentPrice != null).length;
@@ -2214,6 +2242,35 @@ async function refreshPrices() {
   } else {
     showToast(`✅ All ${enriched} stocks updated`, 'success');
   }
+
+  // ── Step 5: Save to Firestore in background (fire & forget — never blocks UI) ─
+  (async () => {
+    try {
+      for (let i = 0; i < stocks.length; i += 400) {
+        const batchWrite = db.batch();
+        stocks.slice(i, i + 400).forEach(s => {
+          const upd = {};
+          if (s.currentPrice != null) { upd.currentPrice = s.currentPrice; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+          if (s.pe           != null) upd.pe            = s.pe;
+          if (s.industry         )    upd.industry      = s.industry;
+          if (s.recommendation   )    upd.recommendation = s.recommendation;
+          if (s.change12w   != null)  upd.change12w     = s.change12w;
+          if (s.targetPrice != null)  upd.targetPrice   = s.targetPrice;
+          if (s.buyRecs     != null)  upd.buyRecs       = s.buyRecs;
+          if (s.sellRecs    != null)  upd.sellRecs      = s.sellRecs;
+          if (s.signal          )     upd.signal        = s.signal;
+          if (s.reason          )     upd.reason        = s.reason;
+          if (Object.keys(upd).length > 0)
+            batchWrite.update(
+              db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
+        });
+        await batchWrite.commit();
+      }
+      await db.collection('portfolios').doc(currentUser.uid)
+        .collection('meta').doc('refresh')
+        .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch(e) { console.warn('Background Firestore save error (non-critical):', e.message); }
+  })();
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }

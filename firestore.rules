@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the requesting user is the super admin (by email)
+    // or a Firestore-promoted admin (by role field)
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'cashammiprabhakar@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Helper: check if the requesting user is approved
+    // Super admin is always treated as approved
+    function isApproved() {
+      return request.auth != null && (
+        request.auth.token.email == 'cashammiprabhakar@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved')
+      );
+    }
+
+    // ── USER PROFILES ──────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Users can read and create their own profile
+      allow read, create: if request.auth != null && request.auth.uid == userId;
+
+      // Users can update their own non-sensitive fields
+      allow update: if request.auth != null && request.auth.uid == userId
+        && !('role' in request.resource.data)        // cannot self-promote
+        && !('status' in request.resource.data);     // cannot self-approve
+
+      // Admins can read all user profiles and update status/role
+      allow read, write: if isAdmin();
+    }
+
+    // ── PORTFOLIO STOCKS ───────────────────────────────────────────────────
+    match /portfolios/{userId}/stocks/{stockId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId
+        && isApproved();
+      allow read, write: if isAdmin();
+    }
+
+    // ── PORTFOLIO META (auto-refresh timestamp etc.) ───────────────────────
+    match /portfolios/{userId}/meta/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId
+        && isApproved();
+      allow read, write: if isAdmin();
+    }
+
+    // ── SHARED MARKET DATA (written by GitHub Actions, read by all approved users) ─
+    // GitHub Actions uses Admin SDK (bypasses rules) to write.
+    // Approved users can read — this powers auto-loaded prices on portfolio open.
+    // Write is blocked from the browser (Admin SDK only).
+    match /sharedMarketData/{symbol} {
+      allow read: if isApproved();
+      allow write: if false;  // only Admin SDK (GitHub Actions) can write
+    }
+
+    // ── DENY EVERYTHING ELSE ───────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
