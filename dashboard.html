@@ -277,6 +277,20 @@
     .btn-export:hover{background:#e3f2fd}
     /* STATS STRIP EXTENDED */
     .stat-card .stat-sub{font-size:0.72rem;color:#888;margin-top:2px}
+    /* HEATMAP TILES */
+    .hm-tile{border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;min-width:60px;min-height:52px;text-align:center;-webkit-tap-highlight-color:transparent}
+    .hm-tile:hover{transform:scale(1.06);box-shadow:0 4px 12px rgba(0,0,0,0.18)}
+    .hm-sym{font-size:0.72rem;font-weight:800;color:#fff;line-height:1.2;word-break:break-all}
+    .hm-pct{font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.88);margin-top:2px}
+    /* MOVERS LIST */
+    .mover-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f4f8;cursor:pointer}
+    .mover-row:last-child{border-bottom:none}
+    .mover-sym{font-weight:700;font-size:0.85rem;color:#1565c0}
+    .mover-name{font-size:0.72rem;color:#888;margin-top:1px}
+    .mover-pct{font-size:0.9rem;font-weight:700}
+    @media(max-width:767px){
+      #moversGrid{grid-template-columns:1fr!important}
+    }
 
     /* ═══════════════════════════════════════════════════════════
        MOBILE APP UI — BOTTOM NAV + CARD VIEW
@@ -605,6 +619,29 @@
         <div style="color:#aaa;font-size:0.85rem;padding:8px">No alerts — refresh prices to check targets.</div>
       </div>
     </div>
+
+    <!-- TOP MOVERS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px" id="moversGrid">
+      <div class="chart-panel">
+        <h3>🚀 Top Gainers</h3>
+        <p class="chart-sub">Best performers in your portfolio</p>
+        <div id="topGainers" style="margin-top:8px"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>📉 Top Losers</h3>
+        <p class="chart-sub">Worst performers in your portfolio</p>
+        <div id="topLosers" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- PORTFOLIO HEATMAP -->
+    <div class="chart-panel" style="margin-top:16px">
+      <h3>🗺️ Portfolio Heatmap</h3>
+      <p class="chart-sub">Sized by invested capital · Colored by P&L %</p>
+      <div id="portfolioHeatmap" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;min-height:80px">
+        <div style="color:#aaa;font-size:0.85rem">Refresh prices to see heatmap.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ADD STOCKS TAB -->
@@ -706,6 +743,8 @@
           <div class="detail-item"><div class="di-label">Avg Cost</div><div class="di-value" id="dc-avgCost">—</div></div>
           <div class="detail-item"><div class="di-label">Quantity</div><div class="di-value" id="dc-qty">—</div></div>
           <div class="detail-item"><div class="di-label">Total Invested</div><div class="di-value" id="dc-invested">—</div></div>
+          <div class="detail-item"><div class="di-label">Holding Period</div><div class="di-value" id="dc-holdDays" style="font-size:0.85rem">—</div></div>
+          <div class="detail-item"><div class="di-label">Tax Category</div><div class="di-value" id="dc-taxCat" style="font-size:0.85rem">—</div></div>
         </div>
       </div>
       <div class="detail-section">
@@ -2879,6 +2918,34 @@ function openDetailCard(symbol) {
   document.getElementById('dc-price').textContent = s.currentPrice != null ? dcCur+fmt(s.currentPrice) : 'Not fetched yet';
   document.getElementById('dc-value').textContent = value != null ? dcCur+fmt(value) : (s.qty === 0 ? 'Fully sold' : '—');
 
+  // ── Holding period + tax category ────────────────────────────────────────
+  const txns = s._transactions || [];
+  const buyTxns = txns.filter(t => !t.transactionType || t.transactionType === 'buy');
+  const earliest = buyTxns.reduce((min, t) => {
+    const d = t.addedAt?.toDate?.() || (t.addedAt ? new Date(t.addedAt) : null);
+    return d && (!min || d < min) ? d : min;
+  }, null);
+  if (earliest) {
+    const holdDays = Math.floor((Date.now() - earliest.getTime()) / 86400000);
+    const holdYears = holdDays / 365;
+    let holdStr = holdDays < 30 ? `${holdDays} days`
+                : holdDays < 365 ? `${Math.floor(holdDays/30)}m ${holdDays%30}d`
+                : `${Math.floor(holdYears)}y ${Math.floor((holdYears % 1)*12)}m`;
+    document.getElementById('dc-holdDays').textContent = holdStr + ` (since ${earliest.toLocaleDateString('en-IN')})`;
+    // STCG = held < 1 year, LTCG = ≥ 1 year (Indian equity tax rules)
+    const taxEl = document.getElementById('dc-taxCat');
+    if (holdDays >= 365) {
+      taxEl.textContent = '✅ LTCG (≥1 year — 12.5% tax)';
+      taxEl.style.color = '#2e7d32';
+    } else {
+      taxEl.textContent = `⚡ STCG (< 1 year — 20% tax) · LTCG in ${365 - holdDays}d`;
+      taxEl.style.color = '#e65100';
+    }
+  } else {
+    document.getElementById('dc-holdDays').textContent = '—';
+    document.getElementById('dc-taxCat').textContent = '—';
+  }
+
   const pnlEl = document.getElementById('dc-pnl');
   pnlEl.textContent = totalPnL != null ? (totalPnL>=0?'+':'')+fmt(totalPnL) : '—';
   pnlEl.className = 'di-value ' + pnlClass;
@@ -2941,6 +3008,15 @@ function openDetailCard(symbol) {
     document.getElementById('dc-reason').parentNode.after(txnContainer);
   }
   txnContainer.innerHTML = txnHtml;
+
+  // ── Wire up dividends + notes for this symbol ───────────────────────────
+  _activeDivSymbol  = symbol;
+  _activeNoteSymbol = symbol;
+  const dateEl = document.getElementById('divDate');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+  const notesEl = document.getElementById('dc-notes');
+  if (notesEl) notesEl.value = s && s.notes ? s.notes : '';
+  renderDivList(symbol);
 
   document.getElementById('detailModal').classList.add('show');
 }
@@ -3015,8 +3091,9 @@ async function fetchPricesFromWorker(symbols) {
   for (let i = 0; i < symbols.length; i += BATCH) {
     const chunk = symbols.slice(i, i + BATCH);
     try {
+      // encodeURIComponent each symbol so & in M&M, IL&FSENGG etc. don't break the URL
       const resp = await Promise.race([
-        fetch(WORKER_URL + '?s=' + chunk.join(',')),
+        fetch(WORKER_URL + '?s=' + chunk.map(encodeURIComponent).join(',')),
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 18000))
       ]);
       if (!resp.ok) continue;
@@ -3775,6 +3852,67 @@ async function loadAnalytics() {
   renderPerformanceChart();
   renderSectorChart();
   renderAlerts();
+  renderTopMovers();
+  renderHeatmap();
+}
+
+// ── TOP MOVERS ──────────────────────────────────────────────────────────────
+function renderTopMovers() {
+  const active = getFilteredSorted().filter(s => s.qty > 0 && s._pnlPct != null);
+  const sorted = [...active].sort((a, b) => b._pnlPct - a._pnlPct);
+  const top5   = sorted.slice(0, 5);
+  const bot5   = sorted.slice(-5).reverse();
+
+  function moverHtml(list) {
+    if (!list.length) return '<div style="color:#aaa;font-size:0.85rem;padding:8px">No data yet — refresh prices first.</div>';
+    return list.map(s => {
+      const pct = s._pnlPct;
+      const col = pct >= 0 ? '#2e7d32' : '#c62828';
+      return `<div class="mover-row" onclick="openDetailCard('${s.symbol}')">
+        <div>
+          <div class="mover-sym">${s.symbol}</div>
+          <div class="mover-name">${s.name || ''}</div>
+        </div>
+        <div class="mover-pct" style="color:${col}">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</div>
+      </div>`;
+    }).join('');
+  }
+  const gEl = document.getElementById('topGainers');
+  const lEl = document.getElementById('topLosers');
+  if (gEl) gEl.innerHTML = moverHtml(top5);
+  if (lEl) lEl.innerHTML = moverHtml(bot5);
+}
+
+// ── PORTFOLIO HEATMAP ───────────────────────────────────────────────────────
+function renderHeatmap() {
+  const el = document.getElementById('portfolioHeatmap');
+  if (!el) return;
+  const list = getFilteredSorted().filter(s => s.qty > 0 && s._invested > 0);
+  if (!list.length) {
+    el.innerHTML = '<div style="color:#aaa;font-size:0.85rem">No active positions — add stocks and refresh prices.</div>';
+    return;
+  }
+  const maxInv = Math.max(...list.map(s => s._invested));
+  el.innerHTML = list.map(s => {
+    const pct = s._pnlPct;
+    const size = Math.max(60, Math.round(60 + (s._invested / maxInv) * 80)); // 60–140px wide
+    // Green/red gradient: deeper color = stronger move
+    let bg;
+    if (pct == null) { bg = '#90a4ae'; }
+    else if (pct >=  20) bg = '#1b5e20';
+    else if (pct >=  10) bg = '#2e7d32';
+    else if (pct >=   5) bg = '#388e3c';
+    else if (pct >=   0) bg = '#66bb6a';
+    else if (pct >=  -5) bg = '#ef9a9a';
+    else if (pct >= -10) bg = '#e53935';
+    else if (pct >= -20) bg = '#c62828';
+    else bg = '#7f0000';
+    const pctStr = pct != null ? (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%' : '—';
+    return `<div class="hm-tile" style="background:${bg};width:${size}px" onclick="openDetailCard('${s.symbol}')" title="${s.name||s.symbol} · ${pctStr}">
+      <div class="hm-sym">${s.symbol}</div>
+      <div class="hm-pct">${pctStr}</div>
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4075,23 +4213,7 @@ function startMarketTicker() {
   _tickerInterval = setInterval(loadMarketTicker, 120000);
 }
 
-// ── PATCH openDetailCard TO WIRE UP NOTES + DIVIDENDS ─────────────────────
-const _origOpenDetailCard = openDetailCard;
-function openDetailCard(symbol) {
-  _origOpenDetailCard(symbol);
-  // Set active symbol for notes + dividends
-  _activeDivSymbol  = symbol;
-  _activeNoteSymbol = symbol;
-  // Pre-fill divDate to today
-  const dateEl = document.getElementById('divDate');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
-  // Fill notes
-  const s = stocks.find(x => x.symbol === symbol);
-  const notesEl = document.getElementById('dc-notes');
-  if (notesEl) notesEl.value = s && s.notes ? s.notes : '';
-  // Fill dividends
-  renderDivList(symbol);
-}
+// openDetailCard is fully self-contained above — notes + dividends are wired in directly.
 
 </script>
 <div style="text-align:center;padding:12px 0 8px;color:#888;font-size:0.78rem;">
