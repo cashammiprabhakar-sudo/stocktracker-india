@@ -33,10 +33,6 @@
     .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);overflow:hidden}
     .table-toolbar{padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e8edf2}
     .table-toolbar .title{font-weight:700;font-size:0.95rem;flex:1}
-    .btn-fill-missing{background:#e65100;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:0.82rem;font-weight:700;cursor:pointer;transition:background .2s;animation:pulse-orange 2s infinite}
-    .btn-fill-missing:hover{background:#bf360c;animation:none}
-    .btn-fill-missing:disabled{background:#90a4ae;cursor:not-allowed;animation:none}
-    @keyframes pulse-orange{0%,100%{box-shadow:0 0 0 0 rgba(230,81,0,.35)}60%{box-shadow:0 0 0 7px rgba(230,81,0,0)}}
     .btn-refresh{background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.2s}
     .btn-refresh:hover{background:#0d47a1}
     .btn-refresh:disabled{background:#90a4ae;cursor:not-allowed}
@@ -197,7 +193,6 @@
     .sym-item:last-child{border-bottom:none}
     .sym-item:hover,.sym-item.active{background:#eef4ff}
     .sym-item .si-ticker{font-weight:700;font-size:0.88rem;color:#1565c0}
-    .sym-item .si-bse-badge{display:inline-block;font-size:0.65rem;font-weight:700;background:#e65100;color:#fff;border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:middle;line-height:1.5}
     .sym-item .si-name{font-size:0.78rem;color:#666}
   </style>
 <!-- SheetJS for Excel support -->
@@ -238,9 +233,6 @@
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
         <span id="mdAge" style="font-size:0.76rem;color:#888;margin-left:8px;"></span>
-        <button class="btn-fill-missing" id="fillMissingBtn" onclick="fillMissingData()" style="display:none">
-          ⚡ Fill Missing Data <span id="missingCount"></span>
-        </button>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
           🔄 Refresh Prices
         </button>
@@ -315,13 +307,9 @@
           <div id="symDropdown" class="sym-dropdown" style="display:none"></div>
           <span class="form-hint">Type NSE symbol or company name — select from list to auto-fill.</span>
         </div>
-        <div class="form-group sym-wrap">
+        <div class="form-group">
           <label>Company Name *</label>
-          <input type="text" id="fName" placeholder="Type company name to search…"
-            oninput="showNameSuggestions(this.value)"
-            onkeydown="handleNameKeydown(event)" autocomplete="off"/>
-          <div id="nameDropdown" class="sym-dropdown" style="display:none"></div>
-          <span class="form-hint">Search by company name — or type symbol above.</span>
+          <input type="text" id="fName" placeholder="Auto-filled when symbol selected"/>
         </div>
         <div class="form-group">
           <label>Avg Purchase Price ₹ *</label>
@@ -651,8 +639,74 @@ const NSE_STOCKS = {
   'ZYDUSLIFE':{'n':'Zydus Lifesciences Ltd','i':'Pharmaceuticals'},
 };
 
-// ── BSE STOCKS — hardcoded for instant autocomplete ──────────────────────
-// Covers BSE-only stocks + stocks commonly accessed via BSE scrip code.
+// ── FULL NSE EQUITY LIST (fetched from NSE at login) ─────────────────────
+let nseStockList = {};   // symbol → {name, industry}
+let nseListLoaded = false;
+
+async function loadNseStockList() {
+  if (nseListLoaded) return;
+  try {
+    // NSE publishes the full equity list as a public CSV — fetch via allorigins proxy
+    const nseUrl = 'https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv';
+    const proxy  = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(nseUrl);
+    const resp = await fetch(proxy);
+    if (!resp.ok) return;
+    const text = await resp.text();
+    const lines = text.split('\n');
+    // Header: SYMBOL,NAME OF COMPANY,SERIES,DATE OF LISTING,PAID UP VALUE,MARKET LOT,ISIN NUMBER,FACE VALUE
+    let parsed = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      // Handle quoted fields (some names contain commas)
+      const cols = [];
+      let cur = '', inQ = false;
+      for (const ch of line + ',') {
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      const sym    = (cols[0] || '').replace(/^"|"$/g,'').trim();
+      const name   = (cols[1] || '').replace(/^"|"$/g,'').trim();
+      const series = (cols[2] || '').replace(/^"|"$/g,'').trim();
+      // Only EQ series = main board equity (excludes BE, BZ, SM, ST, IL etc.)
+      if (!sym || !name || series !== 'EQ') continue;
+      nseStockList[sym] = { name, industry: '' };
+      parsed++;
+    }
+    nseListLoaded = true;
+    console.log(`NSE equity list loaded: ${parsed} EQ-series stocks`);
+  } catch(e) {
+    console.log('NSE equity list unavailable, using local list:', e.message);
+  }
+}
+
+// ── BSE STOCK LIST (fallback to BSE_STOCKS if live load fails) ──────────────
+let bseListLoaded = false;
+let bseStockList = {};   // scripCode → {name, industry}
+
+async function loadBseStockList() {
+  if (bseListLoaded) return;
+  try {
+    const bseUrl = 'https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=&Scripcode=&industry=&segment=Equity&status=Active';
+    const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(bseUrl);
+    const resp = await fetch(proxy);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const items = Array.isArray(data) ? data : (data.Table || data.Data || []);
+    if (!items.length) return;
+    items.forEach(row => {
+      const code = String(row.SCRIP_CD || row.scripCd || '').trim();
+      const name = (row.Scrip_Name || row.scripName || '').trim();
+      if (code && name) bseStockList[code] = { name, industry: '' };
+    });
+    bseListLoaded = true;
+    console.log(`BSE live list loaded: ${Object.keys(bseStockList).length} stocks`);
+  } catch(e) {
+    console.log('BSE live list unavailable, using hardcoded BSE_STOCKS:', e.message);
+  }
+}
+
 // getStockSuggestions() applies name-based dedup: NSE symbols always win over
 // BSE scrip codes so dual-listed stocks show once (as their NSE ticker).
 const BSE_STOCKS = {
@@ -985,50 +1039,6 @@ const BSE_STOCKS = {
   "543257":{"n":"Zomato Ltd","i":"Food Tech"},
 };
 
-// ── FULL NSE EQUITY LIST (fetched from NSE at login) ─────────────────────
-let nseStockList = {};   // symbol → {name, industry}
-let nseListLoaded = false;
-
-async function loadNseStockList() {
-  if (nseListLoaded) return;
-  try {
-    // NSE publishes the full equity list as a public CSV — fetch via allorigins proxy
-    const nseUrl = 'https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv';
-    const proxy  = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(nseUrl);
-    const resp = await fetch(proxy);
-    if (!resp.ok) return;
-    const text = await resp.text();
-    const lines = text.split('\n');
-    // Header: SYMBOL,NAME OF COMPANY,SERIES,DATE OF LISTING,PAID UP VALUE,MARKET LOT,ISIN NUMBER,FACE VALUE
-    let parsed = 0;
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      // Handle quoted fields (some names contain commas)
-      const cols = [];
-      let cur = '', inQ = false;
-      for (const ch of line + ',') {
-        if (ch === '"') { inQ = !inQ; }
-        else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-        else cur += ch;
-      }
-      const sym    = (cols[0] || '').replace(/^"|"$/g,'').trim();
-      const name   = (cols[1] || '').replace(/^"|"$/g,'').trim();
-      const series = (cols[2] || '').replace(/^"|"$/g,'').trim();
-      // Only EQ series = main board equity (excludes BE, BZ, SM, ST, IL etc.)
-      if (!sym || !name || series !== 'EQ') continue;
-      nseStockList[sym] = { name, industry: '' };
-      parsed++;
-    }
-    nseListLoaded = true;
-    console.log(`NSE equity list loaded: ${parsed} EQ-series stocks`);
-  } catch(e) {
-    console.log('NSE equity list unavailable, using local list:', e.message);
-  }
-}
-
-
-// ── NSE EXTENDED — comprehensive NSE EQ stock list for instant autocomplete ──
 // 464 additional NSE stocks (excludes stocks already in NSE_STOCKS above).
 // Used as fallback when live NSE proxy is unavailable.
 const NSE_EXTENDED = {
@@ -1497,54 +1507,6 @@ const NSE_EXTENDED = {
   'TECHNOFAB': 'Technocraft Industries India Ltd',
   'MAHSEAMLES': 'Maharashtra Seamless Ltd',
 };
-// ── BSE FULL EQUITY LIST (fetched at login, ~4000+ stocks) ───────────────
-// Loaded dynamically from BSE API via proxy. On success, replaces / extends
-// the hardcoded BSE_STOCKS object. Falls back to BSE_STOCKS silently on error.
-let bseListLoaded = false;
-let bseStockList = {};   // scripCode → {name, industry}
-
-async function loadBseStockList() {
-  if (bseListLoaded) return;
-  // Try multiple proxies in order until one works
-  const bseApiUrl = 'https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=&Scripcode=&industry=&segment=Equity&status=Active';
-  const proxies = [
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(bseApiUrl),
-    'https://corsproxy.io/?' + encodeURIComponent(bseApiUrl),
-    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(bseApiUrl),
-  ];
-  for (const proxy of proxies) {
-    try {
-      const resp = await fetch(proxy, { headers: { 'Accept': 'application/json' } });
-      if (!resp.ok) continue;
-      const text = await resp.text();
-      if (!text || text.length < 100) continue;
-      let data = JSON.parse(text);
-      // BSE API returns { Table: [...] } or array directly
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        data = data.Table || data.data || data.Data || [];
-      }
-      if (!Array.isArray(data) || data.length < 100) continue;
-      let parsed = 0;
-      for (const item of data) {
-        const scripCode = String(item.SCRIP_CD || item.Scripcode || item.scripcode || '').trim();
-        const scripId   = String(item.Scrip_Id || item.SCRIP_ID || item.scrip_id || '').trim().toUpperCase();
-        const name      = String(item.SCRIP_NAME || item.scrip_name || item.ScripName || item.Companyname || '').trim();
-        if (!scripCode || !name) continue;
-        // Skip if NSE symbol already covers this company (same scripId in nseStockList)
-        if (scripId && nseStockList[scripId]) continue;
-        bseStockList[scripCode] = { name, industry: item.INDUSTRY || item.industry || '' };
-        parsed++;
-      }
-      bseListLoaded = true;
-      console.log(`BSE equity list loaded: ${parsed} stocks via proxy`);
-      return;   // success — stop trying proxies
-    } catch(e) {
-      console.log('BSE proxy attempt failed:', e.message);
-    }
-  }
-  // All proxies failed — bseStockList stays empty; BSE_STOCKS hardcoded fallback used instead
-  console.log('BSE equity list unavailable, using hardcoded BSE_STOCKS fallback');
-}
 
 // ── SYMBOL AUTOCOMPLETE ───────────────────────────────────────────────────
 let acHighlight = -1;
@@ -1617,7 +1579,7 @@ function showSymbolSuggestions(query) {
   if (!suggestions.length || !query) { dd.style.display = 'none'; return; }
   dd.innerHTML = suggestions.map((s, i) =>
     `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
-      <span class="si-ticker">${s.sym}</span>${s.isBse ? '<span class="si-bse-badge">BSE</span>' : ''}
+      <span class="si-ticker">${s.sym}</span>
       <span class="si-name">${s.name}</span>
     </div>`
   ).join('');
@@ -1628,34 +1590,6 @@ function selectSymbol(sym, name, industry) {
   document.getElementById('fSym').value = sym;
   document.getElementById('fName').value = name;
   document.getElementById('symDropdown').style.display = 'none';
-  document.getElementById('nameDropdown').style.display = 'none';
-  // Focus price field for fast entry
-  document.getElementById('fCost').focus();
-}
-
-function showNameSuggestions(query) {
-  acHighlight = -1;
-  const dd = document.getElementById('nameDropdown');
-  // Search without forcing uppercase so names match naturally
-  const suggestions = getStockSuggestions(query);
-  if (!suggestions.length || !query) { dd.style.display = 'none'; return; }
-  dd.innerHTML = suggestions.map((s, i) =>
-    `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
-      <span class="si-ticker">${s.sym}</span>${s.isBse ? '<span class="si-bse-badge">BSE</span>' : ''}
-      <span class="si-name">${s.name}</span>
-    </div>`
-  ).join('');
-  dd.style.display = 'block';
-}
-
-function handleNameKeydown(e) {
-  const dd = document.getElementById('nameDropdown');
-  const items = dd.querySelectorAll('.sym-item');
-  if (!items.length) return;
-  if (e.key === 'ArrowDown') { e.preventDefault(); acHighlight = Math.min(acHighlight+1, items.length-1); updateAcHighlight(items); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); acHighlight = Math.max(acHighlight-1, 0); updateAcHighlight(items); }
-  else if (e.key === 'Enter' && acHighlight >= 0) { e.preventDefault(); items[acHighlight].dispatchEvent(new MouseEvent('mousedown')); }
-  else if (e.key === 'Escape') { dd.style.display = 'none'; acHighlight = -1; }
 }
 
 function handleSymbolKeydown(e) {
@@ -1743,35 +1677,9 @@ const YAHOO_OVERRIDES = {
 };
 function toYahoo(sym) { return YAHOO_OVERRIDES[sym] || (sym + '.NS'); }
 
-// ── YAHOO FINANCE DIRECT FETCH ───────────────────────────────────────────────
-// Prices are fetched directly from Yahoo Finance in the browser.
-// market_data.json (GitHub Actions) is used as a supplement for P/E, sector, etc.
-// This means prices always work — no GitHub Actions setup required.
-
-// Fetch up to 20 Yahoo Finance symbols in one API call, with proxy fallbacks.
-async function fetchYahooBatch(yahooSymbols) {
-  if (!yahooSymbols.length) return [];
-  const syms = yahooSymbols.join(',');
-  const fields = 'regularMarketPrice,shortName,trailingPE,recommendationKey,fiftyTwoWeekChangePercent,regularMarketChangePercent,sector';
-  const base = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=${fields}&formatted=false&lang=en-US`;
-  const base2 = base.replace('query1', 'query2');
-  const proxied1 = `https://corsproxy.io/?${encodeURIComponent(base)}`;
-  const proxied2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`;
-
-  for (const url of [base, base2, proxied1, proxied2]) {
-    try {
-      const resp = await fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
-      });
-      if (!resp.ok) continue;
-      const data = await resp.json();
-      const results = data?.quoteResponse?.result;
-      if (results && results.length > 0) return results;
-    } catch(e) { /* try next */ }
-  }
-  return [];
-}
+// ── YAHOO SYMBOL MAPPING ──────────────────────────────────────────────────────
+// toYahoo() converts NSE/BSE symbols to Yahoo Finance format (.NS/.BO suffix).
+// Same format works for Stooq.com (primary price source — no auth needed).
 
 // ── SIGNAL DERIVATION ──────────────────────────────────────────────────────
 function deriveSignal(recKey) {
@@ -1841,68 +1749,55 @@ function generateCommentary(name, industry, rec, pe, change52w) {
   return context + outlook + peNote;
 }
 
+// ── ENSURE ADMIN FIRESTORE DOC ─────────────────────────────────────────────
+// Creates/repairs the super admin's Firestore user doc on every login.
+// Ensures admin appears in "Active Users" tab with ⭐ Super Admin badge.
+async function ensureAdminFirestoreDoc(user) {
+  try {
+    const ref = db.collection('users').doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists || snap.data().status !== 'approved') {
+      await ref.set({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || 'Super Admin',
+        role: 'admin',
+        status: 'approved',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+  } catch(e) { console.warn('ensureAdminFirestoreDoc failed:', e.message); }
+}
+
 // ── AUTH GUARD ─────────────────────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = 'index.html'; return; }
-
-  // ── Super admin: always gets full access ───────────────────────────────
+  // Super admin always gets access (no Firestore doc needed)
   if (user.email === ADMIN_EMAIL) {
     currentUser = user;
-    document.getElementById('userName').textContent = user.displayName || 'Super Admin';
+    document.getElementById('userName').textContent = user.displayName || user.email;
     document.getElementById('adminLink').style.display = 'inline';
     document.getElementById('manageUsersBtn').style.display = 'inline';
-    // Ensure Firestore doc exists so super admin appears in user management
-    ensureAdminFirestoreDoc(user);
+    ensureAdminFirestoreDoc(user);  // ensure admin appears in User Management
     loadPortfolio();
     return;
   }
-
-  // ── Regular users: check approval status ──────────────────────────────
-  try {
-    const snap = await db.collection('users').doc(user.uid).get();
-    if (!snap.exists || snap.data().status !== 'approved') {
-      window.location.href = 'index.html'; return;
-    }
-    currentUser = user;
-    document.getElementById('userName').textContent = user.displayName || user.email;
-    if (snap.data().role === 'admin') {
-      document.getElementById('adminLink').style.display = 'inline';
-      document.getElementById('manageUsersBtn').style.display = 'inline';
-    }
-    loadPortfolio();
-  } catch(e) {
-    console.error('Auth guard error:', e);
-    window.location.href = 'index.html';
+  // Regular users: check approval
+  const snap = await db.collection('users').doc(user.uid).get();
+  if (!snap.exists || snap.data().status !== 'approved') {
+    window.location.href = 'index.html'; return;
   }
+  currentUser = user;
+  document.getElementById('userName').textContent = user.displayName || user.email;
+  if (snap.data().role === 'admin') document.getElementById('adminLink').style.display='inline';
+  loadPortfolio();
 });
-
-// ── ENSURE ADMIN FIRESTORE DOC (so super admin appears in user management) ─
-async function ensureAdminFirestoreDoc(user) {
-  try {
-    const snap = await db.collection('users').doc(user.uid).get();
-    if (!snap.exists) {
-      await db.collection('users').doc(user.uid).set({
-        uid: user.uid, email: user.email,
-        displayName: user.displayName || 'Super Admin',
-        firstName: (user.displayName || 'Super').split(' ')[0],
-        lastName: (user.displayName || '').split(' ').slice(1).join(' ') || 'Admin',
-        phone: '', role: 'admin', status: 'approved', emailVerified: true,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } else {
-      const d = snap.data();
-      if (d.role !== 'admin' || d.status !== 'approved') {
-        await db.collection('users').doc(user.uid).update({ role: 'admin', status: 'approved' });
-      }
-    }
-  } catch(e) { console.warn('ensureAdminFirestoreDoc:', e.message); }
-}
 
 // ── LOAD PORTFOLIO ─────────────────────────────────────────────────────────
 async function loadPortfolio() {
   showOverlay('Loading portfolio…');
-  loadNseStockList();   // background — no await, populates autocomplete while portfolio loads
-  loadBseStockList();   // background — fetches full BSE equity list (~4000+ stocks) for autocomplete
+  loadNseStockList();   // background: populates NSE autocomplete
+  loadBseStockList();   // background: populates BSE autocomplete
   try {
     const snap = await db.collection('portfolios').doc(currentUser.uid)
       .collection('stocks').orderBy('addedAt','asc').get();
@@ -1980,7 +1875,6 @@ function renderTable() {
   const empty = document.getElementById('emptyState');
   const count = document.getElementById('stockCount');
   count.textContent = stocks.length ? `(${stocks.length} stocks)` : '';
-  updateMissingDataBtn();
   if (!stocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   const list = getFilteredSorted();
@@ -2147,83 +2041,157 @@ function updateStats() {
 }
 
 // ── REFRESH ─────────────────────────────────────────────────────────────────
-// Fetch prices directly from Yahoo Finance in the browser — no GitHub Actions needed.
-// P/E, sector, analyst recommendations also fetched live from Yahoo Finance.
-// market_data.json (if available from GitHub Actions) supplements missing fields.
+// Primary: fetches live prices from Stooq.com (CORS-friendly, no auth needed).
+// Supplemental: Yahoo Finance via proxy for P/E, sector, analyst recommendations.
+// Fallback: market_data.json (loaded on login via loadMarketData).
+
+async function fetchStooqBatch(stooqSymbols) {
+  if (!stooqSymbols.length) return {};
+  // Stooq expects lowercase symbols, comma-separated
+  const syms = stooqSymbols.map(s => s.toLowerCase()).join(',');
+  // f=sd2c: symbol, date (YYYYMMDD), close price
+  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(syms)}&f=sd2c&h&e=csv`;
+  try {
+    const resp = await Promise.race([
+      fetch(url),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
+    ]);
+    if (!resp.ok) return {};
+    const csv = await resp.text();
+    const result = {};
+    const lines = csv.trim().split('\n');
+    // Skip header row (Symbol,Date,Close)
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].trim().split(',');
+      if (parts.length < 3) continue;
+      const sym = parts[0].trim().toUpperCase();  // e.g. RELIANCE.NS
+      const price = parseFloat(parts[2]);
+      if (sym && !isNaN(price) && price > 0) result[sym] = price;
+    }
+    return result;
+  } catch(e) {
+    console.warn('Stooq fetch failed:', e.message);
+    return {};
+  }
+}
+
+async function fetchYahooSupplemental(yahooSymbols) {
+  if (!yahooSymbols.length) return [];
+  const syms = yahooSymbols.slice(0, 20).join(',');
+  const fields = 'trailingPE,recommendationKey,sector,shortName,fiftyTwoWeekChangePercent';
+  const base = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=${fields}&formatted=false&lang=en-US`;
+
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
+    `https://corsproxy.io/?${encodeURIComponent(base)}`,
+    `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(base)}`,
+  ];
+
+  for (const url of proxies) {
+    try {
+      const resp = await Promise.race([
+        fetch(url, { headers: { Accept: 'application/json' } }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+      ]);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const results = data?.quoteResponse?.result;
+      if (Array.isArray(results) && results.length > 0) return results;
+    } catch(e) { /* try next proxy */ }
+  }
+  return [];
+}
+
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Fetching prices…';
-  document.getElementById('refreshNote').textContent = 'Contacting Yahoo Finance…';
+  document.getElementById('refreshNote').textContent = 'Connecting to Stooq…';
 
-  // Build reverse map: Yahoo symbol → stock object
-  const reverseMap = {};
-  stocks.forEach(s => { reverseMap[toYahoo(s.symbol)] = s; });
+  // Build Stooq symbol map: stooqSym (uppercase) → [stock objects]
+  // Use same Yahoo symbol format — both Yahoo and Stooq use .NS / .BO suffixes
+  const stooqMap = {};
+  stocks.forEach(s => {
+    const stooqSym = toYahoo(s.symbol).toUpperCase(); // e.g. RELIANCE.NS
+    if (!stooqMap[stooqSym]) stooqMap[stooqSym] = [];
+    stooqMap[stooqSym].push(s);
+  });
 
-  // Deduplicate Yahoo symbols (multiple portfolio stocks may map to same Yahoo sym)
-  const allYahooSyms = [...new Set(stocks.map(s => toYahoo(s.symbol)))];
+  const allStooqSyms = Object.keys(stooqMap);
+  let pricesFound = 0;
+  const BATCH = 50; // Stooq handles 50+ symbols per request
 
-  let fetched = 0;
-  const BATCH = 15; // Yahoo Finance handles up to ~20 per request reliably
+  // ── Step 1: Fetch prices from Stooq ──────────────────────────────────────
+  for (let i = 0; i < allStooqSyms.length; i += BATCH) {
+    const batchSyms = allStooqSyms.slice(i, i + BATCH);
+    const pct = Math.round(((i + BATCH) / allStooqSyms.length) * 85);
+    btn.textContent = `⏳ ${Math.min(pct, 85)}% — fetching prices…`;
+    document.getElementById('refreshNote').textContent =
+      `Fetching prices ${i + 1}–${Math.min(i + BATCH, allStooqSyms.length)} of ${allStooqSyms.length}…`;
 
-  for (let i = 0; i < allYahooSyms.length; i += BATCH) {
-    const batchSyms = allYahooSyms.slice(i, i + BATCH);
-    const pct = Math.round(((i + BATCH) / allYahooSyms.length) * 100);
-    btn.textContent = `⏳ ${Math.min(pct, 99)}% — fetching prices…`;
-
-    const quotes = await fetchYahooBatch(batchSyms);
-    quotes.forEach(q => {
-      const stock = reverseMap[q.symbol];
-      if (!stock) return;
-      if (q.regularMarketPrice != null)        stock.currentPrice  = q.regularMarketPrice;
-      if (q.trailingPE         != null)        stock.pe            = q.trailingPE;
-      if (q.recommendationKey)                 stock.recommendation = q.recommendationKey;
-      if (q.fiftyTwoWeekChangePercent != null) stock.change12w     = q.fiftyTwoWeekChangePercent;
-      if (q.sector)                            stock.industry      = q.sector;
-      if (q.shortName && !stock.name)          stock.name          = q.shortName;
-      stock.signal = deriveSignal(q.recommendationKey);
-      fetched++;
+    const priceMap = await fetchStooqBatch(batchSyms);
+    Object.entries(priceMap).forEach(([sym, price]) => {
+      (stooqMap[sym] || []).forEach(s => { s.currentPrice = price; pricesFound++; });
     });
   }
 
-  // Supplement with market_data.json for any fields Yahoo didn't return (P/E, commentary, etc.)
-  btn.textContent = '⏳ Loading supplemental data…';
-  await loadMarketData(); // fills any remaining gaps from GitHub Actions data
+  // ── Step 2: Fetch supplemental data from Yahoo Finance (optional) ─────────
+  btn.textContent = '⏳ Loading analytics…';
+  document.getElementById('refreshNote').textContent = 'Fetching P/E ratios and recommendations…';
 
-  // Derive signals and commentary for stocks that now have enough data
+  const yahooMap = {};
+  stocks.forEach(s => { yahooMap[toYahoo(s.symbol)] = s; });
+  const yahooSyms = [...new Set(stocks.map(s => toYahoo(s.symbol)))];
+
+  for (let i = 0; i < yahooSyms.length; i += 20) {
+    const batch = yahooSyms.slice(i, i + 20);
+    const quotes = await fetchYahooSupplemental(batch);
+    quotes.forEach(q => {
+      const stock = yahooMap[q.symbol];
+      if (!stock) return;
+      if (q.trailingPE               != null) stock.pe             = q.trailingPE;
+      if (q.recommendationKey               ) stock.recommendation = q.recommendationKey;
+      if (q.sector                          ) stock.industry       = q.sector;
+      if (q.fiftyTwoWeekChangePercent != null) stock.change12w     = q.fiftyTwoWeekChangePercent;
+      if (q.shortName && !stock.name        ) stock.name           = q.shortName;
+      if (q.recommendationKey               ) stock.signal         = deriveSignal(q.recommendationKey);
+    });
+  }
+
+  // ── Step 3: Fill remaining gaps from market_data.json (if available) ──────
+  btn.textContent = '⏳ Applying supplemental data…';
+  await loadMarketData(); // fills gaps for stocks Stooq/Yahoo didn't return
+
+  // Derive signals + commentary for stocks that now have enough data
   stocks.forEach(s => {
     if (!s.signal && s.recommendation) s.signal = deriveSignal(s.recommendation);
-    if (!s.reason && s.name && s.industry && s.recommendation) {
+    if (!s.reason && s.name && s.industry && s.recommendation)
       s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
-    }
   });
 
-  // Save all enriched data to Firestore (persists across sessions and devices)
+  // ── Step 4: Save enriched data to Firestore ───────────────────────────────
   btn.textContent = '⏳ Saving to cloud…';
   for (let i = 0; i < stocks.length; i += 400) {
     const batchWrite = db.batch();
     stocks.slice(i, i + 400).forEach(s => {
       const upd = {};
       if (s.currentPrice != null) { upd.currentPrice = s.currentPrice; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
-      if (s.pe           != null) upd.pe             = s.pe;
-      if (s.industry         )    upd.industry       = s.industry;
+      if (s.pe           != null) upd.pe            = s.pe;
+      if (s.industry         )    upd.industry      = s.industry;
       if (s.recommendation   )    upd.recommendation = s.recommendation;
-      if (s.change12w   != null)  upd.change12w      = s.change12w;
-      if (s.targetPrice != null)  upd.targetPrice    = s.targetPrice;
-      if (s.buyRecs     != null)  upd.buyRecs        = s.buyRecs;
-      if (s.sellRecs    != null)  upd.sellRecs       = s.sellRecs;
-      if (s.signal          )     upd.signal         = s.signal;
-      if (s.reason          )     upd.reason         = s.reason;
-      if (Object.keys(upd).length > 0) {
+      if (s.change12w   != null)  upd.change12w     = s.change12w;
+      if (s.targetPrice != null)  upd.targetPrice   = s.targetPrice;
+      if (s.buyRecs     != null)  upd.buyRecs       = s.buyRecs;
+      if (s.sellRecs    != null)  upd.sellRecs      = s.sellRecs;
+      if (s.signal          )     upd.signal        = s.signal;
+      if (s.reason          )     upd.reason        = s.reason;
+      if (Object.keys(upd).length > 0)
         batchWrite.update(
           db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
-      }
     });
     try { await batchWrite.commit(); } catch(e) { /* non-critical */ }
   }
-
-  // Save refresh timestamp
   try {
     await db.collection('portfolios').doc(currentUser.uid)
       .collection('meta').doc('refresh')
@@ -2237,41 +2205,15 @@ async function refreshPrices() {
   const now = new Date();
   const enriched = stocks.filter(s => s.currentPrice != null).length;
   document.getElementById('refreshNote').textContent =
-    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${enriched}/${stocks.length} stocks enriched`;
-  if (enriched === 0) {
-    showToast('⚠️ Could not reach Yahoo Finance. Check your connection and try again.', 'error');
+    `Updated ${now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})} · ${enriched}/${stocks.length} prices updated`;
+
+  if (pricesFound === 0) {
+    showToast('⚠️ Stooq unreachable. Check your internet connection and try again.', 'error');
+  } else if (enriched < stocks.length) {
+    showToast(`✅ ${enriched}/${stocks.length} stocks updated (some BSE/unlisted stocks may be missing)`, 'success');
   } else {
-    showToast(`✅ ${enriched}/${stocks.length} stocks updated`, 'success');
+    showToast(`✅ All ${enriched} stocks updated`, 'success');
   }
-}
-
-// ── FILL MISSING DATA (priority refresh) ──────────────────────────────────
-function countMissingStocks() {
-  return stocks.filter(s => s.currentPrice == null || s.pe == null || !s.industry).length;
-}
-
-function updateMissingDataBtn() {
-  const n   = countMissingStocks();
-  const btn = document.getElementById('fillMissingBtn');
-  const ctr = document.getElementById('missingCount');
-  if (!btn) return;
-  if (n > 0) {
-    btn.style.display = 'inline-flex';
-    ctr.textContent = `(${n} stock${n===1?'':'s'})`;
-  } else {
-    btn.style.display = 'none';
-  }
-}
-
-async function fillMissingData() {
-  const n = countMissingStocks();
-  if (!n) { showToast('All stocks already have complete data ✅', 'success'); return; }
-  showToast(`⚡ Fetching data for ${n} incomplete stock${n===1?'':'s'}…`);
-  const btn = document.getElementById('fillMissingBtn');
-  btn.disabled = true; btn.textContent = '⏳ Fetching…';
-  await refreshPrices();   // refreshPrices already handles all update + save logic
-  btn.disabled = false;
-  // updateMissingDataBtn() is called inside refreshPrices→renderTable path
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -2298,29 +2240,18 @@ function downloadCsvTemplate() {
 // ── ADD STOCK ──────────────────────────────────────────────────────────────
 async function addStock() {
   const sym  = document.getElementById('fSym').value.trim().toUpperCase();
-  let   name = document.getElementById('fName').value.trim();
+  const name = document.getElementById('fName').value.trim();
   const cost = parseFloat(document.getElementById('fCost').value);
   const qtyRaw = document.getElementById('fQty').value.trim();
   const qty  = qtyRaw === '' ? 1 : parseInt(qtyRaw);  // default to 1 if blank
-  if (!sym) { showToast('Please enter a stock symbol.','error'); return; }
-  // Auto-lookup name from any available source if user typed symbol but left name blank
-  if (!name) {
-    const md  = marketData[sym];
-    const nse = NSE_STOCKS[sym];
-    const nseL = nseStockList[sym];
-    const bseC = BSE_STOCKS[sym];
-    const bseL = bseStockList[sym];
-    const extN = NSE_EXTENDED[sym];
-    name = (md && md.name) || (nse && nse.n) || (nseL && nseL.name) ||
-           (bseC && bseC.n) || (bseL && bseL.name) || extN || sym;
-    document.getElementById('fName').value = name;
-  }
   // Auto-fill industry from stock list if available
   const mdEntry = marketData[sym];
   const nseEntry = NSE_STOCKS[sym];
   const ind = (mdEntry && mdEntry.industry) || (nseEntry && nseEntry.i) || '';
-  if (isNaN(cost) || cost <= 0) { showToast('Enter a valid average cost (e.g. 234.50).','error'); return; }
-  if (isNaN(qty)  || qty  < 1)  { showToast('Enter a valid quantity (e.g. 10).','error'); return; }
+  if (!sym)         { showToast('Please enter a symbol.','error'); return; }
+  if (!name)        { showToast('Please enter company name.','error'); return; }
+  if (isNaN(cost) || cost <= 0) { showToast('Enter a valid average cost.','error'); return; }
+  if (isNaN(qty)  || qty  < 1) { showToast('Enter a valid quantity.','error'); return; }
   const btn = document.getElementById('addBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
@@ -2339,7 +2270,6 @@ async function addStock() {
 function clearAddForm() {
   ['fSym','fName','fCost','fQty'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('symDropdown').style.display = 'none';
-  document.getElementById('nameDropdown').style.display = 'none';
 }
 
 // ── DELETE STOCK ───────────────────────────────────────────────────────────
@@ -2474,14 +2404,6 @@ async function saveNewPassword() {
     showToast('New password does not meet all requirements.','error'); return;
   }
   if (newPwd !== confirm) { showToast('Passwords do not match.','error'); return; }
-  // Detect sign-in provider (Google users cannot use email/password re-auth)
-  const providerData = currentUser.providerData || [];
-  const isGoogleUser = providerData.some(p => p.providerId === 'google.com');
-  const isEmailUser  = providerData.some(p => p.providerId === 'password');
-  if (isGoogleUser && !isEmailUser) {
-    showToast('❌ Your account uses Google Sign-In. Password cannot be changed here — manage it via Google Account settings.', 'error');
-    return;
-  }
   try {
     const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, current);
     await currentUser.reauthenticateWithCredential(cred);
@@ -2489,15 +2411,8 @@ async function saveNewPassword() {
     closeChangePwd();
     showToast('✅ Password changed successfully!', 'success');
   } catch(e) {
-    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')
-      showToast('❌ Current password is incorrect.', 'error');
-    else if (e.code === 'auth/requires-recent-login')
-      showToast('⚠️ Session expired. Please sign out and sign in again, then change your password.', 'error');
-    else if (e.code === 'auth/too-many-requests')
-      showToast('❌ Too many failed attempts. Please wait a few minutes and try again.', 'error');
-    else if (e.code === 'auth/weak-password')
-      showToast('❌ Password too weak — please choose a stronger one.', 'error');
-    else showToast('❌ Error: ' + (e.message || e.code || e), 'error');
+    if (e.code === 'auth/wrong-password') showToast('❌ Current password is incorrect.', 'error');
+    else showToast('❌ Error: ' + (e.message || e), 'error');
   }
 }
 
