@@ -7,8 +7,20 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
+    /* MARKET TICKER BAR */
+    #tickerBar{background:#0d1b2a;color:#e8f4fd;padding:6px 16px;display:flex;align-items:center;gap:16px;overflow-x:auto;white-space:nowrap;font-size:0.76rem;position:sticky;top:0;z-index:110;scrollbar-width:none}
+    #tickerBar::-webkit-scrollbar{display:none}
+    .tick-lbl{font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:#90caf9;flex-shrink:0;margin-right:4px}
+    .tick-sep{width:1px;height:16px;background:rgba(255,255,255,0.15);flex-shrink:0}
+    .tick-item{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:0 2px}
+    .tick-name{color:#90caf9;font-size:0.7rem}
+    .tick-price{font-weight:700;color:#fff}
+    .tick-chg{font-size:0.7rem;font-weight:600}
+    .tick-chg.up{color:#69f0ae}
+    .tick-chg.dn{color:#ff5252}
+    .tick-time{margin-left:auto;font-size:0.65rem;color:#546e7a;flex-shrink:0}
     /* HEADER */
-    .header{background:#1565c0;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+    .header{background:#1565c0;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:32px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
     .header h1{font-size:1.1rem;font-weight:700}
     .header-right{display:flex;align-items:center;gap:12px}
     .user-name{font-size:0.82rem;opacity:0.85;display:none}
@@ -247,6 +259,14 @@
     .div-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#e8f5e9;border-radius:6px;margin-bottom:4px;font-size:0.8rem}
     .div-item .div-del{background:none;border:none;color:#c62828;cursor:pointer;font-size:0.78rem;padding:0 4px}
     .div-total{font-size:0.82rem;font-weight:700;color:#2e7d32;margin-top:6px}
+    /* GLOBAL TAB */
+    .global-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;padding:12px 16px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+    .global-stats{display:flex;gap:20px;flex-wrap:wrap}
+    .global-stat{display:flex;flex-direction:column;align-items:center}
+    .global-stat .g-label{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#888}
+    .global-stat .g-value{font-size:1.05rem;font-weight:700;color:#1565c0}
+    .global-stat .g-value.gain{color:#2e7d32} .global-stat .g-value.loss{color:#c62828}
+    .global-fx-note{font-size:0.72rem;color:#888;margin-top:4px}
     /* EXPORT BUTTON */
     .btn-export{background:#fff;border:1.5px solid #1565c0;color:#1565c0;padding:7px 14px;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:5px}
     .btn-export:hover{background:#e3f2fd}
@@ -259,6 +279,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
+
+<!-- LIVE MARKET TICKER BAR -->
+<div id="tickerBar">
+  <span class="tick-lbl">LIVE</span>
+  <div id="tickerItems" style="display:inline-flex;align-items:center;gap:16px">
+    <span style="color:#546e7a;font-size:0.72rem">Loading market data…</span>
+  </div>
+  <span class="tick-time" id="tickerTime"></span>
+</div>
 
 <div class="header">
   <h1>📈 Fnikar</h1>
@@ -283,7 +312,8 @@
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" id="tab-portfolio" onclick="showTab('portfolio')">📊 My Portfolio</button>
+    <button class="tab active" id="tab-portfolio" onclick="showTab('portfolio')">📊 India Portfolio</button>
+    <button class="tab" id="tab-global" onclick="showTab('global')">🌍 US &amp; Global</button>
     <button class="tab" id="tab-add" onclick="showTab('add')">➕ Add Stocks</button>
     <button class="tab" id="tab-analytics" onclick="showTab('analytics')">📈 Analytics</button>
   </div>
@@ -326,18 +356,18 @@
               <th class="sortable" onclick="sortBy('name')">Company <span class="sort-arrow" id="sort-name">⇅</span></th>
               <th class="sortable" onclick="sortBy('symbol')">Ticker <span class="sort-arrow" id="sort-symbol">⇅</span></th>
               <th class="sortable" onclick="sortBy('industry')">Industry <span class="sort-arrow" id="sort-industry">⇅</span></th>
-              <th class="num sortable" onclick="sortBy('avgCost')">Avg Cost ₹ <span class="sort-arrow" id="sort-avgCost">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('avgCost')">Avg Cost <span class="sort-arrow" id="sort-avgCost">⇅</span></th>
               <th class="num sortable" onclick="sortBy('qty')">Qty <span class="sort-arrow" id="sort-qty">⇅</span></th>
-              <th class="num sortable" onclick="sortBy('invested')">Invested ₹ <span class="sort-arrow" id="sort-invested">⇅</span></th>
-              <th class="num sortable" onclick="sortBy('currentPrice')">Price ₹ <span class="sort-arrow" id="sort-currentPrice">⇅</span></th>
-              <th class="num sortable" onclick="sortBy('value')">Value ₹ <span class="sort-arrow" id="sort-value">⇅</span></th>
-              <th class="num sortable" onclick="sortBy('pnl')">P&amp;L ₹ <span class="sort-arrow" id="sort-pnl">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('invested')">Invested <span class="sort-arrow" id="sort-invested">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('currentPrice')">Price <span class="sort-arrow" id="sort-currentPrice">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('value')">Value <span class="sort-arrow" id="sort-value">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('pnl')">P&amp;L <span class="sort-arrow" id="sort-pnl">⇅</span></th>
               <th class="num sortable" onclick="sortBy('pnlPct')">P&amp;L % <span class="sort-arrow" id="sort-pnlPct">⇅</span></th>
               <th class="num sortable" onclick="sortBy('pe')">P/E <span class="sort-arrow" id="sort-pe">⇅</span></th>
               <th class="num sortable" onclick="sortBy('change12w')">12w Chg% <span class="sort-arrow" id="sort-change12w">⇅</span></th>
               <th class="num">Buy Recs</th>
               <th class="num">Sell Recs</th>
-              <th class="num sortable" onclick="sortBy('targetPrice')">Target ₹ <span class="sort-arrow" id="sort-targetPrice">⇅</span></th>
+              <th class="num sortable" onclick="sortBy('targetPrice')">Target <span class="sort-arrow" id="sort-targetPrice">⇅</span></th>
               <th class="sortable" onclick="sortBy('signal')">Signal <span class="sort-arrow" id="sort-signal">⇅</span></th>
               <th class="sortable" onclick="sortBy('recommendation')">Rec. <span class="sort-arrow" id="sort-recommendation">⇅</span></th>
               <th>Commentary</th>
@@ -352,6 +382,45 @@
         <div class="icon">📭</div>
         <p>No stocks added yet.<br/>Click <strong>Add Stocks</strong> to get started.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL (US & LSE) TAB -->
+  <div id="tabGlobal" style="display:none">
+    <div class="global-header">
+      <div class="global-stats">
+        <div class="global-stat"><span class="g-label">Invested (USD)</span><span class="g-value" id="gStatInvested">—</span></div>
+        <div class="global-stat"><span class="g-label">Current Value (USD)</span><span class="g-value" id="gStatValue">—</span></div>
+        <div class="global-stat"><span class="g-label">P&amp;L (USD)</span><span class="g-value" id="gStatPnl">—</span></div>
+        <div class="global-stat"><span class="g-label">Return %</span><span class="g-value" id="gStatReturn">—</span></div>
+      </div>
+      <div>
+        <div class="global-fx-note" id="gFxNote">FX rates updated on price refresh</div>
+        <div style="font-size:0.72rem;color:#888;margin-top:3px">Values in each stock's native currency · P&amp;L in USD-equivalent</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="portfolio-table" id="globalTable">
+        <thead><tr>
+          <th>#</th>
+          <th>Company</th>
+          <th>Ticker</th>
+          <th>Exchange</th>
+          <th class="num">Avg Cost</th>
+          <th class="num">Qty</th>
+          <th class="num">Invested</th>
+          <th class="num">Price</th>
+          <th class="num">Value</th>
+          <th class="num">P&amp;L</th>
+          <th class="num">P&amp;L %</th>
+          <th class="num">P/E</th>
+          <th class="num">52w Chg%</th>
+          <th class="num">Buy Recs</th>
+          <th class="num">Sell Recs</th>
+          <th class="num">Target</th>
+        </tr></thead>
+        <tbody id="globalTableBody"><tr><td colspan="16" style="text-align:center;padding:32px;color:#aaa">No US/global stocks in portfolio. Add AAPL, MSFT, TSLA… or HSBA.L</td></tr></tbody>
+      </table>
     </div>
   </div>
 
@@ -402,7 +471,7 @@
         <div class="form-group sym-wrap">
           <label>Stock Symbol *</label>
           <input type="text" id="fSym" placeholder="Type symbol or company name…"
-            oninput="this.value=this.value.toUpperCase();showSymbolSuggestions(this.value)"
+            oninput="this.value=this.value.toUpperCase();showSymbolSuggestions(this.value);updateCostLabel(this.value)"
             onkeydown="handleSymbolKeydown(event)" autocomplete="off"/>
           <div id="symDropdown" class="sym-dropdown" style="display:none"></div>
           <span class="form-hint">Type NSE/BSE symbol — select from list to auto-fill.</span>
@@ -428,11 +497,12 @@
         <div class="csv-info">
           Supports <strong>CSV</strong> and <strong>Excel (.xlsx)</strong> — first sheet is used automatically.<br/>
           CSV format: <code>Symbol, AvgCost, Quantity</code> &nbsp;·&nbsp; Example: <code>HDFCBANK, 1800, 10</code><br/>
-          Excel: any sheet with Symbol, AvgCost, Qty columns — header row skipped automatically.
+          Excel/CSV: columns needed — Symbol, TransactionType (buy/sell), Price, Quantity, Date, Industry, Notes.
+          Supports NSE symbols (HDFCBANK), BSE numeric codes (533155), US stocks (AAPL), and LSE stocks (SHEL.L).
         </div>
         <div style="margin-bottom:12px">
           <button onclick="downloadCsvTemplate()" style="background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer">
-            📥 Download Sample Template
+            📥 Download Excel Template (.xlsx)
           </button>
         </div>
         <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()" ondragover="csvDragOver(event)" ondragleave="csvDragLeave(event)" ondrop="csvDrop(event)">
@@ -1729,6 +1799,14 @@ function selectSymbol(sym, name, industry) {
   document.getElementById('fSym').value = sym;
   document.getElementById('fName').value = name;
   document.getElementById('symDropdown').style.display = 'none';
+  updateCostLabel(sym);
+}
+
+// Update cost label currency when symbol changes
+function updateCostLabel(sym) {
+  const cur = CUR_SYM[stockCurrency(sym)] || '₹';
+  const label = document.getElementById('fCostLabel');
+  if (label) label.textContent = (txnType === 'sell' ? 'Sell Price ' : 'Purchase Price ') + cur + ' *';
 }
 
 function handleSymbolKeydown(e) {
@@ -1758,6 +1836,63 @@ let rawTransactions = []; // all raw Firestore docs (individual buy/sell records
 let marketData = {};  // cache of market_data.json
 let txnType = 'buy';  // current transaction type for Add form
 
+// ── MULTI-CURRENCY SUPPORT (US / LSE / Indian stocks) ─────────────────────
+// Live FX rates are updated from the worker response (_fx field).
+let fxRates = { USDINR: 84, GBPINR: 107 }; // sensible defaults until worker responds
+
+// Mirror of worker's US_STOCKS set — same list, kept in sync
+const US_TICKERS = new Set([
+  'AAPL','MSFT','NVDA','META','GOOGL','GOOG','AVGO','ORCL','CSCO','AMD',
+  'QCOM','TXN','INTU','IBM','CRM','NOW','ACN','ADBE','INTC','MU',
+  'AMAT','LRCX','KLAC','ADI','MCHP','NXPI','MRVL','SMCI','ARM','TSM',
+  'AMZN','TSLA','MCD','NKE','LOW','HD','TJX','BKNG','ORLY','MAR',
+  'HLT','ABNB','CMG','DHI','PHM','GM','F','TSCO','EBAY','ETSY',
+  'UNH','LLY','JNJ','ABBV','MRK','TMO','ABT','ISRG','AMGN','GILD',
+  'REGN','VRTX','ZTS','BSX','BDX','EW','IDXX','DXCM','MRNA','BIIB',
+  'JPM','BAC','V','MA','WFC','GS','MS','AXP','BLK','SPGI',
+  'MCO','CME','ICE','COF','USB','SCHW','AIG','PRU','AFL','MET',
+  'XOM','CVX','COP','EOG','SLB','PSX','VLO','MPC','OKE','WMB',
+  'PG','WMT','COST','KO','PEP','PM','MO','MDLZ','CL','KMB',
+  'GIS','KHC','HSY','K','EL','MNST',
+  'GE','HON','CAT','RTX','LMT','NOC','GD','DE','EMR','ETN',
+  'ITW','MMM','ROP','PH','PCAR','CTAS','AJG','NSC','UNP','CSX',
+  'FDX','UPS','URI','FAST','CARR','OTIS','GEV','GEHC',
+  'T','VZ','NFLX','DIS','CMCSA','CHTR','WBD','PARA','SNAP','PINS',
+  'PLD','EQIX','AMT','CCI','PSA','O','DLR','EXR','WELL','VNQ',
+  'LIN','APD','ECL','PPG','SHW','NEM','FCX','DUK','SO','NEE',
+  'ED','EXC','PCG','D','PEG',
+  'UBER','PANW','CRWD','NET','DDOG','SNOW','PLTR','COIN','RBLX',
+  'DASH','RIVN','LCID','NIO','BABA','JD','PDD','SOFI','SQ','HOOD','ROKU',
+  'ZM','DOCU','OKTA','WDAY','BILL','PATH','AI','ASML','SAP',
+  'SPY','QQQ','IWM','DIA','VTI','VOO','ARKK','GLD','SLV','TLT',
+  'XLF','XLK','XLE','XLV','XLP','XLI','XLU','IEMG',
+  'DELL','HPQ','HPE','WDC','STX','EA','TTWO','ATVI',
+  'BRK.A','BRK.B','HES','ACGL','FANG','IR','MSCI',
+]);
+
+function isUSStock(sym)  { return US_TICKERS.has((sym||'').toUpperCase()); }
+function isLSEStock(sym) { return /\.L$/i.test(sym||''); }
+
+function stockCurrency(sym) {
+  if (isUSStock(sym))  return 'USD';
+  if (isLSEStock(sym)) return 'GBP';
+  return 'INR';
+}
+const CUR_SYM = { INR:'₹', USD:'$', GBP:'£' };
+
+// Convert an amount in a stock's native currency to INR for portfolio totals
+function toINR(amount, sym) {
+  const cur = stockCurrency(sym);
+  if (cur === 'USD') return amount * fxRates.USDINR;
+  if (cur === 'GBP') return amount * fxRates.GBPINR;
+  return amount;
+}
+
+// Format price in stock's native currency
+function fmtPrice(amount, sym) {
+  return (CUR_SYM[stockCurrency(sym)] || '₹') + fmt(amount);
+}
+
 // ── SET TRANSACTION TYPE (Buy / Sell toggle) ───────────────────────────────
 function setTxnType(type) {
   txnType = type;
@@ -1765,12 +1900,14 @@ function setTxnType(type) {
   document.getElementById('btnSell').classList.toggle('active', type === 'sell');
   const costLabel = document.getElementById('fCostLabel');
   const addBtn = document.getElementById('addBtn');
+  const sym = (document.getElementById('fSym')?.value || '').toUpperCase();
+  const cur = CUR_SYM[stockCurrency(sym)] || '₹';
   if (type === 'sell') {
-    costLabel.textContent = 'Sell Price ₹ *';
+    costLabel.textContent = `Sell Price ${cur} *`;
     addBtn.textContent = '🔴 Record Sell Transaction';
     addBtn.style.background = '#c62828';
   } else {
-    costLabel.textContent = 'Purchase Price ₹ *';
+    costLabel.textContent = `Purchase Price ${cur} *`;
     addBtn.textContent = '🟢 Add Buy Transaction';
     addBtn.style.background = '#2e7d32';
   }
@@ -2065,6 +2202,7 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('manageUsersBtn').style.display = 'inline';
     ensureAdminFirestoreDoc(user);  // ensure admin appears in User Management
     loadPortfolioWithExtras();
+    startMarketTicker();
     return;
   }
   // Regular users: check approval
@@ -2076,6 +2214,7 @@ auth.onAuthStateChanged(async user => {
   document.getElementById('userName').textContent = user.displayName || user.email;
   if (snap.data().role === 'admin') document.getElementById('adminLink').style.display='inline';
   loadPortfolioWithExtras();
+  startMarketTicker();
 });
 
 // ── LOAD PORTFOLIO ─────────────────────────────────────────────────────────
@@ -2162,14 +2301,82 @@ function getFilteredSorted() {
   return list;
 }
 
+// ── RENDER GLOBAL (US/LSE) TABLE ──────────────────────────────────────────
+function renderGlobalTable() {
+  const globalStocks = stocks.filter(s => isUSStock(s.symbol) || isLSEStock(s.symbol));
+  const tbody = document.getElementById('globalTableBody');
+  if (!globalStocks.length) {
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:32px;color:#aaa">No US/global stocks in portfolio yet.<br>Add AAPL, MSFT, TSLA, GOOGL… or HSBA.L, BP.L</td></tr>';
+    document.getElementById('gStatInvested').textContent = '—';
+    document.getElementById('gStatValue').textContent = '—';
+    document.getElementById('gStatPnl').textContent = '—';
+    document.getElementById('gStatReturn').textContent = '—';
+    return;
+  }
+
+  // Per-exchange group stats (USD for US, GBP for LSE, convert to USD for totals)
+  let totalInvUSD = 0, totalValUSD = 0, hasVal = false;
+  const gbpToUsd = fxRates.GBPINR / fxRates.USDINR; // approximate GBP/USD
+
+  tbody.innerHTML = globalStocks.map((s, i) => {
+    const isSoldOut = s.qty === 0;
+    const cSym = CUR_SYM[stockCurrency(s.symbol)] || '$';
+    const invested = (s.avgCost||0) * (s.qty||0);
+    const value    = s.qty > 0 && s.currentPrice != null ? s.currentPrice * s.qty : null;
+    const pnl      = value != null ? value - invested : (s.realizedPnL||0);
+    const pnlPct   = invested > 0 && pnl != null ? (pnl/invested*100) : null;
+    const pnlCls   = pnl != null ? (pnl >= 0 ? 'gain' : 'loss') : '';
+    const exchange = isLSEStock(s.symbol) ? '🇬🇧 LSE' : '🇺🇸 NYSE/NASDAQ';
+
+    // Accumulate in USD
+    const toUSD = isLSEStock(s.symbol) ? gbpToUsd : 1;
+    totalInvUSD += invested * toUSD;
+    if (value != null) { totalValUSD += value * toUSD; hasVal = true; }
+
+    return `<tr onclick="openDetailCard('${s.symbol}')" style="cursor:pointer${isSoldOut?';opacity:0.6':''}">
+      <td>${i+1}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.name||s.symbol}">${s.name||s.symbol}</td>
+      <td><strong>${s.symbol}</strong></td>
+      <td style="font-size:0.78rem;color:#555">${exchange}</td>
+      <td class="num">${cSym}${fmt(s.avgCost)}</td>
+      <td class="num">${isSoldOut?'<span style="color:#bbb">Sold</span>':s.qty}</td>
+      <td class="num">${isSoldOut?'—':cSym+fmt(invested)}</td>
+      <td class="num">${s.currentPrice!=null?cSym+fmt(s.currentPrice):'<span style="color:#bbb">—</span>'}</td>
+      <td class="num">${value!=null?cSym+fmt(value):'<span style="color:#bbb">—</span>'}</td>
+      <td class="num ${pnlCls}">${pnl!=null?(pnl>=0?'+':'')+cSym+fmt(Math.abs(pnl)):'—'}</td>
+      <td class="num ${pnlCls}">${pnlPct!=null?(pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%':'—'}</td>
+      <td class="num">${s.pe!=null?s.pe.toFixed(1):'—'}</td>
+      <td class="num ${s.change12w!=null?(s.change12w>=0?'gain':'loss'):''}">${s.change12w!=null?(s.change12w>=0?'+':'')+s.change12w.toFixed(1)+'%':'—'}</td>
+      <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
+      <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
+      <td class="num">${s.targetPrice?cSym+fmt(s.targetPrice):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Update global stats
+  const pnlUSD = hasVal ? totalValUSD - totalInvUSD : null;
+  const retPct = pnlUSD != null && totalInvUSD > 0 ? (pnlUSD/totalInvUSD*100) : null;
+  document.getElementById('gStatInvested').textContent = '$' + fmt(totalInvUSD);
+  document.getElementById('gStatValue').textContent = hasVal ? '$' + fmt(totalValUSD) : '—';
+  const pnlEl = document.getElementById('gStatPnl');
+  pnlEl.textContent = pnlUSD != null ? (pnlUSD>=0?'+':'')+'$'+fmt(Math.abs(pnlUSD)) : '—';
+  pnlEl.className = 'g-value ' + (pnlUSD!=null?(pnlUSD>=0?'gain':'loss'):'');
+  const retEl = document.getElementById('gStatReturn');
+  retEl.textContent = retPct!=null ? (retPct>=0?'+':'')+retPct.toFixed(2)+'%' : '—';
+  retEl.className = 'g-value ' + (retPct!=null?(retPct>=0?'gain':'loss'):'');
+  document.getElementById('gFxNote').textContent = `1 USD = ₹${fmt(fxRates.USDINR)} · 1 GBP = ₹${fmt(fxRates.GBPINR)}`;
+}
+
 // ── RENDER TABLE ───────────────────────────────────────────────────────────
 function renderTable() {
   const tbody = document.getElementById('portfolioBody');
   const empty = document.getElementById('emptyState');
   const count = document.getElementById('stockCount');
-  const activeCount = stocks.filter(s => s.qty > 0).length;
-  count.textContent = stocks.length ? `(${activeCount} active${stocks.length > activeCount ? `, ${stocks.length-activeCount} closed` : ''})` : '';
-  if (!stocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  // India-only stocks (exclude US/LSE from main table)
+  const indiaStocks = stocks.filter(s => !isUSStock(s.symbol) && !isLSEStock(s.symbol));
+  const activeCount = indiaStocks.filter(s => s.qty > 0).length;
+  count.textContent = indiaStocks.length ? `(${activeCount} active${indiaStocks.length > activeCount ? `, ${indiaStocks.length-activeCount} closed` : ''})` : '';
+  if (!indiaStocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   const list = getFilteredSorted();
   document.getElementById('filterCount').textContent =
@@ -2178,8 +2385,9 @@ function renderTable() {
     const invested   = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
     const isSoldOut  = s.qty === 0;
     const pnlClass   = pnl == null ? '' : pnl >= 0 ? 'gain-cell' : 'loss-cell';
-    const priceDisp  = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : '<span style="color:#bbb">—</span>';
-    const valueDisp  = value != null ? '₹'+fmt(value) : (isSoldOut ? '<span style="color:#bbb;font-style:italic">Sold</span>' : '<span style="color:#bbb">—</span>');
+    const cSym = CUR_SYM[stockCurrency(s.symbol)] || '₹';
+    const priceDisp  = s.currentPrice != null ? cSym+fmt(s.currentPrice) : '<span style="color:#bbb">—</span>';
+    const valueDisp  = value != null ? cSym+fmt(value) : (isSoldOut ? '<span style="color:#bbb;font-style:italic">Sold</span>' : '<span style="color:#bbb">—</span>');
     const pnlDisp    = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
     const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">—</span>';
     const peDisp     = s.pe != null ? s.pe.toFixed(2) : '—';
@@ -2196,14 +2404,15 @@ function renderTable() {
     const qtyDisp  = isSoldOut
       ? `<span style="color:#bbb;font-style:italic">Sold</span>`
       : `${s.qty}${txnBuys>1?`<span style="font-size:0.72rem;color:#1565c0;margin-left:3px">avg</span>`:''}`;
+    const xFlag = isUSStock(s.symbol) ? ' 🇺🇸' : isLSEStock(s.symbol) ? ' 🇬🇧' : '';
     return `<tr onclick="openDetailCard('${s.symbol}')" title="Click for full details" style="${isSoldOut?'opacity:0.6':''}">
       <td onclick="event.stopPropagation()">${i+1}</td>
-      <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}${txnLabel}</td>
+      <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}${xFlag}${txnLabel}</td>
       <td><strong>${s.symbol}</strong></td>
       <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${s.industry||'—'}</td>
-      <td class="num">₹${fmt(s.avgCost)}${txnBuys>1?'<span style="font-size:0.7rem;color:#888"> avg</span>':''}</td>
+      <td class="num">${cSym}${fmt(s.avgCost)}${txnBuys>1?'<span style="font-size:0.7rem;color:#888"> avg</span>':''}</td>
       <td class="num">${qtyDisp}</td>
-      <td class="num">${isSoldOut?'<span style="color:#bbb">—</span>':'₹'+fmt(invested)}</td>
+      <td class="num">${isSoldOut?'<span style="color:#bbb">—</span>':cSym+fmt(invested)}</td>
       <td class="num ${s.priceLoading?'price-loading':''}">${priceDisp}</td>
       <td class="num">${valueDisp}</td>
       <td class="num ${pnlClass}">${pnlDisp}</td>
@@ -2217,7 +2426,7 @@ function renderTable() {
         const pct = s.currentPrice!=null ? (s.currentPrice/s.targetPrice*100) : null;
         const cls = pct!=null&&pct>=100?'tgt-hit':pct!=null&&pct>=90?'tgt-near':'';
         const badge = pct!=null&&pct>=100?'<span class="tgt-badge hit">🎯 HIT</span>':pct!=null&&pct>=90?'<span class="tgt-badge near">🔔 NEAR</span>':'';
-        return `<td class="num ${cls}">₹${fmt(s.targetPrice)}${badge}</td>`;
+        return `<td class="num ${cls}">${cSym}${fmt(s.targetPrice)}${badge}</td>`;
       })()}
       <td class="${signalClass}" style="font-size:0.78rem">${isSoldOut?'—':s.signal||'—'}</td>
       <td><span class="${recClass}">${recNorm&&!isSoldOut?recNorm.replace('strong_','').toUpperCase():'—'}</span></td>
@@ -2297,13 +2506,15 @@ function openDetailCard(symbol) {
   const recNorm   = (s.recommendation||'').toLowerCase();
   const recClass  = recNorm==='buy'?'rec-buy':recNorm==='sell'?'rec-sell':recNorm?'rec-hold':'';
 
+  const dcCur = CUR_SYM[stockCurrency(s.symbol)] || '₹';
+  const xTag  = isUSStock(s.symbol) ? ' 🇺🇸 USD' : isLSEStock(s.symbol) ? ' 🇬🇧 GBP' : '';
   document.getElementById('dc-title').textContent = s.name || s.symbol;
-  document.getElementById('dc-subtitle').textContent = `${s.symbol}  ·  ${s.industry || 'Unknown Industry'}`;
-  document.getElementById('dc-avgCost').textContent = '₹' + fmt(s.avgCost) + (s._buyQty > s.qty ? ' (weighted avg)' : '');
+  document.getElementById('dc-subtitle').textContent = `${s.symbol}${xTag}  ·  ${s.industry || 'Unknown Industry'}`;
+  document.getElementById('dc-avgCost').textContent = dcCur + fmt(s.avgCost) + (s._buyQty > s.qty ? ' (weighted avg)' : '');
   document.getElementById('dc-qty').textContent = s.qty > 0 ? s.qty + ' shares' : '0 shares (fully sold)';
-  document.getElementById('dc-invested').textContent = invested > 0 ? '₹' + fmt(invested) : '—';
-  document.getElementById('dc-price').textContent = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : 'Not fetched yet';
-  document.getElementById('dc-value').textContent = value != null ? '₹'+fmt(value) : (s.qty === 0 ? 'Fully sold' : '—');
+  document.getElementById('dc-invested').textContent = invested > 0 ? dcCur + fmt(invested) : '—';
+  document.getElementById('dc-price').textContent = s.currentPrice != null ? dcCur+fmt(s.currentPrice) : 'Not fetched yet';
+  document.getElementById('dc-value').textContent = value != null ? dcCur+fmt(value) : (s.qty === 0 ? 'Fully sold' : '—');
 
   const pnlEl = document.getElementById('dc-pnl');
   pnlEl.textContent = totalPnL != null ? (totalPnL>=0?'+':'')+fmt(totalPnL) : '—';
@@ -2348,7 +2559,7 @@ function openDetailCard(symbol) {
         return `<div class="txn-row ${typ}">
           <span class="txn-type">${typ==='sell'?'🔴 SELL':'🟢 BUY'}</span>
           <span class="txn-qty">${t.qty||0} sh</span>
-          <span class="txn-price">@ ₹${fmt(t.avgCost)} = ₹${fmt(val)}</span>
+          <span class="txn-price">@ ${dcCur}${fmt(t.avgCost)} = ${dcCur}${fmt(val)}</span>
           <span class="txn-date">${dt}</span>
           <button class="btn-del-txn" onclick="event.stopPropagation();deleteSingleTransaction('${t.id}')" title="Remove this transaction">✕</button>
         </div>`;
@@ -2385,11 +2596,11 @@ function updateStats() {
   const totalBuyCapital = stocks.reduce((s, st) => s + (st._buyQty||st.qty||0)*(st.avgCost||0), 0);
 
   stocks.forEach(s => {
-    const netInvested = (s.avgCost||0) * (s.qty||0); // active capital
+    const netInvested = toINR((s.avgCost||0) * (s.qty||0), s.symbol); // convert to ₹
     totalInvested += netInvested;
-    totalRealizedPnL += (s.realizedPnL||0);
+    totalRealizedPnL += toINR(s.realizedPnL||0, s.symbol);
     if (s.qty > 0 && s.currentPrice != null) {
-      totalCurrentValue += s.currentPrice * s.qty;
+      totalCurrentValue += toINR(s.currentPrice * s.qty, s.symbol);
       hasValue = true;
     }
   });
@@ -2415,7 +2626,7 @@ function updateStats() {
   // Realized P&L sub-label
   const realSub = document.getElementById('statRealized');
   if (realSub && totalRealizedPnL !== 0) {
-    realSub.textContent = `Realized: ${totalRealizedPnL>=0?'+':''}₹${fmt(totalRealizedPnL)}`;
+    realSub.textContent = `Realized: ${totalRealizedPnL>=0?'+':''}₹${fmt(totalRealizedPnL)} (₹-equiv)`;
     realSub.style.display = '';
   } else if (realSub) { realSub.style.display = 'none'; }
   // Dividend income stat
@@ -2473,11 +2684,17 @@ async function refreshPrices() {
 
     const data = await fetchPricesFromWorker(symbols);
 
+    // Extract live FX rates from worker response
+    if (data._fx) {
+      if (data._fx.USDINR > 0) fxRates.USDINR = data._fx.USDINR;
+      if (data._fx.GBPINR > 0) fxRates.GBPINR = data._fx.GBPINR;
+    }
+
     // Apply fetched data to consolidated portfolio stocks
     let updated = 0;
     stocks.forEach(s => {
       const d = data[s.symbol];
-      if (!d) return;
+      if (!d || d === data._fx) return;
       if (d.price      != null) { s.currentPrice   = d.price;  updated++; }
       if (d.pe         != null)   s.pe             = d.pe;
       if (d.rec              )    s.recommendation = d.rec;
@@ -2559,21 +2776,75 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── DOWNLOAD CSV TEMPLATE ──────────────────────────────────────────────────
 function downloadCsvTemplate() {
-  const rows = [
-    'Symbol,Name,AvgCost,Quantity',
-    'HDFCBANK,HDFC Bank Ltd,1800,10',
-    'RELIANCE,Reliance Industries,2500,5',
-    'TCS,Tata Consultancy Services,3800,3',
-    'INFY,Infosys Ltd,1600,8',
-    'WIPRO,Wipro Ltd,500,20'
+  // Build XLSX workbook with SheetJS
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Portfolio Template ──────────────────────────────────────────
+  const headers = ['Symbol','Name','TransactionType','Price','Quantity','Date','Industry','Notes'];
+  const examples = [
+    // Indian NSE stocks
+    ['HDFCBANK','HDFC Bank Ltd','buy',1800,10,'2024-01-15','Banking',''],
+    ['RELIANCE','Reliance Industries','buy',2500,5,'2024-02-10','Energy',''],
+    ['TCS','Tata Consultancy Services','buy',3800,3,'2024-03-05','IT',''],
+    ['INFY','Infosys Ltd','sell',1600,2,'2024-06-20','IT','Partial exit'],
+    // BSE numeric code example
+    ['533155','Infosys Ltd (BSE)','buy',1600,4,'2024-03-01','IT','Use BSE code if NSE code unknown'],
+    // Indian NSE more examples
+    ['WIPRO','Wipro Ltd','buy',500,20,'2024-01-25','IT',''],
+    ['ICICIBANK','ICICI Bank','buy',1100,8,'2024-04-10','Banking',''],
+    ['AARTIIND','Aarti Industries','buy',520,15,'2024-05-01','Chemicals',''],
+    // US stocks (no suffix needed)
+    ['AAPL','Apple Inc','buy',185,5,'2024-01-10','Technology','US stock — use $ price'],
+    ['MSFT','Microsoft Corp','buy',410,3,'2024-02-14','Technology',''],
+    ['TSLA','Tesla Inc','buy',210,8,'2024-03-20','Automotive',''],
+    ['NVDA','NVIDIA Corp','buy',875,2,'2024-04-05','Technology',''],
+    // LSE stocks
+    ['SHEL.L','Shell plc','buy',2800,10,'2024-01-30','Energy','LSE stock — use .L suffix'],
+    ['HSBA.L','HSBC Holdings','buy',640,20,'2024-02-25','Banking',''],
   ];
-  const csv = rows.join('\n');
-  const blob = new Blob([csv], {type: 'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'fnikar_portfolio_template.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
+
+  const wsData = [headers, ...examples];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:12},{wch:30},{wch:16},{wch:10},{wch:10},{wch:14},{wch:20},{wch:35}
+  ];
+  // Freeze header row
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Portfolio');
+
+  // ── Sheet 2: Instructions ────────────────────────────────────────────────
+  const instr = [
+    ['FNIKAR Portfolio Bulk Upload Template — Instructions'],
+    [''],
+    ['Column','Description','Valid Values / Format'],
+    ['Symbol','Stock ticker symbol','NSE: HDFCBANK, RELIANCE | BSE numeric: 533155 | US: AAPL, MSFT | LSE: SHEL.L'],
+    ['Name','Company name (for display)','Any text, e.g. HDFC Bank Ltd'],
+    ['TransactionType','Type of transaction','buy  OR  sell  (lowercase)'],
+    ['Price','Buy/sell price per share','Number. INR for Indian, USD for US, GBP for LSE stocks'],
+    ['Quantity','Number of shares','Whole number, minimum 1'],
+    ['Date','Transaction date','YYYY-MM-DD format, e.g. 2024-01-15'],
+    ['Industry','Sector/industry (optional)','e.g. Banking, IT, Energy, Pharma, FMCG'],
+    ['Notes','Any personal notes (optional)','Free text'],
+    [''],
+    ['TIPS:'],
+    ['• NSE symbols — use the trading symbol as on NSE (e.g. HDFCBANK, not HDFC BANK)'],
+    ['• BSE codes — 6-digit numeric code works (e.g. 533155 for Infosys)'],
+    ['• US stocks — use bare ticker without any suffix (AAPL, MSFT, TSLA, NVDA, GOOGL, etc.)'],
+    ['• LSE stocks — add .L suffix (SHEL.L, HSBA.L, BP.L, etc.)'],
+    ['• Multiple buys — add one row per transaction; app will average the cost automatically'],
+    ['• Sell rows — must have a matching buy already in your portfolio'],
+    ['• Date field — optional; leave blank if unknown'],
+    ['• Industry field — optional; app auto-fills from known stock database'],
+  ];
+  const wsI = XLSX.utils.aoa_to_sheet(instr);
+  wsI['!cols'] = [{wch:20},{wch:45},{wch:70}];
+  XLSX.utils.book_append_sheet(wb, wsI, 'Instructions');
+
+  // ── Download ─────────────────────────────────────────────────────────────
+  XLSX.writeFile(wb, 'fnikar_portfolio_template.xlsx');
 }
 
 // ── ADD STOCK / TRANSACTION ────────────────────────────────────────────────
@@ -2743,13 +3014,15 @@ function setCsvStatus(msg, type) {
 // ── UI HELPERS ─────────────────────────────────────────────────────────────
 function showTab(tab) {
   document.getElementById('tabPortfolio').style.display  = tab==='portfolio'  ? '' : 'none';
+  document.getElementById('tabGlobal').style.display     = tab==='global'     ? '' : 'none';
   document.getElementById('tabAdd').style.display        = tab==='add'        ? '' : 'none';
   document.getElementById('tabAnalytics').style.display  = tab==='analytics'  ? '' : 'none';
-  ['portfolio','add','analytics'].forEach(t => {
+  ['portfolio','global','add','analytics'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.classList.toggle('active', t===tab);
   });
   if (tab==='analytics') loadAnalytics();
+  if (tab==='global')    renderGlobalTable();
 }
 
 let toastTimer;
@@ -3360,6 +3633,67 @@ async function loadPortfolioWithExtras() {
   });
 }
 
+// ── MARKET TICKER BAR ─────────────────────────────────────────────────────
+let _tickerInterval = null;
+
+async function loadMarketTicker() {
+  if (!WORKER_URL) return;
+  const itemsEl = document.getElementById('tickerItems');
+  const timeEl  = document.getElementById('tickerTime');
+  try {
+    const resp = await Promise.race([
+      fetch(WORKER_URL + '?market=1'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+    ]);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+
+    const ORDER = ['NIFTY','SENSEX','USDINR','GOLD','SILVER','SP500','NASDAQ','DOWJONES','CRUDE','BITCOIN'];
+    const LABELS = {
+      NIFTY:'Nifty 50', SENSEX:'Sensex', USDINR:'USD/INR',
+      GOLD:'Gold', SILVER:'Silver', SP500:'S&P 500',
+      NASDAQ:'NASDAQ', DOWJONES:'Dow Jones', CRUDE:'Crude Oil', BITCOIN:'Bitcoin'
+    };
+    const PREFIX = {
+      NIFTY:'', SENSEX:'', USDINR:'₹', GOLD:'$', SILVER:'$',
+      SP500:'', NASDAQ:'', DOWJONES:'', CRUDE:'$', BITCOIN:'$'
+    };
+
+    let html = '';
+    for (const key of ORDER) {
+      const d = data[key];
+      if (!d || d.price == null) continue;
+      const price    = d.price;
+      const pct      = d.changePct != null ? d.changePct : null;
+      const isUp     = pct != null ? pct >= 0 : null;
+      const pctStr   = pct != null ? (isUp ? '▲' : '▼') + Math.abs(pct).toFixed(2) + '%' : '';
+      const color    = isUp === null ? '#ccc' : isUp ? '#4caf50' : '#f44336';
+      const priceStr = PREFIX[key] + (price >= 1000 ? price.toLocaleString('en-IN', {maximumFractionDigits:2})
+                                                     : price.toFixed(price < 10 ? 4 : 2));
+      html += `<span class="tick-item">
+        <span class="tick-name">${LABELS[key]}</span>
+        <span class="tick-price">${priceStr}</span>
+        ${pctStr ? `<span class="tick-chg" style="color:${color}">${pctStr}</span>` : ''}
+      </span>`;
+    }
+    if (itemsEl) itemsEl.innerHTML = html || '<span style="color:#aaa">Market data unavailable</span>';
+    if (timeEl) {
+      const now = new Date();
+      timeEl.textContent = 'Updated ' + now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+    }
+  } catch(e) {
+    console.warn('Market ticker error:', e.message);
+    if (itemsEl) itemsEl.innerHTML = '<span style="color:#888">Market data unavailable</span>';
+  }
+}
+
+// Start ticker on load and refresh every 2 minutes
+function startMarketTicker() {
+  loadMarketTicker();
+  if (_tickerInterval) clearInterval(_tickerInterval);
+  _tickerInterval = setInterval(loadMarketTicker, 120000);
+}
+
 // ── PATCH openDetailCard TO WIRE UP NOTES + DIVIDENDS ─────────────────────
 const _origOpenDetailCard = openDetailCard;
 function openDetailCard(symbol) {
@@ -3384,4 +3718,3 @@ function openDetailCard(symbol) {
 </div>
 </body>
 </html>
-           
