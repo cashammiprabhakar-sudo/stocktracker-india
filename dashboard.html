@@ -2164,7 +2164,7 @@ async function refreshPrices() {
       if (d.sellRecs   != null)   s.sellRecs       = d.sellRecs;
       if (d.name && !s.name  )    s.name           = d.name;
       if (d.rec              )    s.signal         = deriveSignal(d.rec);
-      if (s.name && s.industry && s.recommendation)
+      if (s.name && (s.industry || s.recommendation))
         s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
     });
 
