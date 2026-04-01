@@ -786,6 +786,69 @@ def _fetch_ticker(symbol, yahoo_sym):
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
+def write_to_firestore(stocks_data: dict, generated_at: str) -> int:
+    """
+    Writes fetched stock data to Firestore `sharedMarketData` collection.
+    Each document: sharedMarketData/{SYMBOL} → {price, pe, recommendation, ...}
+    Also writes sharedMarketData/__meta__ with updatedAt timestamp.
+    Returns the number of documents successfully written.
+    """
+    sa_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+    if not sa_json:
+        print("  FIREBASE_SERVICE_ACCOUNT not set — skipping Firestore write.")
+        return 0
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, firestore as fs, firestore as fstore
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(json.loads(sa_json))
+            firebase_admin.initialize_app(cred)
+        db = fs.client()
+
+        written = 0
+        batch_size = 400          # Firestore admin SDK limit is 500 per batch
+        symbols = [s for s, d in stocks_data.items() if d.get("available")]
+        print(f"  Writing {len(symbols)} available stocks to sharedMarketData…")
+
+        for i in range(0, len(symbols), batch_size):
+            batch = db.batch()
+            chunk = symbols[i:i + batch_size]
+            for sym in chunk:
+                d = stocks_data[sym]
+                doc = {}
+                # Only include defined fields — keeps documents small
+                if d.get("price")          is not None: doc["price"]          = d["price"]
+                if d.get("pe")             is not None: doc["pe"]             = d["pe"]
+                if d.get("recommendation")            : doc["recommendation"] = d["recommendation"]
+                if d.get("industry")                  : doc["industry"]       = d["industry"]
+                if d.get("change52w")      is not None: doc["change12w"]      = d["change52w"]
+                if d.get("buyRecs")        is not None: doc["buyRecs"]        = d["buyRecs"]
+                if d.get("sellRecs")       is not None: doc["sellRecs"]       = d["sellRecs"]
+                if d.get("signal")                    : doc["signal"]         = d["signal"]
+                if d.get("commentary")                : doc["reason"]         = d["commentary"]
+                if d.get("name")                      : doc["name"]           = d["name"]
+                if d.get("targetPrice")    is not None: doc["targetPrice"]    = d["targetPrice"]
+                doc["updatedAt"] = fstore.SERVER_TIMESTAMP
+                batch.set(db.collection("sharedMarketData").document(sym), doc, merge=True)
+            batch.commit()
+            written += len(chunk)
+            print(f"    Batch {i // batch_size + 1}: wrote {len(chunk)} docs ({written}/{len(symbols)} total)")
+
+        # Write meta document with timestamp and coverage stats
+        db.collection("sharedMarketData").document("__meta__").set({
+            "updatedAt":    fstore.SERVER_TIMESTAMP,
+            "generatedAt":  generated_at,
+            "stockCount":   len(symbols),
+            "totalSymbols": len(stocks_data),
+        }, merge=True)
+
+        print(f"  ✓ sharedMarketData updated: {written} stocks, meta doc written.")
+        return written
+    except Exception as e:
+        print(f"  ✗ Firestore write failed: {e}")
+        return 0
+
+
 def main():
     print(f"Fnikar Market Data Fetch v3 — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print("=" * 68)
@@ -875,6 +938,15 @@ def main():
     print(f"\n{'=' * 68}")
     print(f"Done — {ok_count}/{total} stocks fetched  ({ok_count/total*100:.1f}% success rate)")
     print(f"Written to {out_path}  ({size_kb:.0f} KB)")
+
+    # ── Write to Firestore sharedMarketData collection ─────────────────────────
+    print(f"\n[Step 5] Writing to Firestore sharedMarketData collection…")
+    fs_count = write_to_firestore(result["stocks"], result["generatedAt"])
+    if fs_count > 0:
+        print(f"  ✓ Firestore sharedMarketData updated: {fs_count} stocks")
+    else:
+        print(f"  ⚠ Firestore write skipped (no service account or error — see above)")
+    print(f"{'=' * 68}")
 
 if __name__ == "__main__":
     main()
