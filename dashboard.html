@@ -71,6 +71,26 @@
     .btn-add{background:#2e7d32;color:#fff;border:none;padding:11px 24px;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:10px}
     .btn-add:hover{background:#1b5e20}
     .btn-add:disabled{background:#90a4ae;cursor:not-allowed}
+    /* TRANSACTION TYPE TOGGLE */
+    .txn-toggle{display:flex;gap:8px;margin-top:2px}
+    .txn-btn{flex:1;padding:10px 12px;border:2px solid #dde3ec;border-radius:7px;background:#fff;font-size:0.88rem;font-weight:600;cursor:pointer;transition:all 0.18s;color:#666}
+    .txn-btn.buy.active{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32}
+    .txn-btn.sell.active{background:#ffebee;border-color:#c62828;color:#c62828}
+    /* TRANSACTION BADGE */
+    .txn-badge{display:inline-block;background:#e3f2fd;color:#1565c0;border-radius:10px;padding:1px 7px;font-size:0.72rem;font-weight:600;margin-left:5px;vertical-align:middle}
+    /* SELL ROW HIGHLIGHT */
+    tr.sold-out td{opacity:0.55;text-decoration:line-through}
+    /* TRANSACTION HISTORY IN DETAIL CARD */
+    .txn-history{margin-top:16px;padding-top:14px;border-top:1px solid #eee}
+    .txn-history h4{font-size:0.85rem;font-weight:700;color:#555;margin-bottom:8px}
+    .txn-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:6px;font-size:0.8rem;margin-bottom:4px}
+    .txn-row.buy{background:#e8f5e9}.txn-row.sell{background:#ffebee}
+    .txn-row .txn-type{font-weight:700;width:40px}
+    .txn-row .txn-qty{color:#555;width:60px}
+    .txn-row .txn-price{font-weight:600;flex:1;text-align:right}
+    .txn-row .txn-date{color:#999;font-size:0.74rem;margin-left:10px}
+    .txn-row .btn-del-txn{background:none;border:none;color:#e53935;cursor:pointer;padding:2px 5px;font-size:0.8rem;border-radius:3px}
+    .txn-row .btn-del-txn:hover{background:#ffcdd2}
     /* CSV SECTION */
     .csv-section{margin-top:28px;padding-top:24px;border-top:1px solid #eee}
     .csv-section h3{font-size:0.95rem;font-weight:700;margin-bottom:8px;color:#333}
@@ -294,22 +314,29 @@
   <!-- ADD STOCKS TAB -->
   <div id="tabAdd" style="display:none">
     <div class="add-panel">
-      <h2>Add a Stock Manually</h2>
+      <h2>Add a Transaction</h2>
       <div class="form-row">
+        <div class="form-group">
+          <label>Transaction Type</label>
+          <div class="txn-toggle">
+            <button id="btnBuy" class="txn-btn buy active" onclick="setTxnType('buy')">🟢 Buy</button>
+            <button id="btnSell" class="txn-btn sell" onclick="setTxnType('sell')">🔴 Sell</button>
+          </div>
+        </div>
         <div class="form-group sym-wrap">
           <label>Stock Symbol *</label>
           <input type="text" id="fSym" placeholder="Type symbol or company name…"
             oninput="this.value=this.value.toUpperCase();showSymbolSuggestions(this.value)"
             onkeydown="handleSymbolKeydown(event)" autocomplete="off"/>
           <div id="symDropdown" class="sym-dropdown" style="display:none"></div>
-          <span class="form-hint">Type NSE symbol or company name — select from list to auto-fill.</span>
+          <span class="form-hint">Type NSE/BSE symbol — select from list to auto-fill.</span>
         </div>
         <div class="form-group">
           <label>Company Name *</label>
           <input type="text" id="fName" placeholder="Auto-filled when symbol selected"/>
         </div>
         <div class="form-group">
-          <label>Avg Purchase Price ₹ *</label>
+          <label id="fCostLabel">Purchase Price ₹ *</label>
           <input type="number" id="fCost" placeholder="e.g. 1500.50" step="0.01" min="0"/>
         </div>
         <div class="form-group">
@@ -317,7 +344,7 @@
           <input type="number" id="fQty" placeholder="1" step="1" min="1"/>
         </div>
       </div>
-      <button class="btn-add" id="addBtn" onclick="addStock()">+ Add to Portfolio</button>
+      <button class="btn-add" id="addBtn" onclick="addStock()">🟢 Add Buy Transaction</button>
 
       <!-- CSV UPLOAD -->
       <div class="csv-section">
@@ -1576,8 +1603,25 @@ function getStockSuggestions(query) {
 function showSymbolSuggestions(query) {
   acHighlight = -1;
   const dd = document.getElementById('symDropdown');
+  if (!query) { dd.style.display = 'none'; return; }
+
+  // For sell mode: show only stocks currently held in portfolio
+  if (txnType === 'sell') {
+    const q = query.toUpperCase();
+    const held = stocks.filter(s => s.qty > 0 && (s.symbol.includes(q) || (s.name||'').toUpperCase().includes(q)));
+    if (!held.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = held.map((s, i) =>
+      `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.symbol}','${(s.name||'').replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
+        <span class="si-ticker">${s.symbol}</span>
+        <span class="si-name">${s.name||''} <span style="color:#c62828;font-size:0.75rem">${s.qty} held</span></span>
+      </div>`
+    ).join('');
+    dd.style.display = 'block';
+    return;
+  }
+
   const suggestions = getStockSuggestions(query);
-  if (!suggestions.length || !query) { dd.style.display = 'none'; return; }
+  if (!suggestions.length) { dd.style.display = 'none'; return; }
   dd.innerHTML = suggestions.map((s, i) =>
     `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
       <span class="si-ticker">${s.sym}</span>
@@ -1615,8 +1659,97 @@ const auth = firebase.auth();
 const db   = firebase.firestore();
 
 let currentUser = null;
-let stocks = [];  // in-memory cache of portfolio
+let stocks = [];       // consolidated portfolio view (one entry per symbol)
+let rawTransactions = []; // all raw Firestore docs (individual buy/sell records)
 let marketData = {};  // cache of market_data.json
+let txnType = 'buy';  // current transaction type for Add form
+
+// ── SET TRANSACTION TYPE (Buy / Sell toggle) ───────────────────────────────
+function setTxnType(type) {
+  txnType = type;
+  document.getElementById('btnBuy').classList.toggle('active', type === 'buy');
+  document.getElementById('btnSell').classList.toggle('active', type === 'sell');
+  const costLabel = document.getElementById('fCostLabel');
+  const addBtn = document.getElementById('addBtn');
+  if (type === 'sell') {
+    costLabel.textContent = 'Sell Price ₹ *';
+    addBtn.textContent = '🔴 Record Sell Transaction';
+    addBtn.style.background = '#c62828';
+  } else {
+    costLabel.textContent = 'Purchase Price ₹ *';
+    addBtn.textContent = '🟢 Add Buy Transaction';
+    addBtn.style.background = '#2e7d32';
+  }
+}
+
+// ── CONSOLIDATE TRANSACTIONS BY SYMBOL ───────────────────────────────────────
+// Groups all raw buy/sell docs by symbol and returns one consolidated entry per symbol.
+// - All existing docs without transactionType are treated as 'buy' (backward compatible).
+// - avgCost = weighted average of all buy transactions.
+// - qty = totalBuyQty - totalSellQty (net position).
+// - realizedPnL = sum of (sellQty × (sellPrice - avgBuyCost)) for all sells.
+// - Market data fields (price, pe, rec, etc.) taken from whichever doc has them (latest wins).
+function consolidateBySymbol(txns) {
+  const groups = {};
+
+  txns.forEach(t => {
+    const sym = t.symbol;
+    if (!groups[sym]) {
+      groups[sym] = {
+        symbol: sym, name: t.name || sym, industry: t.industry || '',
+        // Market data (overwritten with latest available)
+        currentPrice: null, pe: null, recommendation: null, signal: null,
+        change12w: null, targetPrice: null, buyRecs: null, sellRecs: null, reason: null,
+        // Representative doc id (oldest buy — used for market-data Firestore updates)
+        id: t.id,
+        addedAt: t.addedAt,
+        _transactions: [],
+      };
+    }
+    const g = groups[sym];
+    // Overwrite market data fields with the latest non-null value from any doc
+    if (t.currentPrice != null) g.currentPrice   = t.currentPrice;
+    if (t.pe           != null) g.pe              = t.pe;
+    if (t.recommendation     ) g.recommendation  = t.recommendation;
+    if (t.signal             ) g.signal           = t.signal;
+    if (t.change12w    != null) g.change12w       = t.change12w;
+    if (t.targetPrice  != null) g.targetPrice     = t.targetPrice;
+    if (t.buyRecs      != null) g.buyRecs         = t.buyRecs;
+    if (t.sellRecs     != null) g.sellRecs        = t.sellRecs;
+    if (t.reason             ) g.reason           = t.reason;
+    if (t.name && !g.name   ) g.name             = t.name;
+    if (t.industry && !g.industry) g.industry    = t.industry;
+
+    g._transactions.push(t);
+  });
+
+  return Object.values(groups).map(g => {
+    const buys  = g._transactions.filter(t => !t.transactionType || t.transactionType === 'buy');
+    const sells = g._transactions.filter(t => t.transactionType === 'sell');
+
+    const totalBuyQty  = buys.reduce((s, t) => s + (t.qty || 0), 0);
+    const totalSellQty = sells.reduce((s, t) => s + (t.qty || 0), 0);
+    const netQty       = totalBuyQty - totalSellQty;
+    const totalInvested = buys.reduce((s, t) => s + (t.qty || 0) * (t.avgCost || 0), 0);
+    const avgCost      = totalBuyQty > 0 ? totalInvested / totalBuyQty : 0;
+
+    // Realized P&L: for each sell, profit = qty × (sellPrice - avgBuyCost)
+    const realizedPnL = sells.reduce((s, t) => s + (t.qty || 0) * ((t.avgCost || 0) - avgCost), 0);
+
+    return {
+      ...g,
+      qty:          Math.max(0, netQty),
+      avgCost:      avgCost,
+      realizedPnL:  realizedPnL,
+      _buyQty:      totalBuyQty,
+      _sellQty:     totalSellQty,
+      _rawIds:      g._transactions.map(t => t.id),
+    };
+  })
+  // Show all symbols, even fully sold ones (qty=0), so user sees history
+  // Sort: active positions first, then fully sold
+  .sort((a, b) => (b.qty > 0 ? 1 : 0) - (a.qty > 0 ? 1 : 0) || (a.name||'').localeCompare(b.name||''));
+}
 
 // ── SHARED MARKET DATA (written by GitHub Actions → Firestore) ───────────────
 // GitHub Actions fetches all NSE stocks daily and writes to sharedMarketData/{SYMBOL}.
@@ -1859,7 +1992,8 @@ async function loadPortfolio() {
   try {
     const snap = await db.collection('portfolios').doc(currentUser.uid)
       .collection('stocks').orderBy('addedAt','asc').get();
-    stocks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    rawTransactions = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    stocks = consolidateBySymbol(rawTransactions);
     renderTable();
     updateStats();
     populateIndustryFilter();
@@ -1904,11 +2038,16 @@ let filterState = { search: '', industry: '', rec: '', signal: '' };
 
 function getFilteredSorted() {
   let list = stocks.map(s => {
-    const invested = (s.avgCost||0)*(s.qty||0);
-    const value = s.currentPrice != null ? s.currentPrice * s.qty : null;
-    const pnl = value != null ? value - invested : null;
-    const pnlPct = (pnl != null && invested > 0) ? pnl/invested*100 : null;
-    return {...s, _invested: invested, _value: value, _pnl: pnl, _pnlPct: pnlPct};
+    const invested = (s.avgCost||0)*(s.qty||0);  // active invested capital (net qty × avg cost)
+    const value    = (s.qty > 0 && s.currentPrice != null) ? s.currentPrice * s.qty : null;
+    const unrealizedPnL = value != null ? value - invested : null;
+    const totalPnL = unrealizedPnL != null
+      ? unrealizedPnL + (s.realizedPnL||0)
+      : (s.realizedPnL != null ? s.realizedPnL : null);
+    const pnl    = totalPnL;
+    const totalOriginal = (s._buyQty||0) * (s.avgCost||0);
+    const pnlPct = (pnl != null && totalOriginal > 0) ? pnl/totalOriginal*100 : null;
+    return {...s, _invested: invested, _value: value, _pnl: pnl, _pnlPct: pnlPct, _unrealPnL: unrealizedPnL};
   });
   // Filters
   const q = filterState.search.toLowerCase();
@@ -1934,33 +2073,43 @@ function renderTable() {
   const tbody = document.getElementById('portfolioBody');
   const empty = document.getElementById('emptyState');
   const count = document.getElementById('stockCount');
-  count.textContent = stocks.length ? `(${stocks.length} stocks)` : '';
+  const activeCount = stocks.filter(s => s.qty > 0).length;
+  count.textContent = stocks.length ? `(${activeCount} active${stocks.length > activeCount ? `, ${stocks.length-activeCount} closed` : ''})` : '';
   if (!stocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   const list = getFilteredSorted();
   document.getElementById('filterCount').textContent =
     list.length < stocks.length ? `Showing ${list.length} of ${stocks.length}` : '';
   tbody.innerHTML = list.map((s, i) => {
-    const invested = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
-    const pnlClass = pnl == null ? '' : pnl >= 0 ? 'gain-cell' : 'loss-cell';
-    const priceDisp = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : '<span style="color:#bbb">—</span>';
-    const valueDisp = value != null ? '₹'+fmt(value) : '<span style="color:#bbb">—</span>';
-    const pnlDisp = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
+    const invested   = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
+    const isSoldOut  = s.qty === 0;
+    const pnlClass   = pnl == null ? '' : pnl >= 0 ? 'gain-cell' : 'loss-cell';
+    const priceDisp  = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : '<span style="color:#bbb">—</span>';
+    const valueDisp  = value != null ? '₹'+fmt(value) : (isSoldOut ? '<span style="color:#bbb;font-style:italic">Sold</span>' : '<span style="color:#bbb">—</span>');
+    const pnlDisp    = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '<span style="color:#bbb">—</span>';
     const pnlPctDisp = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '<span style="color:#bbb">—</span>';
-    const peDisp = s.pe != null ? s.pe.toFixed(2) : '—';
-    const chg = s.change12w;
-    const chgDisp = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
+    const peDisp     = s.pe != null ? s.pe.toFixed(2) : '—';
+    const chg        = s.change12w;
+    const chgDisp    = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
     const signalClass = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
-    const recNorm = (s.recommendation||'').toLowerCase();
-    const recClass = recNorm==='buy'?'rec-buy':recNorm==='sell'?'rec-sell':recNorm?'rec-hold':'';
-    return `<tr onclick="openDetailCard('${s.id}')" title="Click for full details">
+    const recNorm    = (s.recommendation||'').toLowerCase();
+    const recClass   = recNorm==='buy'?'rec-buy':recNorm==='sell'?'rec-sell':recNorm?'rec-hold':'';
+    // Show buy/sell count badges
+    const txnBuys  = (s._transactions||[]).filter(t => !t.transactionType || t.transactionType==='buy').length;
+    const txnSells = (s._transactions||[]).filter(t => t.transactionType==='sell').length;
+    const txnLabel = txnBuys > 1 || txnSells > 0
+      ? `<span class="txn-badge">${txnBuys}B${txnSells>0?' '+txnSells+'S':''}</span>` : '';
+    const qtyDisp  = isSoldOut
+      ? `<span style="color:#bbb;font-style:italic">Sold</span>`
+      : `${s.qty}${txnBuys>1?`<span style="font-size:0.72rem;color:#1565c0;margin-left:3px">avg</span>`:''}`;
+    return `<tr onclick="openDetailCard('${s.symbol}')" title="Click for full details" style="${isSoldOut?'opacity:0.6':''}">
       <td onclick="event.stopPropagation()">${i+1}</td>
-      <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}</td>
+      <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}${txnLabel}</td>
       <td><strong>${s.symbol}</strong></td>
       <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${s.industry||'—'}</td>
-      <td class="num">₹${fmt(s.avgCost)}</td>
-      <td class="num">${s.qty}</td>
-      <td class="num">₹${fmt(invested)}</td>
+      <td class="num">₹${fmt(s.avgCost)}${txnBuys>1?'<span style="font-size:0.7rem;color:#888"> avg</span>':''}</td>
+      <td class="num">${qtyDisp}</td>
+      <td class="num">${isSoldOut?'<span style="color:#bbb">—</span>':'₹'+fmt(invested)}</td>
       <td class="num ${s.priceLoading?'price-loading':''}">${priceDisp}</td>
       <td class="num">${valueDisp}</td>
       <td class="num ${pnlClass}">${pnlDisp}</td>
@@ -1969,10 +2118,10 @@ function renderTable() {
       <td class="num">${chgDisp}</td>
       <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
       <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
-      <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'—'}</td>
-      <td><span class="${recClass}">${recNorm?recNorm.replace('strong_','').toUpperCase():'—'}</span></td>
+      <td class="${signalClass}" style="font-size:0.78rem">${isSoldOut?'—':s.signal||'—'}</td>
+      <td><span class="${recClass}">${recNorm&&!isSoldOut?recNorm.replace('strong_','').toUpperCase():'—'}</span></td>
       <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${s.reason||'—'}</td>
-      <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
+      <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.symbol}')" title="Remove all transactions">🗑</button></td>
     </tr>`;
   }).join('');
 }
@@ -2015,7 +2164,8 @@ function clearFilters() {
 }
 
 function populateIndustryFilter() {
-  const industries = [...new Set(stocks.map(s => s.industry).filter(Boolean))].sort();
+  // Only include active (non-zero qty) stocks in filter options
+  const industries = [...new Set(stocks.filter(s=>s.qty>0).map(s => s.industry).filter(Boolean))].sort();
   const sel = document.getElementById('filterIndustry');
   const cur = sel.value;
   sel.innerHTML = '<option value="">All Industries</option>' +
@@ -2024,7 +2174,7 @@ function populateIndustryFilter() {
 
 function populateRecFilter() {
   const recOrder = ['buy', 'strong_buy', 'hold', 'neutral', 'sell', 'strong_sell'];
-  const recs = [...new Set(stocks.map(s => (s.recommendation||'').toLowerCase()).filter(Boolean))]
+  const recs = [...new Set(stocks.filter(s=>s.qty>0).map(s => (s.recommendation||'').toLowerCase()).filter(Boolean))]
     .sort((a, b) => recOrder.indexOf(a) - recOrder.indexOf(b));
   const sel = document.getElementById('filterRec');
   const cur = sel.value;
@@ -2033,26 +2183,29 @@ function populateRecFilter() {
 }
 
 // ── STOCK DETAIL CARD ──────────────────────────────────────────────────────
-function openDetailCard(stockId) {
-  const s = stocks.find(x => x.id === stockId);
+function openDetailCard(symbol) {
+  const s = stocks.find(x => x.symbol === symbol);
   if (!s) return;
   const invested = (s.avgCost||0)*(s.qty||0);
-  const value = s.currentPrice != null ? s.currentPrice * s.qty : null;
-  const pnl = value != null ? value - invested : null;
-  const pnlPct = (pnl != null && invested > 0) ? pnl/invested*100 : null;
-  const pnlClass = pnl == null ? '' : pnl >= 0 ? 'gain' : 'loss';
-  const recClass = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
+  const value = s.qty > 0 && s.currentPrice != null ? s.currentPrice * s.qty : null;
+  const unrealPnL = value != null ? value - invested : null;
+  const totalPnL  = unrealPnL != null ? unrealPnL + (s.realizedPnL||0) : (s.realizedPnL||null);
+  const totalOrig = (s._buyQty||s.qty||0) * (s.avgCost||0);
+  const pnlPct    = (totalPnL != null && totalOrig > 0) ? totalPnL/totalOrig*100 : null;
+  const pnlClass  = totalPnL == null ? '' : totalPnL >= 0 ? 'gain' : 'loss';
+  const recNorm   = (s.recommendation||'').toLowerCase();
+  const recClass  = recNorm==='buy'?'rec-buy':recNorm==='sell'?'rec-sell':recNorm?'rec-hold':'';
 
   document.getElementById('dc-title').textContent = s.name || s.symbol;
   document.getElementById('dc-subtitle').textContent = `${s.symbol}  ·  ${s.industry || 'Unknown Industry'}`;
-  document.getElementById('dc-avgCost').textContent = '₹' + fmt(s.avgCost);
-  document.getElementById('dc-qty').textContent = s.qty + ' shares';
-  document.getElementById('dc-invested').textContent = '₹' + fmt(invested);
+  document.getElementById('dc-avgCost').textContent = '₹' + fmt(s.avgCost) + (s._buyQty > s.qty ? ' (weighted avg)' : '');
+  document.getElementById('dc-qty').textContent = s.qty > 0 ? s.qty + ' shares' : '0 shares (fully sold)';
+  document.getElementById('dc-invested').textContent = invested > 0 ? '₹' + fmt(invested) : '—';
   document.getElementById('dc-price').textContent = s.currentPrice != null ? '₹'+fmt(s.currentPrice) : 'Not fetched yet';
-  document.getElementById('dc-value').textContent = value != null ? '₹'+fmt(value) : '—';
+  document.getElementById('dc-value').textContent = value != null ? '₹'+fmt(value) : (s.qty === 0 ? 'Fully sold' : '—');
 
   const pnlEl = document.getElementById('dc-pnl');
-  pnlEl.textContent = pnl != null ? (pnl>=0?'+':'')+fmt(pnl) : '—';
+  pnlEl.textContent = totalPnL != null ? (totalPnL>=0?'+':'')+fmt(totalPnL) : '—';
   pnlEl.className = 'di-value ' + pnlClass;
 
   const pnlPctEl = document.getElementById('dc-pnlPct');
@@ -2073,10 +2226,46 @@ function openDetailCard(stockId) {
   sigEl.className = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
 
   const recEl = document.getElementById('dc-rec');
-  recEl.textContent = s.recommendation || '—';
+  recEl.textContent = recNorm ? recNorm.replace('strong_','').toUpperCase() : '—';
   recEl.className = 'detail-rec-badge ' + recClass;
 
   document.getElementById('dc-reason').textContent = s.reason || 'No commentary available.';
+
+  // ── Transaction history section ──────────────────────────────────────────
+  const txns = (s._transactions || []).sort((a,b) => {
+    const ad = a.addedAt?.toDate?.() || new Date(a.addedAt||0);
+    const bd = b.addedAt?.toDate?.() || new Date(b.addedAt||0);
+    return ad - bd;
+  });
+  const txnHtml = txns.length > 1 || txns.some(t => t.transactionType === 'sell') ? `
+    <div class="txn-history">
+      <h4>📋 Transaction History (${txns.length})</h4>
+      ${txns.map(t => {
+        const typ  = t.transactionType || 'buy';
+        const dt   = t.addedAt?.toDate?.() ? t.addedAt.toDate().toLocaleDateString('en-IN') : '';
+        const val  = (t.qty||0) * (t.avgCost||0);
+        return `<div class="txn-row ${typ}">
+          <span class="txn-type">${typ==='sell'?'🔴 SELL':'🟢 BUY'}</span>
+          <span class="txn-qty">${t.qty||0} sh</span>
+          <span class="txn-price">@ ₹${fmt(t.avgCost)} = ₹${fmt(val)}</span>
+          <span class="txn-date">${dt}</span>
+          <button class="btn-del-txn" onclick="event.stopPropagation();deleteSingleTransaction('${t.id}')" title="Remove this transaction">✕</button>
+        </div>`;
+      }).join('')}
+      ${s.realizedPnL ? `<div style="padding:6px 10px;font-size:0.8rem;font-weight:600;color:${s.realizedPnL>=0?'#2e7d32':'#c62828'}">
+        Realized P&amp;L from sells: ${s.realizedPnL>=0?'+':''}₹${fmt(s.realizedPnL)}
+      </div>` : ''}
+    </div>` : '';
+
+  // Inject into modal (find or create container after dc-reason)
+  let txnContainer = document.getElementById('dc-txnHistory');
+  if (!txnContainer) {
+    txnContainer = document.createElement('div');
+    txnContainer.id = 'dc-txnHistory';
+    document.getElementById('dc-reason').parentNode.after(txnContainer);
+  }
+  txnContainer.innerHTML = txnHtml;
+
   document.getElementById('detailModal').classList.add('show');
 }
 
@@ -2090,23 +2279,35 @@ document.getElementById('detailModal').addEventListener('click', function(e) {
 
 // ── UPDATE SUMMARY STATS ───────────────────────────────────────────────────
 function updateStats() {
-  let totalInvested = 0, totalValue = 0, hasValue = false;
+  let totalInvested = 0, totalCurrentValue = 0, totalRealizedPnL = 0;
+  let hasValue = false;
+  const totalBuyCapital = stocks.reduce((s, st) => s + (st._buyQty||st.qty||0)*(st.avgCost||0), 0);
+
   stocks.forEach(s => {
-    const inv = (s.avgCost||0) * (s.qty||0);
-    totalInvested += inv;
-    if (s.currentPrice != null) { totalValue += s.currentPrice * s.qty; hasValue = true; }
+    const netInvested = (s.avgCost||0) * (s.qty||0); // active capital
+    totalInvested += netInvested;
+    totalRealizedPnL += (s.realizedPnL||0);
+    if (s.qty > 0 && s.currentPrice != null) {
+      totalCurrentValue += s.currentPrice * s.qty;
+      hasValue = true;
+    }
   });
-  const pnl = hasValue ? totalValue - totalInvested : null;
-  const pnlPct = (pnl != null && totalInvested > 0) ? (pnl/totalInvested*100) : null;
+
+  const unrealizedPnL = hasValue ? totalCurrentValue - totalInvested : null;
+  const totalPnL      = unrealizedPnL != null
+    ? unrealizedPnL + totalRealizedPnL
+    : (totalRealizedPnL !== 0 ? totalRealizedPnL : null);
+  const pnlPct = (totalPnL != null && totalBuyCapital > 0) ? (totalPnL/totalBuyCapital*100) : null;
+
   document.getElementById('statInvested').textContent = '₹'+fmt(totalInvested);
-  document.getElementById('statValue').textContent = hasValue ? '₹'+fmt(totalValue) : '—';
-  const glEl = document.getElementById('statGainLoss');
+  document.getElementById('statValue').textContent = hasValue ? '₹'+fmt(totalCurrentValue) : '—';
+  const glEl  = document.getElementById('statGainLoss');
   const retEl = document.getElementById('statReturn');
-  if (pnl != null) {
-    glEl.textContent = (pnl>=0?'+':'')+fmt(pnl);
-    glEl.className = 'value ' + (pnl>=0?'gain':'loss');
-    retEl.textContent = (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%';
-    retEl.className = 'value ' + (pnlPct>=0?'gain':'loss');
+  if (totalPnL != null) {
+    glEl.textContent  = (totalPnL>=0?'+':'')+fmt(totalPnL);
+    glEl.className    = 'value ' + (totalPnL>=0?'gain':'loss');
+    retEl.textContent = pnlPct != null ? (pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%' : '—';
+    retEl.className   = 'value ' + (totalPnL>=0?'gain':'loss');
   } else {
     glEl.textContent = '—'; retEl.textContent = '—';
   }
@@ -2161,7 +2362,7 @@ async function refreshPrices() {
 
     const data = await fetchPricesFromWorker(symbols);
 
-    // Apply fetched data to portfolio stocks
+    // Apply fetched data to consolidated portfolio stocks
     let updated = 0;
     stocks.forEach(s => {
       const d = data[s.symbol];
@@ -2200,7 +2401,8 @@ async function refreshPrices() {
       showToast(`✅ All ${updated} stocks updated`, 'success');
     }
 
-    // ── Background: save to Firestore (fire-and-forget, never blocks UI) ──────
+    // ── Background: save market data to Firestore (fire-and-forget) ─────────
+    // Saves to the representative (oldest buy) doc for each symbol.
     (async () => {
       try {
         for (let i = 0; i < stocks.length; i += 400) {
@@ -2219,6 +2421,7 @@ async function refreshPrices() {
             if (s.signal             )    upd.signal        = s.signal;
             if (s.reason             )    upd.reason        = s.reason;
             if (Object.keys(upd).length) {
+              // s.id = representative doc (oldest buy transaction for this symbol)
               bw.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
               hasUpdates = true;
             }
@@ -2262,34 +2465,59 @@ function downloadCsvTemplate() {
   URL.revokeObjectURL(a.href);
 }
 
-// ── ADD STOCK ──────────────────────────────────────────────────────────────
+// ── ADD STOCK / TRANSACTION ────────────────────────────────────────────────
 async function addStock() {
-  const sym  = document.getElementById('fSym').value.trim().toUpperCase();
-  const name = document.getElementById('fName').value.trim();
-  const cost = parseFloat(document.getElementById('fCost').value);
+  const sym    = document.getElementById('fSym').value.trim().toUpperCase();
+  const name   = document.getElementById('fName').value.trim();
+  const cost   = parseFloat(document.getElementById('fCost').value);
   const qtyRaw = document.getElementById('fQty').value.trim();
-  const qty  = qtyRaw === '' ? 1 : parseInt(qtyRaw);  // default to 1 if blank
-  // Auto-fill industry from stock list if available
-  const mdEntry = marketData[sym];
+  const qty    = qtyRaw === '' ? 1 : parseInt(qtyRaw);
+
+  if (!sym)                            { showToast('Please enter a symbol.','error'); return; }
+  if (!name)                           { showToast('Please enter company name.','error'); return; }
+  if (isNaN(cost) || cost <= 0)        { showToast('Enter a valid price.','error'); return; }
+  if (isNaN(qty)  || qty  < 1)         { showToast('Enter a valid quantity.','error'); return; }
+
+  // Sell validation: stock must exist and have sufficient shares
+  if (txnType === 'sell') {
+    const existing = stocks.find(s => s.symbol === sym);
+    if (!existing) {
+      showToast(`${sym} is not in your portfolio. Cannot sell.`, 'error'); return;
+    }
+    if (qty > existing.qty) {
+      showToast(`Only ${existing.qty} shares of ${sym} held. Cannot sell ${qty}.`, 'error'); return;
+    }
+  }
+
+  // Auto-fill industry from known lists
+  const mdEntry  = marketData[sym];
   const nseEntry = NSE_STOCKS[sym];
   const ind = (mdEntry && mdEntry.industry) || (nseEntry && nseEntry.i) || '';
-  if (!sym)         { showToast('Please enter a symbol.','error'); return; }
-  if (!name)        { showToast('Please enter company name.','error'); return; }
-  if (isNaN(cost) || cost <= 0) { showToast('Enter a valid average cost.','error'); return; }
-  if (isNaN(qty)  || qty  < 1) { showToast('Enter a valid quantity.','error'); return; }
+
   const btn = document.getElementById('addBtn');
-  btn.disabled = true; btn.textContent = 'Adding…';
+  btn.disabled = true;
+  btn.textContent = txnType === 'sell' ? 'Recording sell…' : 'Adding…';
+
   try {
-    const doc = { symbol: sym, name, industry: ind, avgCost: cost, qty,
+    const doc = {
+      symbol: sym, name, industry: ind,
+      avgCost: cost, qty,
+      transactionType: txnType,  // 'buy' or 'sell'
       addedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      currentPrice: null, pe: null, signal: null, recommendation: null };
+      currentPrice: null, pe: null, signal: null, recommendation: null
+    };
     const ref = await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add(doc);
-    stocks.push({id: ref.id, ...doc, addedAt: new Date()});
+    // Add to raw transactions and recompute consolidated view
+    rawTransactions.push({id: ref.id, ...doc, addedAt: new Date()});
+    stocks = consolidateBySymbol(rawTransactions);
     clearAddForm();
-    renderTable(); updateStats();
-    showToast(`✅ ${sym} added to portfolio`,'success');
-  } catch(e) { showToast('Error adding stock.','error'); }
-  btn.disabled = false; btn.textContent = '+ Add to Portfolio';
+    renderTable(); updateStats(); populateIndustryFilter(); populateRecFilter();
+    const verb = txnType === 'sell' ? '🔴 Sell recorded for' : '✅ Bought';
+    showToast(`${verb} ${qty} × ${sym} @ ₹${cost.toFixed(2)}`, 'success');
+  } catch(e) { showToast('Error saving transaction: ' + e.message, 'error'); }
+
+  btn.disabled = false;
+  setTxnType(txnType); // reset button label
 }
 
 function clearAddForm() {
@@ -2297,15 +2525,40 @@ function clearAddForm() {
   document.getElementById('symDropdown').style.display = 'none';
 }
 
-// ── DELETE STOCK ───────────────────────────────────────────────────────────
-async function deleteStock(docId) {
-  if (!confirm('Remove this stock from your portfolio?')) return;
+// ── DELETE STOCK (all transactions for a symbol) ───────────────────────────
+async function deleteStock(symbol) {
+  const entry = stocks.find(s => s.symbol === symbol);
+  if (!entry) return;
+  const txnCount = (entry._rawIds||[]).length;
+  const label = txnCount > 1
+    ? `Remove ALL ${txnCount} transactions for ${symbol}?`
+    : `Remove ${symbol} from your portfolio?`;
+  if (!confirm(label)) return;
+  try {
+    // Delete all underlying Firestore docs for this symbol
+    const ids = entry._rawIds || [entry.id];
+    const bw = db.batch();
+    ids.forEach(docId => {
+      bw.delete(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(docId));
+    });
+    await bw.commit();
+    rawTransactions = rawTransactions.filter(t => t.symbol !== symbol);
+    stocks = consolidateBySymbol(rawTransactions);
+    renderTable(); updateStats(); populateIndustryFilter(); populateRecFilter();
+    showToast(`${symbol} removed from portfolio.`, 'success');
+  } catch(e) { showToast('Error removing stock: ' + e.message, 'error'); }
+}
+
+// ── DELETE INDIVIDUAL TRANSACTION ──────────────────────────────────────────
+async function deleteSingleTransaction(docId) {
+  if (!confirm('Remove this individual transaction?')) return;
   try {
     await db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(docId).delete();
-    stocks = stocks.filter(s => s.id !== docId);
-    renderTable(); updateStats();
-    showToast('Stock removed.','success');
-  } catch(e) { showToast('Error removing stock.','error'); }
+    rawTransactions = rawTransactions.filter(t => t.id !== docId);
+    stocks = consolidateBySymbol(rawTransactions);
+    renderTable(); updateStats(); closeDetailCard();
+    showToast('Transaction removed.', 'success');
+  } catch(e) { showToast('Error removing transaction.', 'error'); }
 }
 
 // ── CSV UPLOAD ─────────────────────────────────────────────────────────────
@@ -2358,14 +2611,15 @@ async function parseCsv(text) {
   let added = 0;
   for (const row of rows) {
     try {
-      const doc = { ...row, currentPrice: null, pe: null, signal: null, recommendation: null,
+      const doc = { ...row, transactionType: 'buy', currentPrice: null, pe: null, signal: null, recommendation: null,
         addedAt: firebase.firestore.FieldValue.serverTimestamp() };
       const ref = await db.collection('portfolios').doc(currentUser.uid).collection('stocks').add(doc);
-      stocks.push({id: ref.id, ...doc, addedAt: new Date()});
+      rawTransactions.push({id: ref.id, ...doc, addedAt: new Date()});
       added++;
     } catch(e) { /* skip errors */ }
   }
-  renderTable(); updateStats();
+  stocks = consolidateBySymbol(rawTransactions);
+  renderTable(); updateStats(); populateIndustryFilter(); populateRecFilter();
   setCsvStatus(`✅ Imported ${added} stocks successfully!`,'success');
   showToast(`✅ ${added} stocks imported from CSV`,'success');
 }
