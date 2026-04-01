@@ -245,9 +245,6 @@
         </select>
         <select id="filterRec" onchange="applyFilters()">
           <option value="">All Recommendations</option>
-          <option value="BUY">BUY</option>
-          <option value="HOLD">HOLD</option>
-          <option value="SELL">SELL</option>
         </select>
         <select id="filterSignal" onchange="applyFilters()">
           <option value="">All Signals</option>
@@ -1659,6 +1656,7 @@ async function loadSharedMarketData() {
       renderTable();
       updateStats();
       populateIndustryFilter();
+      populateRecFilter();
       // Show when shared data was last updated
       const metaSnap = await db.collection('sharedMarketData').doc('__meta__').get();
       if (metaSnap.exists && metaSnap.data().updatedAt) {
@@ -1720,6 +1718,7 @@ function applyMarketData() {
   renderTable();
   updateStats();
   populateIndustryFilter();
+  populateRecFilter();
 }
 
 // ── YAHOO FINANCE SYMBOL MAPPING ──────────────────────────────────────────
@@ -1864,6 +1863,7 @@ async function loadPortfolio() {
     renderTable();
     updateStats();
     populateIndustryFilter();
+    populateRecFilter();
     await loadSharedMarketData(); // pre-loaded prices from GitHub Actions → Firestore
     await loadMarketData();        // fallback: market_data.json (P/E, industry, signal, commentary)
     checkAutoRefresh();            // auto-refresh stale prices every 12h
@@ -1914,7 +1914,7 @@ function getFilteredSorted() {
   const q = filterState.search.toLowerCase();
   if (q) list = list.filter(s => (s.name||'').toLowerCase().includes(q) || (s.symbol||'').toLowerCase().includes(q));
   if (filterState.industry) list = list.filter(s => s.industry === filterState.industry);
-  if (filterState.rec) list = list.filter(s => s.recommendation === filterState.rec);
+  if (filterState.rec) list = list.filter(s => (s.recommendation||'').toLowerCase() === filterState.rec.toLowerCase());
   if (filterState.signal) list = list.filter(s => (s.signal||'').includes(filterState.signal));
   // Sort
   if (sortState.col) {
@@ -1951,7 +1951,8 @@ function renderTable() {
     const chg = s.change12w;
     const chgDisp = chg != null ? `<span class="${chg>=0?'chg-up':'chg-dn'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : '—';
     const signalClass = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
-    const recClass = s.recommendation==='BUY'?'rec-buy':s.recommendation==='SELL'?'rec-sell':'rec-hold';
+    const recNorm = (s.recommendation||'').toLowerCase();
+    const recClass = recNorm==='buy'?'rec-buy':recNorm==='sell'?'rec-sell':recNorm?'rec-hold':'';
     return `<tr onclick="openDetailCard('${s.id}')" title="Click for full details">
       <td onclick="event.stopPropagation()">${i+1}</td>
       <td class="company" title="${s.name||s.symbol}">${s.name||s.symbol}</td>
@@ -1969,7 +1970,7 @@ function renderTable() {
       <td class="num" style="color:#2e7d32;font-weight:600">${s.buyRecs!=null?s.buyRecs:'—'}</td>
       <td class="num" style="color:#c62828;font-weight:600">${s.sellRecs!=null?s.sellRecs:'—'}</td>
       <td class="${signalClass}" style="font-size:0.78rem">${s.signal||'—'}</td>
-      <td><span class="${recClass}">${s.recommendation||'—'}</span></td>
+      <td><span class="${recClass}">${recNorm?recNorm.replace('strong_','').toUpperCase():'—'}</span></td>
       <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${s.reason||'—'}</td>
       <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.id}')" title="Remove">🗑</button></td>
     </tr>`;
@@ -2016,8 +2017,19 @@ function clearFilters() {
 function populateIndustryFilter() {
   const industries = [...new Set(stocks.map(s => s.industry).filter(Boolean))].sort();
   const sel = document.getElementById('filterIndustry');
+  const cur = sel.value;
   sel.innerHTML = '<option value="">All Industries</option>' +
-    industries.map(ind => `<option value="${ind}">${ind}</option>`).join('');
+    industries.map(ind => `<option value="${ind}"${ind===cur?' selected':''}>${ind}</option>`).join('');
+}
+
+function populateRecFilter() {
+  const recOrder = ['buy', 'strong_buy', 'hold', 'neutral', 'sell', 'strong_sell'];
+  const recs = [...new Set(stocks.map(s => (s.recommendation||'').toLowerCase()).filter(Boolean))]
+    .sort((a, b) => recOrder.indexOf(a) - recOrder.indexOf(b));
+  const sel = document.getElementById('filterRec');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Recommendations</option>' +
+    recs.map(r => `<option value="${r}"${r===cur?' selected':''}>${r.replace('strong_','').toUpperCase()}</option>`).join('');
 }
 
 // ── STOCK DETAIL CARD ──────────────────────────────────────────────────────
@@ -2171,6 +2183,8 @@ async function refreshPrices() {
     // ── Update UI immediately — never wait for Firestore ──────────────────────
     renderTable();
     updateStats();
+    populateIndustryFilter();
+    populateRecFilter();
     btn.disabled = false;
     btn.textContent = '🔄 Refresh Prices';
 
