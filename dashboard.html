@@ -467,6 +467,10 @@ const firebaseConfig = {
   appId: "1:144829364145:web:ef183ff4e3035dac272f90"
 };
 const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
+// ── PRICE WORKER (Cloudflare Worker URL) ─────────────────────────────────
+// Set this to your Cloudflare Worker URL after deploying cloudflare-worker.js
+// Example: "https://fnikar-prices.YOUR-NAME.workers.dev"
+const WORKER_URL = 'https://fnikar-prices.cashammiprabhakar.workers.dev';
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── NSE STOCK MASTER LIST (symbol → name, industry) ──────────────────────
@@ -2096,182 +2100,128 @@ function updateStats() {
   }
 }
 
-// ── REFRESH ─────────────────────────────────────────────────────────────────
-// Primary: fetches live prices from Stooq.com (CORS-friendly, no auth needed).
-// Supplemental: Yahoo Finance via proxy for P/E, sector, analyst recommendations.
-// Fallback: market_data.json (loaded on login via loadMarketData).
+// ── PRICE FETCHING VIA CLOUDFLARE WORKER ─────────────────────────────────────
+// All price requests go through the Cloudflare Worker (cloudflare-worker.js).
+// The worker calls Yahoo Finance server-side — no CORS issues, no crumb needed.
+// Deploy the worker once; set WORKER_URL above; prices work for all users.
 
-async function fetchStooqBatch(stooqSymbols) {
-  if (!stooqSymbols.length) return {};
-  // Stooq expects lowercase symbols, comma-separated
-  const syms = stooqSymbols.map(s => s.toLowerCase()).join(',');
-  // f=sd2c: symbol, date (YYYYMMDD), close price
-  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(syms)}&f=sd2c&h&e=csv`;
-  try {
-    const resp = await Promise.race([
-      fetch(url),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
-    ]);
-    if (!resp.ok) return {};
-    const csv = await resp.text();
-    const result = {};
-    const lines = csv.trim().split('\n');
-    // Skip header row (Symbol,Date,Close)
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].trim().split(',');
-      if (parts.length < 3) continue;
-      const sym = parts[0].trim().toUpperCase();  // e.g. RELIANCE.NS
-      const price = parseFloat(parts[2]);
-      if (sym && !isNaN(price) && price > 0) result[sym] = price;
-    }
-    return result;
-  } catch(e) {
-    console.warn('Stooq fetch failed:', e.message);
-    return {};
-  }
-}
+async function fetchPricesFromWorker(symbols) {
+  // Returns { SYMBOL: { price, pe, rec, sector, change52w, name, targetPrice } }
+  if (!symbols.length) return {};
+  if (!WORKER_URL) return {};
 
-async function fetchYahooSupplemental(yahooSymbols) {
-  if (!yahooSymbols.length) return [];
-  const syms = yahooSymbols.slice(0, 20).join(',');
-  const fields = 'trailingPE,recommendationKey,sector,shortName,fiftyTwoWeekChangePercent';
-  const base = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=${fields}&formatted=false&lang=en-US`;
+  const result = {};
+  const BATCH  = 50;   // worker handles 50 symbols per request comfortably
 
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
-    `https://corsproxy.io/?${encodeURIComponent(base)}`,
-    `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(base)}`,
-  ];
-
-  for (const url of proxies) {
+  for (let i = 0; i < symbols.length; i += BATCH) {
+    const chunk = symbols.slice(i, i + BATCH);
     try {
       const resp = await Promise.race([
-        fetch(url, { headers: { Accept: 'application/json' } }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+        fetch(WORKER_URL + '?s=' + chunk.join(',')),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 18000))
       ]);
       if (!resp.ok) continue;
       const data = await resp.json();
-      const results = data?.quoteResponse?.result;
-      if (Array.isArray(results) && results.length > 0) return results;
-    } catch(e) { /* try next proxy */ }
+      Object.assign(result, data);
+    } catch (e) {
+      console.warn('Worker fetch error (batch ' + (i/BATCH+1) + '):', e.message);
+    }
   }
-  return [];
+  return result;
 }
 
 async function refreshPrices() {
   if (!stocks.length) { showToast('No stocks to refresh.'); return; }
+
+  if (!WORKER_URL) {
+    showToast('⚠️ Set WORKER_URL in dashboard.html (see cloudflare-worker.js setup guide)', 'error');
+    return;
+  }
+
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Fetching prices…';
-  document.getElementById('refreshNote').textContent = 'Connecting to Stooq…';
+  document.getElementById('refreshNote').textContent = 'Connecting to price server…';
 
-  // Build Stooq symbol map: stooqSym (uppercase) → [stock objects]
-  // Use same Yahoo symbol format — both Yahoo and Stooq use .NS / .BO suffixes
-  const stooqMap = {};
-  stocks.forEach(s => {
-    const stooqSym = toYahoo(s.symbol).toUpperCase(); // e.g. RELIANCE.NS
-    if (!stooqMap[stooqSym]) stooqMap[stooqSym] = [];
-    stooqMap[stooqSym].push(s);
-  });
+  try {
+    const symbols = [...new Set(stocks.map(s => s.symbol))];
+    btn.textContent = `⏳ Fetching ${symbols.length} stocks…`;
 
-  const allStooqSyms = Object.keys(stooqMap);
-  let pricesFound = 0;
-  const BATCH = 50; // Stooq handles 50+ symbols per request
+    const data = await fetchPricesFromWorker(symbols);
 
-  // ── Step 1: Fetch prices from Stooq ──────────────────────────────────────
-  for (let i = 0; i < allStooqSyms.length; i += BATCH) {
-    const batchSyms = allStooqSyms.slice(i, i + BATCH);
-    const pct = Math.round(((i + BATCH) / allStooqSyms.length) * 85);
-    btn.textContent = `⏳ ${Math.min(pct, 85)}% — fetching prices…`;
+    // Apply fetched data to portfolio stocks
+    let updated = 0;
+    stocks.forEach(s => {
+      const d = data[s.symbol];
+      if (!d) return;
+      if (d.price      != null) { s.currentPrice   = d.price;  updated++; }
+      if (d.pe         != null)   s.pe             = d.pe;
+      if (d.rec              )    s.recommendation = d.rec;
+      if (d.sector           )    s.industry       = d.sector;
+      if (d.change52w  != null)   s.change12w      = d.change52w;
+      if (d.targetPrice!= null)   s.targetPrice    = d.targetPrice;
+      if (d.name && !s.name  )    s.name           = d.name;
+      if (!s.signal && d.rec )    s.signal         = deriveSignal(d.rec);
+      if (!s.reason && s.name && s.industry && s.recommendation)
+        s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
+    });
+
+    // ── Update UI immediately — never wait for Firestore ──────────────────────
+    renderTable();
+    updateStats();
+    btn.disabled = false;
+    btn.textContent = '🔄 Refresh Prices';
+
+    const now = new Date();
     document.getElementById('refreshNote').textContent =
-      `Fetching prices ${i + 1}–${Math.min(i + BATCH, allStooqSyms.length)} of ${allStooqSyms.length}…`;
+      `Updated ${now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})} · ${updated}/${stocks.length} prices updated`;
 
-    const priceMap = await fetchStooqBatch(batchSyms);
-    Object.entries(priceMap).forEach(([sym, price]) => {
-      (stooqMap[sym] || []).forEach(s => { s.currentPrice = price; pricesFound++; });
-    });
-  }
+    if (updated === 0) {
+      showToast('⚠️ No prices received — try again or check Worker URL.', 'error');
+    } else if (updated < stocks.length) {
+      showToast(`✅ ${updated}/${stocks.length} updated (some BSE/unlisted may be missing)`, 'success');
+    } else {
+      showToast(`✅ All ${updated} stocks updated`, 'success');
+    }
 
-  // ── Step 2: Fetch supplemental data from Yahoo Finance (optional) ─────────
-  btn.textContent = '⏳ Loading analytics…';
-  document.getElementById('refreshNote').textContent = 'Fetching P/E ratios and recommendations…';
-
-  const yahooMap = {};
-  stocks.forEach(s => { yahooMap[toYahoo(s.symbol)] = s; });
-  const yahooSyms = [...new Set(stocks.map(s => toYahoo(s.symbol)))];
-
-  for (let i = 0; i < yahooSyms.length; i += 20) {
-    const batch = yahooSyms.slice(i, i + 20);
-    const quotes = await fetchYahooSupplemental(batch);
-    quotes.forEach(q => {
-      const stock = yahooMap[q.symbol];
-      if (!stock) return;
-      if (q.trailingPE               != null) stock.pe             = q.trailingPE;
-      if (q.recommendationKey               ) stock.recommendation = q.recommendationKey;
-      if (q.sector                          ) stock.industry       = q.sector;
-      if (q.fiftyTwoWeekChangePercent != null) stock.change12w     = q.fiftyTwoWeekChangePercent;
-      if (q.shortName && !stock.name        ) stock.name           = q.shortName;
-      if (q.recommendationKey               ) stock.signal         = deriveSignal(q.recommendationKey);
-    });
-  }
-
-  // ── Step 3: Fill remaining gaps from market_data.json (if available) ──────
-  btn.textContent = '⏳ Applying supplemental data…';
-  await loadMarketData(); // fills gaps for stocks Stooq/Yahoo didn't return
-
-  // Derive signals + commentary for stocks that now have enough data
-  stocks.forEach(s => {
-    if (!s.signal && s.recommendation) s.signal = deriveSignal(s.recommendation);
-    if (!s.reason && s.name && s.industry && s.recommendation)
-      s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
-  });
-
-  // ── Step 4: Update UI immediately — don't wait for Firestore ────────────────
-  updateStats();
-  renderTable();
-  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
-  const now = new Date();
-  const enriched = stocks.filter(s => s.currentPrice != null).length;
-  document.getElementById('refreshNote').textContent =
-    `Updated ${now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})} · ${enriched}/${stocks.length} prices updated`;
-
-  if (pricesFound === 0) {
-    showToast('⚠️ Stooq unreachable. Check your internet connection and try again.', 'error');
-  } else if (enriched < stocks.length) {
-    showToast(`✅ ${enriched}/${stocks.length} stocks updated (some BSE/unlisted stocks may be missing)`, 'success');
-  } else {
-    showToast(`✅ All ${enriched} stocks updated`, 'success');
-  }
-
-  // ── Step 5: Save to Firestore in background (fire & forget — never blocks UI) ─
-  (async () => {
-    try {
-      for (let i = 0; i < stocks.length; i += 400) {
-        const batchWrite = db.batch();
-        stocks.slice(i, i + 400).forEach(s => {
-          const upd = {};
-          if (s.currentPrice != null) { upd.currentPrice = s.currentPrice; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
-          if (s.pe           != null) upd.pe            = s.pe;
-          if (s.industry         )    upd.industry      = s.industry;
-          if (s.recommendation   )    upd.recommendation = s.recommendation;
-          if (s.change12w   != null)  upd.change12w     = s.change12w;
-          if (s.targetPrice != null)  upd.targetPrice   = s.targetPrice;
-          if (s.buyRecs     != null)  upd.buyRecs       = s.buyRecs;
-          if (s.sellRecs    != null)  upd.sellRecs      = s.sellRecs;
-          if (s.signal          )     upd.signal        = s.signal;
-          if (s.reason          )     upd.reason        = s.reason;
-          if (Object.keys(upd).length > 0)
-            batchWrite.update(
-              db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
-        });
-        await batchWrite.commit();
+    // ── Background: save to Firestore (fire-and-forget, never blocks UI) ──────
+    (async () => {
+      try {
+        for (let i = 0; i < stocks.length; i += 400) {
+          const bw = db.batch();
+          let hasUpdates = false;
+          stocks.slice(i, i + 400).forEach(s => {
+            const upd = {};
+            if (s.currentPrice != null) { upd.currentPrice = s.currentPrice; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+            if (s.pe           != null)   upd.pe            = s.pe;
+            if (s.industry           )    upd.industry      = s.industry;
+            if (s.recommendation     )    upd.recommendation= s.recommendation;
+            if (s.change12w    != null)   upd.change12w     = s.change12w;
+            if (s.targetPrice  != null)   upd.targetPrice   = s.targetPrice;
+            if (s.signal             )    upd.signal        = s.signal;
+            if (s.reason             )    upd.reason        = s.reason;
+            if (Object.keys(upd).length) {
+              bw.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
+              hasUpdates = true;
+            }
+          });
+          if (hasUpdates) await bw.commit();
+        }
+        await db.collection('portfolios').doc(currentUser.uid)
+          .collection('meta').doc('refresh')
+          .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      } catch (e) {
+        console.warn('Background Firestore save (non-critical):', e.message);
       }
-      await db.collection('portfolios').doc(currentUser.uid)
-        .collection('meta').doc('refresh')
-        .set({ refreshedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    } catch(e) { console.warn('Background Firestore save error (non-critical):', e.message); }
-  })();
+    })();
+
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '🔄 Refresh Prices';
+    showToast('⚠️ Price fetch failed: ' + e.message, 'error');
+  }
 }
+
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
