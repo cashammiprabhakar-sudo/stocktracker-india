@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Fnikar — My Portfolio</title>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Fnikar"/>
+  <meta name="theme-color" content="#1565c0"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
@@ -272,6 +277,150 @@
     .btn-export:hover{background:#e3f2fd}
     /* STATS STRIP EXTENDED */
     .stat-card .stat-sub{font-size:0.72rem;color:#888;margin-top:2px}
+
+    /* ═══════════════════════════════════════════════════════════
+       MOBILE APP UI — BOTTOM NAV + CARD VIEW
+       ═══════════════════════════════════════════════════════════ */
+
+    /* Give body bottom padding on mobile so content isn't hidden behind nav */
+    @media(max-width:767px){
+      body{padding-bottom:68px}
+      /* Compact ticker bar on mobile */
+      #tickerBar{padding:5px 10px;font-size:0.7rem;top:0}
+      /* Compact header */
+      .header{padding:10px 14px;position:sticky;top:28px}
+      .header h1{font-size:1rem}
+      .header-right{gap:6px}
+      .btn-logout{padding:5px 10px;font-size:0.78rem}
+      .btn-chg-pwd{display:none}/* hide on mobile — accessible via menu */
+      /* Main padding */
+      .main{padding:10px 10px 0}
+      /* Stats strip */
+      .stats-strip{gap:8px;margin-bottom:12px}
+      .stat-card{padding:10px 12px}
+      .stat-card .label{font-size:0.68rem}
+      .stat-card .value{font-size:1.1rem}
+      /* Hide desktop tabs on mobile */
+      .tabs{display:none}
+      /* Toast above bottom nav */
+      .toast{bottom:78px;right:12px;left:12px;text-align:center;max-width:none}
+      /* Table toolbar compact */
+      .table-toolbar{padding:10px 12px;flex-wrap:wrap;gap:6px}
+      .table-toolbar .title{font-size:0.88rem}
+      .btn-refresh{padding:7px 12px;font-size:0.8rem}
+      .btn-export{padding:6px 10px;font-size:0.78rem}
+      /* Filter bar stacked */
+      .filter-bar{flex-direction:column;gap:7px;padding:10px 12px}
+      .filter-bar input[type=text]{min-width:0;width:100%}
+      .filter-bar select{width:100%;font-size:0.85rem}
+      /* Hide desktop table, show mobile cards */
+      .table-scroll{display:none}
+      /* Detail modal full-screen bottom sheet on mobile */
+      .detail-modal-bg{padding:0;align-items:flex-end}
+      .detail-card{border-radius:20px 20px 0 0;max-height:92vh;width:100%;max-width:100%}
+      /* Add form improvements */
+      .add-panel{padding:16px}
+      .add-panel h2{font-size:0.95rem;margin-bottom:14px}
+      .form-group input,.form-group select{padding:12px 14px;font-size:1rem}
+      .btn-add{width:100%;padding:14px;font-size:1rem;margin-top:14px}
+      .txn-btn{padding:12px;font-size:0.92rem}
+      /* Global tab header stacked */
+      .global-header{flex-direction:column;gap:8px}
+      .global-stats{gap:14px}
+      .global-stat .g-value{font-size:0.95rem}
+      /* CSV section */
+      .csv-section{margin-top:20px;padding-top:16px}
+      .csv-drop{padding:20px}
+      /* Analytics charts */
+      .chart-panel{padding:14px}
+      .chart-range-btns{gap:4px}
+      .chart-range-btn{padding:5px 8px;font-size:0.74rem}
+    }
+
+    /* ── BOTTOM NAVIGATION BAR ─────────────────────────────── */
+    .mobile-bottom-nav{
+      display:none;/* hidden on desktop */
+      position:fixed;
+      bottom:0;left:0;right:0;
+      background:#fff;
+      border-top:1px solid #e0e8f5;
+      z-index:200;
+      box-shadow:0 -2px 12px rgba(0,0,0,0.1);
+      height:62px;
+      align-items:stretch;
+    }
+    @media(max-width:767px){
+      .mobile-bottom-nav{display:flex}
+    }
+    .mob-nav-btn{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:3px;
+      background:none;
+      border:none;
+      cursor:pointer;
+      padding:6px 4px;
+      color:#888;
+      transition:color 0.2s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .mob-nav-btn.active{color:#1565c0}
+    .mob-nav-icon{font-size:1.3rem;line-height:1}
+    .mob-nav-label{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+    .mob-nav-btn.active .mob-nav-label{color:#1565c0}
+
+    /* ── MOBILE STOCK CARDS ───────────────────────────────── */
+    .mobile-card-list{display:none}
+    @media(max-width:767px){
+      .mobile-card-list{display:block}
+    }
+    .mob-stock-card{
+      background:#fff;
+      border-radius:12px;
+      padding:14px 16px;
+      margin:0 0 10px;
+      box-shadow:0 1px 4px rgba(0,0,0,0.08);
+      cursor:pointer;
+      transition:box-shadow 0.15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .mob-stock-card:active{box-shadow:0 2px 8px rgba(0,0,0,0.15);transform:scale(0.99)}
+    .mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+    .mob-card-left{}
+    .mob-card-ticker{font-size:1rem;font-weight:800;color:#1565c0;letter-spacing:0.3px}
+    .mob-card-name{font-size:0.78rem;color:#666;margin-top:1px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mob-card-right{text-align:right;flex-shrink:0}
+    .mob-card-price{font-size:1.05rem;font-weight:700;color:#222}
+    .mob-card-pnlpct{font-size:0.82rem;font-weight:700;margin-top:1px}
+    .mob-card-pnlpct.gain{color:#2e7d32}
+    .mob-card-pnlpct.loss{color:#c62828}
+    .mob-card-bottom{display:flex;gap:10px;flex-wrap:wrap}
+    .mob-card-stat{display:flex;flex-direction:column;flex:1;min-width:80px}
+    .mob-card-stat-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.4px;color:#aaa;font-weight:600}
+    .mob-card-stat-value{font-size:0.82rem;font-weight:600;color:#333;margin-top:1px}
+    .mob-card-stat-value.gain{color:#2e7d32}
+    .mob-card-stat-value.loss{color:#c62828}
+    .mob-card-divider{height:1px;background:#f0f4f8;margin:8px 0}
+    .mob-card-industry{font-size:0.7rem;color:#999;margin-top:4px}
+    .mob-card-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:6px}
+    .mob-sold-badge{background:#f5f5f5;color:#999;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;font-style:italic}
+
+    /* ── MOBILE GLOBAL TAB CARDS ───────────────────────────── */
+    .mob-global-card{
+      background:#fff;
+      border-radius:12px;
+      padding:14px 16px;
+      margin:0 0 10px;
+      box-shadow:0 1px 4px rgba(0,0,0,0.08);
+      cursor:pointer;
+    }
+    /* Mobile add form FAB hint */
+    @media(max-width:767px){
+      .admin-link-mobile{display:flex;gap:8px;align-items:center}
+    }
   </style>
 <!-- SheetJS for Excel support -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -378,9 +527,11 @@
           </tbody>
         </table>
       </div>
+      <!-- MOBILE CARDS (visible only on small screens) -->
+      <div class="mobile-card-list" id="mobileCardList" style="padding:10px 12px"></div>
       <div class="empty-state" id="emptyState" style="display:none">
         <div class="icon">📭</div>
-        <p>No stocks added yet.<br/>Click <strong>Add Stocks</strong> to get started.</p>
+        <p>No stocks added yet.<br/>Click <strong>➕ Add</strong> to get started.</p>
       </div>
     </div>
   </div>
@@ -514,6 +665,26 @@
     </div>
   </div>
 </div>
+
+<!-- MOBILE BOTTOM NAVIGATION -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+  <button class="mob-nav-btn active" id="mnav-portfolio" onclick="showTab('portfolio')">
+    <span class="mob-nav-icon">🇮🇳</span>
+    <span class="mob-nav-label">India</span>
+  </button>
+  <button class="mob-nav-btn" id="mnav-global" onclick="showTab('global')">
+    <span class="mob-nav-icon">🌍</span>
+    <span class="mob-nav-label">Global</span>
+  </button>
+  <button class="mob-nav-btn" id="mnav-add" onclick="showTab('add')">
+    <span class="mob-nav-icon">➕</span>
+    <span class="mob-nav-label">Add</span>
+  </button>
+  <button class="mob-nav-btn" id="mnav-analytics" onclick="showTab('analytics')">
+    <span class="mob-nav-icon">📈</span>
+    <span class="mob-nav-label">Analytics</span>
+  </button>
+</nav>
 
 <div class="toast" id="toast"></div>
 <div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-msg" id="overlayMsg">Loading…</div></div>
@@ -2442,11 +2613,13 @@ function renderTable() {
   const indiaStocks = stocks.filter(s => !isUSStock(s.symbol) && !isLSEStock(s.symbol));
   const activeCount = indiaStocks.filter(s => s.qty > 0).length;
   count.textContent = indiaStocks.length ? `(${activeCount} active${indiaStocks.length > activeCount ? `, ${indiaStocks.length-activeCount} closed` : ''})` : '';
-  if (!indiaStocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  if (!indiaStocks.length) { tbody.innerHTML=''; const mc=document.getElementById('mobileCardList'); if(mc)mc.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   const list = getFilteredSorted();
   document.getElementById('filterCount').textContent =
     list.length < stocks.length ? `Showing ${list.length} of ${stocks.length}` : '';
+  // Also render mobile cards
+  renderMobileCards();
   tbody.innerHTML = list.map((s, i) => {
     const invested   = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
     const isSoldOut  = s.qty === 0;
@@ -2499,6 +2672,78 @@ function renderTable() {
       <td style="max-width:220px;min-width:140px;font-size:0.76rem;color:#666;white-space:normal;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${s.reason||'—'}</td>
       <td onclick="event.stopPropagation()"><button class="btn-del" onclick="deleteStock('${s.symbol}')" title="Remove all transactions">🗑</button></td>
     </tr>`;
+  }).join('');
+}
+
+// ── MOBILE CARD RENDERING ─────────────────────────────────────────────────
+function renderMobileCards() {
+  const container = document.getElementById('mobileCardList');
+  if (!container) return;
+  const indiaStocks = stocks.filter(s => !isUSStock(s.symbol) && !isLSEStock(s.symbol));
+  if (!indiaStocks.length) { container.innerHTML = ''; return; }
+  const list = getFilteredSorted();
+  container.innerHTML = list.map(s => {
+    const isSoldOut = s.qty === 0;
+    const invested  = s._invested, value = s._value, pnl = s._pnl, pnlPct = s._pnlPct;
+    const cSym = CUR_SYM[stockCurrency(s.symbol)] || '₹';
+    const priceDisp = s.currentPrice != null ? cSym + fmt(s.currentPrice) : '—';
+    const pnlPctDisp = pnlPct != null ? (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%' : null;
+    const pnlPctClass = pnlPct != null ? (pnlPct >= 0 ? 'gain' : 'loss') : '';
+    const pnlDisp = pnl != null ? (pnl >= 0 ? '+' : '') + cSym + fmt(Math.abs(pnl)) : '—';
+    const pnlClass = pnl != null ? (pnl >= 0 ? 'gain' : 'loss') : '';
+    const valueDisp = value != null ? cSym + fmt(value) : '—';
+    const recNorm = (s.recommendation || '').toLowerCase();
+    const recClass = recNorm === 'buy' ? 'rec-buy' : recNorm === 'sell' ? 'rec-sell' : recNorm ? 'rec-hold' : '';
+    const txnBuys  = (s._transactions || []).filter(t => !t.transactionType || t.transactionType === 'buy').length;
+    const txnSells = (s._transactions || []).filter(t => t.transactionType === 'sell').length;
+    const xFlag = isUSStock(s.symbol) ? ' 🇺🇸' : isLSEStock(s.symbol) ? ' 🇬🇧' : '';
+    // Target alert
+    let tgtBadge = '';
+    if (s.targetPrice && !isSoldOut && s.currentPrice != null) {
+      const pct = s.currentPrice / s.targetPrice * 100;
+      if (pct >= 100) tgtBadge = '<span class="tgt-badge hit">🎯 HIT</span>';
+      else if (pct >= 90) tgtBadge = '<span class="tgt-badge near">🔔 NEAR</span>';
+    }
+    return `<div class="mob-stock-card${isSoldOut ? ' sold-out' : ''}" onclick="openDetailCard('${s.symbol}')">
+      <div class="mob-card-top">
+        <div class="mob-card-left">
+          <div class="mob-card-ticker">${xFlag}${s.symbol}${txnBuys > 1 || txnSells > 0 ? `<span class="txn-badge" style="font-size:0.65rem">${txnBuys}B${txnSells > 0 ? ' ' + txnSells + 'S' : ''}</span>` : ''}</div>
+          <div class="mob-card-name">${s.name || s.symbol}</div>
+          ${s.industry ? `<div class="mob-card-industry">${s.industry}</div>` : ''}
+        </div>
+        <div class="mob-card-right">
+          <div class="mob-card-price${s.priceLoading ? ' price-loading' : ''}">${priceDisp}</div>
+          ${pnlPctDisp ? `<div class="mob-card-pnlpct ${pnlPctClass}">${pnlPctDisp}</div>` : ''}
+        </div>
+      </div>
+      ${isSoldOut ? '<span class="mob-sold-badge">Position Closed</span>' : `
+      <div class="mob-card-divider"></div>
+      <div class="mob-card-bottom">
+        <div class="mob-card-stat">
+          <span class="mob-card-stat-label">Avg Cost</span>
+          <span class="mob-card-stat-value">${cSym}${fmt(s.avgCost)}</span>
+        </div>
+        <div class="mob-card-stat">
+          <span class="mob-card-stat-label">Qty</span>
+          <span class="mob-card-stat-value">${s.qty}</span>
+        </div>
+        <div class="mob-card-stat">
+          <span class="mob-card-stat-label">Value</span>
+          <span class="mob-card-stat-value">${valueDisp}</span>
+        </div>
+        <div class="mob-card-stat">
+          <span class="mob-card-stat-label">P&L</span>
+          <span class="mob-card-stat-value ${pnlClass}">${pnlDisp}</span>
+        </div>
+      </div>
+      ${(recNorm && !isSoldOut) || tgtBadge ? `
+      <div class="mob-card-badges" style="margin-top:8px">
+        ${recNorm && !isSoldOut ? `<span class="${recClass}">${recNorm.replace('strong_', '').toUpperCase()}</span>` : ''}
+        ${s.signal && !isSoldOut ? `<span style="font-size:0.75rem;color:${s.signal.includes('▲') ? '#2e7d32' : s.signal.includes('▼') ? '#c62828' : '#888'};font-weight:600">${s.signal}</span>` : ''}
+        ${tgtBadge}
+      </div>` : ''}
+      `}
+    </div>`;
   }).join('');
 }
 
@@ -3083,12 +3328,20 @@ function showTab(tab) {
   document.getElementById('tabGlobal').style.display     = tab==='global'     ? '' : 'none';
   document.getElementById('tabAdd').style.display        = tab==='add'        ? '' : 'none';
   document.getElementById('tabAnalytics').style.display  = tab==='analytics'  ? '' : 'none';
+  // Desktop tabs
   ['portfolio','global','add','analytics'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.classList.toggle('active', t===tab);
   });
+  // Mobile bottom nav sync
+  ['portfolio','global','add','analytics'].forEach(t => {
+    const el = document.getElementById('mnav-'+t);
+    if (el) el.classList.toggle('active', t===tab);
+  });
   if (tab==='analytics') loadAnalytics();
   if (tab==='global')    renderGlobalTable();
+  // Scroll to top on tab switch (mobile UX)
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
 let toastTimer;
