@@ -33,6 +33,10 @@
     .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);overflow:hidden}
     .table-toolbar{padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e8edf2}
     .table-toolbar .title{font-weight:700;font-size:0.95rem;flex:1}
+    .btn-fill-missing{background:#e65100;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:0.82rem;font-weight:700;cursor:pointer;transition:background .2s;animation:pulse-orange 2s infinite}
+    .btn-fill-missing:hover{background:#bf360c;animation:none}
+    .btn-fill-missing:disabled{background:#90a4ae;cursor:not-allowed;animation:none}
+    @keyframes pulse-orange{0%,100%{box-shadow:0 0 0 0 rgba(230,81,0,.35)}60%{box-shadow:0 0 0 7px rgba(230,81,0,0)}}
     .btn-refresh{background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.2s}
     .btn-refresh:hover{background:#0d47a1}
     .btn-refresh:disabled{background:#90a4ae;cursor:not-allowed}
@@ -234,6 +238,9 @@
         <span class="title">My Portfolio <span id="stockCount" style="font-weight:400;color:#888;font-size:0.85rem"></span></span>
         <span class="refresh-note" id="refreshNote"></span>
         <span id="mdAge" style="font-size:0.76rem;color:#888;margin-left:8px;"></span>
+        <button class="btn-fill-missing" id="fillMissingBtn" onclick="fillMissingData()" style="display:none">
+          ⚡ Fill Missing Data <span id="missingCount"></span>
+        </button>
         <button class="btn-refresh" id="refreshBtn" onclick="refreshPrices()">
           🔄 Refresh Prices
         </button>
@@ -308,9 +315,13 @@
           <div id="symDropdown" class="sym-dropdown" style="display:none"></div>
           <span class="form-hint">Type NSE symbol or company name — select from list to auto-fill.</span>
         </div>
-        <div class="form-group">
+        <div class="form-group sym-wrap">
           <label>Company Name *</label>
-          <input type="text" id="fName" placeholder="Auto-filled when symbol selected"/>
+          <input type="text" id="fName" placeholder="Type company name to search…"
+            oninput="showNameSuggestions(this.value)"
+            onkeydown="handleNameKeydown(event)" autocomplete="off"/>
+          <div id="nameDropdown" class="sym-dropdown" style="display:none"></div>
+          <span class="form-hint">Search by company name — or type symbol above.</span>
         </div>
         <div class="form-group">
           <label>Avg Purchase Price ₹ *</label>
@@ -1120,8 +1131,9 @@ function getStockSuggestions(query) {
     else if (info.name.toLowerCase().includes(qLow)) nameMatch.push({sym, ...info});
   });
   symMatch.sort((a,b) => a.sym.localeCompare(b.sym));
-  nameMatch.sort((a,b) => a.sym.localeCompare(b.sym));
-  return [...symMatch, ...nameMatch].slice(0, 9);
+  nameMatch.sort((a,b) => a.name.localeCompare(b.name));
+  // Cap symMatch at 5 so name matches always get at least 4 slots
+  return [...symMatch.slice(0,5), ...nameMatch].slice(0, 9);
 }
 
 function showSymbolSuggestions(query) {
@@ -1142,6 +1154,34 @@ function selectSymbol(sym, name, industry) {
   document.getElementById('fSym').value = sym;
   document.getElementById('fName').value = name;
   document.getElementById('symDropdown').style.display = 'none';
+  document.getElementById('nameDropdown').style.display = 'none';
+  // Focus price field for fast entry
+  document.getElementById('fCost').focus();
+}
+
+function showNameSuggestions(query) {
+  acHighlight = -1;
+  const dd = document.getElementById('nameDropdown');
+  // Search without forcing uppercase so names match naturally
+  const suggestions = getStockSuggestions(query);
+  if (!suggestions.length || !query) { dd.style.display = 'none'; return; }
+  dd.innerHTML = suggestions.map((s, i) =>
+    `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
+      <span class="si-ticker">${s.sym}</span>${s.isBse ? '<span class="si-bse-badge">BSE</span>' : ''}
+      <span class="si-name">${s.name}</span>
+    </div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function handleNameKeydown(e) {
+  const dd = document.getElementById('nameDropdown');
+  const items = dd.querySelectorAll('.sym-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); acHighlight = Math.min(acHighlight+1, items.length-1); updateAcHighlight(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acHighlight = Math.max(acHighlight-1, 0); updateAcHighlight(items); }
+  else if (e.key === 'Enter' && acHighlight >= 0) { e.preventDefault(); items[acHighlight].dispatchEvent(new MouseEvent('mousedown')); }
+  else if (e.key === 'Escape') { dd.style.display = 'none'; acHighlight = -1; }
 }
 
 function handleSymbolKeydown(e) {
@@ -1407,6 +1447,7 @@ function renderTable() {
   const empty = document.getElementById('emptyState');
   const count = document.getElementById('stockCount');
   count.textContent = stocks.length ? `(${stocks.length} stocks)` : '';
+  updateMissingDataBtn();
   if (!stocks.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   const list = getFilteredSorted();
@@ -1618,12 +1659,42 @@ async function refreshPrices() {
 
   updateStats();
   renderTable();
-  btn.disabled = false; btn.textContent = '\ud83d\udd04 Refresh Prices';
+  updateMissingDataBtn();
+  btn.disabled = false; btn.textContent = '🔄 Refresh Prices';
   const now = new Date();
   const enriched = stocks.filter(s => s.currentPrice != null).length;
   document.getElementById('refreshNote').textContent =
-    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} \u00b7 ${enriched}/${stocks.length} stocks enriched`;
-  showToast(`\u2705 ${enriched}/${stocks.length} stocks updated`, 'success');
+    `Updated ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${enriched}/${stocks.length} stocks enriched`;
+  showToast(`✅ ${enriched}/${stocks.length} stocks updated`, 'success');
+}
+
+// ── FILL MISSING DATA (priority refresh) ──────────────────────────────────
+function countMissingStocks() {
+  return stocks.filter(s => s.currentPrice == null || s.pe == null || !s.industry).length;
+}
+
+function updateMissingDataBtn() {
+  const n   = countMissingStocks();
+  const btn = document.getElementById('fillMissingBtn');
+  const ctr = document.getElementById('missingCount');
+  if (!btn) return;
+  if (n > 0) {
+    btn.style.display = 'inline-flex';
+    ctr.textContent = `(${n} stock${n===1?'':'s'})`;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+async function fillMissingData() {
+  const n = countMissingStocks();
+  if (!n) { showToast('All stocks already have complete data ✅', 'success'); return; }
+  showToast(`⚡ Fetching data for ${n} incomplete stock${n===1?'':'s'}…`);
+  const btn = document.getElementById('fillMissingBtn');
+  btn.disabled = true; btn.textContent = '⏳ Fetching…';
+  await refreshPrices();   // refreshPrices already handles all update + save logic
+  btn.disabled = false;
+  // updateMissingDataBtn() is called inside refreshPrices→renderTable path
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1814,6 +1885,14 @@ async function saveNewPassword() {
     showToast('New password does not meet all requirements.','error'); return;
   }
   if (newPwd !== confirm) { showToast('Passwords do not match.','error'); return; }
+  // Detect sign-in provider (Google users cannot use email/password re-auth)
+  const providerData = currentUser.providerData || [];
+  const isGoogleUser = providerData.some(p => p.providerId === 'google.com');
+  const isEmailUser  = providerData.some(p => p.providerId === 'password');
+  if (isGoogleUser && !isEmailUser) {
+    showToast('❌ Your account uses Google Sign-In. Password cannot be changed here — manage it via Google Account settings.', 'error');
+    return;
+  }
   try {
     const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, current);
     await currentUser.reauthenticateWithCredential(cred);
@@ -1821,8 +1900,15 @@ async function saveNewPassword() {
     closeChangePwd();
     showToast('✅ Password changed successfully!', 'success');
   } catch(e) {
-    if (e.code === 'auth/wrong-password') showToast('❌ Current password is incorrect.', 'error');
-    else showToast('❌ Error: ' + (e.message || e), 'error');
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')
+      showToast('❌ Current password is incorrect.', 'error');
+    else if (e.code === 'auth/requires-recent-login')
+      showToast('⚠️ Session expired. Please sign out and sign in again, then change your password.', 'error');
+    else if (e.code === 'auth/too-many-requests')
+      showToast('❌ Too many failed attempts. Please wait a few minutes and try again.', 'error');
+    else if (e.code === 'auth/weak-password')
+      showToast('❌ Password too weak — please choose a stronger one.', 'error');
+    else showToast('❌ Error: ' + (e.message || e.code || e), 'error');
   }
 }
 
