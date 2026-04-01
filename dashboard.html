@@ -193,6 +193,7 @@
     .sym-item:last-child{border-bottom:none}
     .sym-item:hover,.sym-item.active{background:#eef4ff}
     .sym-item .si-ticker{font-weight:700;font-size:0.88rem;color:#1565c0}
+    .sym-item .si-bse-badge{display:inline-block;font-size:0.65rem;font-weight:700;background:#e65100;color:#fff;border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:middle;line-height:1.5}
     .sym-item .si-name{font-size:0.78rem;color:#666}
   </style>
 <!-- SheetJS for Excel support -->
@@ -639,6 +640,340 @@ const NSE_STOCKS = {
   'ZYDUSLIFE':{'n':'Zydus Lifesciences Ltd','i':'Pharmaceuticals'},
 };
 
+// ── BSE STOCKS — hardcoded for instant autocomplete ──────────────────────
+// Covers BSE-only stocks + stocks commonly accessed via BSE scrip code.
+// getStockSuggestions() applies name-based dedup: NSE symbols always win over
+// BSE scrip codes so dual-listed stocks show once (as their NSE ticker).
+const BSE_STOCKS = {
+  // ── Auto & Auto Components ─────────────────────────────────────────────
+  "505010":{"n":"Bharat Seats Ltd","i":"Auto Parts & Equipment"},
+  "505506":{"n":"Sunil Industries Ltd","i":"Auto Parts & Equipment"},
+  "522261":{"n":"Automotive Axles Ltd","i":"Auto Parts & Equipment"},
+  "522304":{"n":"Precision Camshafts Ltd","i":"Auto Parts & Equipment"},
+  "523395":{"n":"Ceat Ltd","i":"Auto Parts & Equipment"},
+  "532343":{"n":"Kinetic Engineering Ltd","i":"Auto Parts & Equipment"},
+  "533022":{"n":"Nelcast Ltd","i":"Auto Parts & Equipment"},
+  "535755":{"n":"Minda Corporation Ltd","i":"Auto Parts & Equipment"},
+  "540306":{"n":"Varroc Engineering Ltd","i":"Auto Parts & Equipment"},
+  "543272":{"n":"Sansera Engineering Ltd","i":"Auto Parts & Equipment"},
+  "513262":{"n":"Steel Strips Wheels Ltd","i":"Auto Parts & Equipment"},
+  "540124":{"n":"GNA Axles Ltd","i":"Auto Parts & Equipment"},
+  "543300":{"n":"Sona BLW Precision Forgings Ltd","i":"Auto Parts & Equipment"},
+  // ── Banking & Finance ──────────────────────────────────────────────────
+  "500116":{"n":"Federal Bank Ltd","i":"Banking Services"},
+  "500240":{"n":"Karnataka Bank Ltd","i":"Banking Services"},
+  "500247":{"n":"Karur Vysya Bank Ltd","i":"Banking Services"},
+  "530007":{"n":"Repco Home Finance Ltd","i":"Mortgage Finance"},
+  "533519":{"n":"Edelweiss Financial Services Ltd","i":"Financial Services"},
+  "534816":{"n":"Arman Financial Services Ltd","i":"Consumer Finance"},
+  "538920":{"n":"IIFL Finance Ltd","i":"Consumer Finance"},
+  "539450":{"n":"Ujjivan Small Finance Bank Ltd","i":"Banking Services"},
+  "540566":{"n":"Bandhan Bank Ltd","i":"Banking Services"},
+  "540691":{"n":"HDFC AMC Ltd","i":"Asset Management"},
+  "540697":{"n":"Central Depository Services (India) Ltd","i":"Financial Services"},
+  "540713":{"n":"AU Small Finance Bank Ltd","i":"Banking Services"},
+  "541195":{"n":"Nippon Life India AMC Ltd","i":"Asset Management"},
+  "543278":{"n":"Fusion Micro Finance Ltd","i":"Microfinance"},
+  "543396":{"n":"Five Star Business Finance Ltd","i":"Consumer Finance"},
+  "543412":{"n":"PB Fintech Ltd (Policybazaar)","i":"Insurance Tech"},
+  "544025":{"n":"Jana Small Finance Bank Ltd","i":"Banking Services"},
+  "544183":{"n":"Bajaj Housing Finance Ltd","i":"Mortgage Finance"},
+  "544205":{"n":"Manba Finance Ltd","i":"Consumer Finance"},
+  "506943":{"n":"Muthoot Finance Ltd","i":"Consumer Finance"},
+  "511208":{"n":"Manappuram Finance Ltd","i":"Consumer Finance"},
+  "533048":{"n":"Emkay Global Financial Services Ltd","i":"Capital Markets"},
+  "533121":{"n":"Motilal Oswal Financial Services Ltd","i":"Capital Markets"},
+  "540953":{"n":"ICICI Securities Ltd","i":"Capital Markets"},
+  "531596":{"n":"Monarch Networth Capital Ltd","i":"Capital Markets"},
+  "531599":{"n":"IFL Enterprises Ltd","i":"Consumer Finance"},
+  "543467":{"n":"Nuvama Wealth Management Ltd","i":"Wealth Management"},
+  "543474":{"n":"Aditya Birla Sun Life AMC Ltd","i":"Asset Management"},
+  "543484":{"n":"Fino Payments Bank Ltd","i":"Banking Services"},
+  "516096":{"n":"Sundaram Finance Ltd","i":"Consumer Finance"},
+  "543516":{"n":"AGS Transact Technologies Ltd","i":"Fintech"},
+  // ── Capital Goods & Engineering ───────────────────────────────────────
+  "500002":{"n":"ABB India Ltd","i":"Capital Goods"},
+  "500049":{"n":"Bharat Electronics Ltd","i":"Capital Goods"},
+  "500103":{"n":"Elgi Equipments Ltd","i":"Industrial Machinery"},
+  "504614":{"n":"Elecon Engineering Co Ltd","i":"Industrial Machinery"},
+  "505200":{"n":"Kirloskar Brothers Ltd","i":"Industrial Machinery"},
+  "522101":{"n":"Grindwell Norton Ltd","i":"Industrial Machinery"},
+  "522287":{"n":"Lakshmi Machine Works Ltd","i":"Industrial Machinery"},
+  "526526":{"n":"Genus Power Infrastructures Ltd","i":"Power Equipment"},
+  "532178":{"n":"Himachal Futuristic Communications Ltd","i":"Telecom Equipment"},
+  "532522":{"n":"Thermax Ltd","i":"Capital Goods"},
+  "532955":{"n":"KEC International Ltd","i":"Power Infrastructure"},
+  "533216":{"n":"Texmaco Rail & Engineering Ltd","i":"Industrial Machinery"},
+  "540670":{"n":"Hindustan Aeronautics Ltd","i":"Aerospace & Defence"},
+  "540596":{"n":"Bharat Dynamics Ltd","i":"Defense"},
+  "541143":{"n":"Amber Enterprises India Ltd","i":"Consumer Durables"},
+  "541233":{"n":"Vakrangee Ltd","i":"IT Services"},
+  "544017":{"n":"Mamata Machinery Ltd","i":"Industrial Machinery"},
+  "540818":{"n":"Dixon Technologies (India) Ltd","i":"Consumer Electronics"},
+  "541019":{"n":"Chalet Hotels Ltd","i":"Hotels & Entertainment"},
+  "541179":{"n":"Quess Corp Ltd","i":"Staffing Services"},
+  "543082":{"n":"Likhitha Infrastructure Ltd","i":"Construction"},
+  "543285":{"n":"Windlas Biotech Ltd","i":"Contract Manufacturing"},
+  "543310":{"n":"Sterlite Technologies Ltd","i":"Telecom Equipment"},
+  "543348":{"n":"Data Patterns (India) Ltd","i":"Defense Electronics"},
+  "544073":{"n":"Orient Technologies Ltd","i":"IT Services"},
+  "544120":{"n":"Diffusion Engineers Ltd","i":"Engineering"},
+  "527001":{"n":"Mishra Dhatu Nigam Ltd (Midhani)","i":"Defense Materials"},
+  // ── Cement & Building Materials ───────────────────────────────────────
+  "500020":{"n":"Ambuja Cements Ltd","i":"Cement"},
+  "500012":{"n":"ACC Ltd","i":"Cement"},
+  "500185":{"n":"HIL Ltd","i":"Construction Materials"},
+  "500368":{"n":"Prism Johnson Ltd","i":"Cement"},
+  "500870":{"n":"Heidelberg Materials India Ltd","i":"Cement"},
+  "532654":{"n":"Mangalam Cement Ltd","i":"Cement"},
+  "533219":{"n":"JK Lakshmi Cement Ltd","i":"Cement"},
+  "543274":{"n":"Nuvoco Vistas Corporation Ltd","i":"Cement"},
+  "500193":{"n":"HSIL Ltd (Hindware)","i":"Building Materials"},
+  // ── Chemicals & Specialty Chemicals ──────────────────────────────────
+  "500340":{"n":"Rallis India Ltd","i":"Agrochemicals"},
+  "500442":{"n":"Aarti Industries Ltd","i":"Specialty Chemicals"},
+  "504380":{"n":"Paushak Ltd","i":"Specialty Chemicals"},
+  "504741":{"n":"Hikal Ltd","i":"Specialty Chemicals"},
+  "506285":{"n":"Gujarat Alkalies & Chemicals Ltd","i":"Specialty Chemicals"},
+  "506480":{"n":"Atul Ltd","i":"Specialty Chemicals"},
+  "507819":{"n":"Balaji Amines Ltd","i":"Specialty Chemicals"},
+  "519552":{"n":"India Glycols Ltd","i":"Specialty Chemicals"},
+  "524440":{"n":"Shree Pushkar Chemicals Ltd","i":"Specialty Chemicals"},
+  "524735":{"n":"Gujarat Fluorochemicals Ltd","i":"Specialty Chemicals"},
+  "524804":{"n":"Madras Fertilizers Ltd","i":"Fertilizers"},
+  "524558":{"n":"Hind Rectifiers Ltd","i":"Electrical Components"},
+  "526229":{"n":"Cosmo Films Ltd","i":"Packaging Films"},
+  "530877":{"n":"Bodal Chemicals Ltd","i":"Specialty Chemicals"},
+  "532166":{"n":"Chemplast Sanmar Ltd","i":"Specialty Chemicals"},
+  "532607":{"n":"Alkyl Amines Chemicals Ltd","i":"Specialty Chemicals"},
+  "532755":{"n":"Sudarshan Chemical Industries Ltd","i":"Specialty Chemicals"},
+  "533158":{"n":"Camlin Fine Sciences Ltd","i":"Specialty Chemicals"},
+  "535255":{"n":"Fineotex Chemical Ltd","i":"Specialty Chemicals"},
+  "538666":{"n":"Sharda Cropchem Ltd","i":"Agrochemicals"},
+  "540263":{"n":"Navin Fluorine International Ltd","i":"Specialty Chemicals"},
+  "540678":{"n":"Anupam Rasayan India Ltd","i":"Specialty Chemicals"},
+  "540885":{"n":"Neogen Chemicals Ltd","i":"Specialty Chemicals"},
+  "542398":{"n":"Ami Organics Ltd","i":"Specialty Chemicals"},
+  "543277":{"n":"Tatva Chintan Pharma Chem Ltd","i":"Specialty Chemicals"},
+  "543321":{"n":"Clean Science & Technology Ltd","i":"Specialty Chemicals"},
+  "500470":{"n":"Tata Chemicals Ltd","i":"Specialty Chemicals"},
+  "506395":{"n":"Zydus Wellness Ltd","i":"Food & Beverages"},
+  "532947":{"n":"Rain Industries Ltd","i":"Specialty Chemicals"},
+  "530245":{"n":"Mahanagar Gas Ltd","i":"Gas Utilities"},
+  "532234":{"n":"IOL Chemicals & Pharmaceuticals Ltd","i":"Specialty Chemicals"},
+  "524226":{"n":"Sacheta Metals Ltd","i":"Non-Ferrous Metals"},
+  // ── Consumer Goods & FMCG ─────────────────────────────────────────────
+  "500150":{"n":"Gillette India Ltd","i":"Personal Products"},
+  "500413":{"n":"TTK Prestige Ltd","i":"Consumer Durables"},
+  "500414":{"n":"Kansai Nerolac Paints Ltd","i":"Paints"},
+  "500502":{"n":"Akzo Nobel India Ltd","i":"Paints"},
+  "505890":{"n":"Bajaj Consumer Care Ltd","i":"Personal Products"},
+  "532527":{"n":"Jyothy Labs Ltd","i":"Personal Products"},
+  "535789":{"n":"TCPL Packaging Ltd","i":"Packaging"},
+  "541153":{"n":"Amber Enterprises India Ltd","i":"Consumer Durables"},
+  "543095":{"n":"Stovekraft Ltd","i":"Consumer Durables"},
+  "540064":{"n":"Campus Activewear Ltd","i":"Footwear"},
+  "500437":{"n":"Relaxo Footwears Ltd","i":"Footwear"},
+  "507948":{"n":"Honeywell Automation India Ltd","i":"Industrial Automation"},
+  // ── Conglomerates & Holding Companies ────────────────────────────────
+  "500408":{"n":"Tata Investment Corporation Ltd","i":"Holding Companies"},
+  "502865":{"n":"Forbes & Co Ltd","i":"Conglomerate"},
+  "507525":{"n":"Bombay Burmah Trading Corp Ltd","i":"Conglomerate"},
+  "526173":{"n":"Andrew Yule & Co Ltd","i":"Conglomerate"},
+  "503031":{"n":"Killick Nixon Ltd","i":"Conglomerate"},
+  "509930":{"n":"Kalyani Investment Co Ltd","i":"Holding Companies"},
+  // ── Food & Beverages ──────────────────────────────────────────────────
+  "509480":{"n":"Gujarat Ambuja Exports Ltd","i":"Food Processing"},
+  "533155":{"n":"Agro Tech Foods Ltd","i":"Food & Beverages"},
+  "533168":{"n":"Parag Milk Foods Ltd","i":"Dairy & Food"},
+  "543168":{"n":"Sapphire Foods India Ltd","i":"Restaurants"},
+  "543261":{"n":"Devyani International Ltd","i":"Restaurants"},
+  "543263":{"n":"Barbeque-Nation Hospitality Ltd","i":"Restaurants"},
+  "543064":{"n":"Burger King India Ltd","i":"Restaurants"},
+  "500152":{"n":"Globus Spirits Ltd","i":"Beverages"},
+  "532744":{"n":"United Spirits Ltd","i":"Beverages"},
+  "543500":{"n":"Adani Wilmar Ltd","i":"Food & Beverages"},
+  "533269":{"n":"Mrs Bectors Food Specialities Ltd","i":"Food & Beverages"},
+  "543448":{"n":"Bikaji Foods International Ltd","i":"Food & Beverages"},
+  "543529":{"n":"Hariom Pipe Industries Ltd","i":"Steel"},
+  // ── Healthcare & Pharmaceuticals ──────────────────────────────────────
+  "500087":{"n":"Cipla Ltd","i":"Pharmaceuticals"},
+  "500096":{"n":"Dr Reddy's Laboratories Ltd","i":"Pharmaceuticals"},
+  "500124":{"n":"Dr Lal PathLabs Ltd","i":"Healthcare Services"},
+  "500148":{"n":"GlaxoSmithKline Pharmaceuticals Ltd","i":"Pharmaceuticals"},
+  "500233":{"n":"Indoco Remedies Ltd","i":"Pharmaceuticals"},
+  "500304":{"n":"Natco Pharma Ltd","i":"Pharmaceuticals"},
+  "524600":{"n":"Caplin Point Laboratories Ltd","i":"Pharmaceuticals"},
+  "524820":{"n":"Jubilant Pharmova Ltd","i":"Pharmaceuticals"},
+  "531215":{"n":"JB Chemicals & Pharmaceuticals Ltd","i":"Pharmaceuticals"},
+  "532888":{"n":"Eris Lifesciences Ltd","i":"Pharmaceuticals"},
+  "533106":{"n":"Shilpa Medicare Ltd","i":"Pharmaceuticals"},
+  "533215":{"n":"Bliss GVS Pharma Ltd","i":"Pharmaceuticals"},
+  "535648":{"n":"Suven Pharmaceuticals Ltd","i":"Pharmaceuticals"},
+  "539523":{"n":"Laurus Labs Ltd","i":"Pharmaceuticals"},
+  "540597":{"n":"Strides Pharma Science Ltd","i":"Pharmaceuticals"},
+  "540777":{"n":"Narayana Hrudayalaya Ltd","i":"Healthcare Services"},
+  "542939":{"n":"Metropolis Healthcare Ltd","i":"Healthcare Services"},
+  "543328":{"n":"Krishna Institute of Medical Sciences Ltd","i":"Healthcare"},
+  "543340":{"n":"Medplus Health Services Ltd","i":"Pharmacy Retail"},
+  "543350":{"n":"Supriya Lifescience Ltd","i":"Pharmaceuticals"},
+  "543524":{"n":"Global Health Ltd (Medanta)","i":"Healthcare Services"},
+  "532321":{"n":"Aster DM Healthcare Ltd","i":"Healthcare Services"},
+  "533274":{"n":"Glenmark Life Sciences Ltd","i":"Pharmaceuticals"},
+  "543307":{"n":"Glenmark Life Sciences Ltd","i":"Pharmaceuticals"},
+  "508869":{"n":"Rossari Biotech Ltd","i":"Biotechnology"},
+  "539773":{"n":"Divi's Laboratories Ltd","i":"Pharmaceuticals"},
+  // ── Infrastructure & Real Estate ──────────────────────────────────────
+  "500163":{"n":"Hindustan Construction Co Ltd","i":"Construction & Engineering"},
+  "503590":{"n":"Nesco Ltd","i":"Real Estate"},
+  "505550":{"n":"Kalpataru Power Transmission Ltd","i":"Construction & Engineering"},
+  "519031":{"n":"ITD Cementation India Ltd","i":"Construction"},
+  "526597":{"n":"PSP Projects Ltd","i":"Construction"},
+  "530431":{"n":"IRB Infrastructure Developers Ltd","i":"Infrastructure"},
+  "532749":{"n":"KEI Industries Ltd","i":"Cables & Wires"},
+  "532529":{"n":"DLF Ltd","i":"Real Estate"},
+  "533098":{"n":"DB Realty Ltd","i":"Real Estate"},
+  "534309":{"n":"Sadbhav Engineering Ltd","i":"Construction"},
+  "537291":{"n":"Capacite Infraprojects Ltd","i":"Construction"},
+  "540693":{"n":"Dilip Buildcon Ltd","i":"Construction"},
+  "540740":{"n":"Indiabulls Real Estate Ltd","i":"Real Estate"},
+  "541209":{"n":"Mindspace Business Parks REIT","i":"Real Estate"},
+  "543209":{"n":"Brookfield India Real Estate Trust","i":"Real Estate"},
+  "543260":{"n":"Macrotech Developers Ltd (Lodha)","i":"Real Estate"},
+  "544066":{"n":"Premier Energies Ltd","i":"Solar Energy"},
+  "526527":{"n":"Goldiam International Ltd","i":"Jewelry"},
+  "501301":{"n":"CG Power & Industrial Solutions Ltd","i":"Capital Goods"},
+  "519003":{"n":"RSWM Ltd","i":"Textiles"},
+  // ── Insurance ─────────────────────────────────────────────────────────
+  "540754":{"n":"HDFC Life Insurance Co Ltd","i":"Life Insurance"},
+  "540769":{"n":"SBI Life Insurance Co Ltd","i":"Life Insurance"},
+  "540690":{"n":"Max Financial Services Ltd","i":"Life Insurance"},
+  "543091":{"n":"Go Digit General Insurance Ltd","i":"General Insurance"},
+  "543397":{"n":"Star Health & Allied Insurance Co Ltd","i":"Health Insurance"},
+  "543487":{"n":"Life Insurance Corporation of India","i":"Life Insurance"},
+  // ── IT & Technology ───────────────────────────────────────────────────
+  "500209":{"n":"Infosys Ltd","i":"IT Services & Consulting"},
+  "500439":{"n":"Wipro Ltd","i":"IT Services & Consulting"},
+  "532281":{"n":"HCL Technologies Ltd","i":"IT Services & Consulting"},
+  "532540":{"n":"Tata Consultancy Services Ltd","i":"IT Services & Consulting"},
+  "532648":{"n":"Zensar Technologies Ltd","i":"IT Services & Consulting"},
+  "532720":{"n":"KPIT Technologies Ltd","i":"IT Services"},
+  "533179":{"n":"Tanla Platforms Ltd","i":"Cloud Communications"},
+  "533171":{"n":"Affle India Ltd","i":"Digital Advertising"},
+  "534910":{"n":"Adani Green Energy Ltd","i":"Renewable Energy"},
+  "540133":{"n":"Mastech Digital Ltd","i":"IT Staffing"},
+  "543228":{"n":"RateGain Travel Technologies Ltd","i":"Travel Tech"},
+  "543413":{"n":"Nykaa (FSN E-Commerce Ventures Ltd)","i":"E-Commerce"},
+  "543421":{"n":"One97 Communications Ltd (Paytm)","i":"Fintech"},
+  "543449":{"n":"Netweb Technologies India Ltd","i":"IT Hardware"},
+  "543525":{"n":"Syrma SGS Technology Ltd","i":"Electronics Manufacturing"},
+  "539719":{"n":"Cigniti Technologies Ltd","i":"IT Testing Services"},
+  "544076":{"n":"ECOS India Mobility & Hospitality Ltd","i":"Transportation"},
+  // ── Media & Entertainment ─────────────────────────────────────────────
+  "500243":{"n":"Jagran Prakashan Ltd","i":"Media & Publishing"},
+  "500271":{"n":"PVR Ltd (now PVR INOX)","i":"Entertainment"},
+  "500472":{"n":"Zee Entertainment Enterprises Ltd","i":"Media & Entertainment"},
+  "532368":{"n":"Dish TV India Ltd","i":"DTH Services"},
+  "533108":{"n":"Hathway Cable & Datacom Ltd","i":"Cable TV"},
+  "533261":{"n":"DB Corp Ltd","i":"Media & Publishing"},
+  "539236":{"n":"Navneet Education Ltd","i":"Publishing"},
+  "539540":{"n":"Balaji Telefilms Ltd","i":"Media & Entertainment"},
+  "540143":{"n":"Entertainment Network India Ltd","i":"Radio Broadcasting"},
+  "540743":{"n":"Saregama India Ltd","i":"Music & Media"},
+  // ── Metals & Mining ───────────────────────────────────────────────────
+  "500188":{"n":"Hindustan Copper Ltd","i":"Non-Ferrous Metals"},
+  "504973":{"n":"NMDC Ltd","i":"Mining"},
+  "522275":{"n":"Maithan Alloys Ltd","i":"Ferroalloys"},
+  "523204":{"n":"Gandhar Oil Refinery India Ltd","i":"Oil & Gas"},
+  "532395":{"n":"Vedanta Ltd","i":"Mining & Metals"},
+  "532477":{"n":"Maharashtra Seamless Ltd","i":"Steel"},
+  "532621":{"n":"Gallantt Metal Ltd","i":"Steel"},
+  "533025":{"n":"Lloyds Metals & Energy Ltd","i":"Steel"},
+  "539524":{"n":"APL Apollo Tubes Ltd","i":"Steel"},
+  "540830":{"n":"Polycab India Ltd","i":"Cables & Wires"},
+  "543276":{"n":"Shyam Metalics & Energy Ltd","i":"Steel"},
+  "543435":{"n":"Shyam Metalics & Energy Ltd","i":"Steel & Metals"},
+  "505527":{"n":"Kirloskar Ferrous Industries Ltd","i":"Steel"},
+  "514346":{"n":"Nandan Denim Ltd","i":"Textiles"},
+  "514448":{"n":"Sangam India Ltd","i":"Textiles"},
+  // ── Oil & Gas ─────────────────────────────────────────────────────────
+  "500312":{"n":"Oil & Natural Gas Corporation Ltd","i":"Oil & Gas E&P"},
+  "500325":{"n":"Reliance Industries Ltd","i":"Oil & Gas Refining"},
+  "500400":{"n":"Tata Power Company Ltd","i":"Power"},
+  "506390":{"n":"Gulf Oil Lubricants India Ltd","i":"Lubricants"},
+  "538567":{"n":"Gulf Oil Lubricants India Ltd","i":"Lubricants"},
+  "533150":{"n":"Engineers India Ltd","i":"Oil & Gas Services"},
+  "540536":{"n":"Aegis Logistics Ltd","i":"Oil & Gas Services"},
+  // ── Power & Renewable Energy ──────────────────────────────────────────
+  "500048":{"n":"BGR Energy Systems Ltd","i":"Power Equipment"},
+  "500167":{"n":"Greaves Cotton Ltd","i":"Industrial Machinery"},
+  "504092":{"n":"Orient Electric Ltd","i":"Consumer Durables"},
+  "522257":{"n":"V-Guard Industries Ltd","i":"Consumer Durables"},
+  "530467":{"n":"VA Tech Wabag Ltd","i":"Water Treatment"},
+  "532514":{"n":"Blue Star Ltd","i":"HVAC & Refrigeration"},
+  "540665":{"n":"Sterling & Wilson Renewable Energy Ltd","i":"Renewable Energy"},
+  "543194":{"n":"Torrent Power Ltd","i":"Power Utilities"},
+  "544086":{"n":"Sanstar Ltd","i":"Starch Products"},
+  "544195":{"n":"Ola Electric Mobility Ltd","i":"Electric Vehicles"},
+  "544237":{"n":"NTPC Green Energy Ltd","i":"Renewable Energy"},
+  "544289":{"n":"NTPC Green Energy Ltd","i":"Renewable Energy"},
+  "526747":{"n":"Borosil Renewables Ltd","i":"Solar Glass"},
+  "533006":{"n":"GE Power India Ltd","i":"Power Equipment"},
+  "533148":{"n":"Techno Electric & Engineering Co Ltd","i":"Power Engineering"},
+  // ── Retail & Consumer ─────────────────────────────────────────────────
+  "540709":{"n":"Avenue Supermarts Ltd (DMart)","i":"Retail"},
+  "507990":{"n":"Kewal Kiran Clothing Ltd","i":"Textiles & Apparel"},
+  "519383":{"n":"Dollar Industries Ltd","i":"Textiles & Apparel"},
+  "532383":{"n":"Cantabil Retail India Ltd","i":"Retail"},
+  "543423":{"n":"SJS Enterprises Ltd","i":"Decorative Aesthetics"},
+  "542663":{"n":"Lux Industries Ltd","i":"Textiles & Apparel"},
+  "541270":{"n":"Rupa & Co Ltd","i":"Textiles & Apparel"},
+  // ── Shipping & Logistics ──────────────────────────────────────────────
+  "523618":{"n":"Shreyas Shipping & Logistics Ltd","i":"Shipping"},
+  "532818":{"n":"Allcargo Logistics Ltd","i":"Logistics"},
+  "533475":{"n":"VRL Logistics Ltd","i":"Logistics"},
+  "534715":{"n":"Blue Dart Express Ltd","i":"Express Logistics"},
+  "540741":{"n":"Transport Corporation of India Ltd","i":"Logistics"},
+  "543389":{"n":"Delhivery Ltd","i":"Logistics"},
+  // ── Telecom ───────────────────────────────────────────────────────────
+  "532454":{"n":"Bharti Airtel Ltd","i":"Telecom Services"},
+  "532832":{"n":"Bharti Hexacom Ltd","i":"Telecom Services"},
+  "533248":{"n":"Gujarat Pipavav Port Ltd","i":"Port & Shipping"},
+  "540673":{"n":"Tata Teleservices (Maharashtra) Ltd","i":"Telecom Services"},
+  "500260":{"n":"MTNL","i":"Telecom Services"},
+  // ── Textiles & Apparel ────────────────────────────────────────────────
+  "500053":{"n":"Bombay Dyeing & Manufacturing Co Ltd","i":"Textiles"},
+  "500168":{"n":"Garden Silk Mills Ltd","i":"Textiles"},
+  "500228":{"n":"Indo Count Industries Ltd","i":"Textiles"},
+  "500250":{"n":"Welspun India Ltd","i":"Textiles"},
+  "500355":{"n":"Raymond Ltd","i":"Textiles & Apparel"},
+  "502820":{"n":"Bombay Rayon Fashions Ltd","i":"Textiles"},
+  "503160":{"n":"Laxmi Mills Company Ltd","i":"Textiles"},
+  "514312":{"n":"Zenith Fibres Ltd","i":"Textiles"},
+  "521064":{"n":"Siyaram Silk Mills Ltd","i":"Textiles"},
+  "530019":{"n":"Gokaldas Exports Ltd","i":"Textiles"},
+  "532508":{"n":"KPR Mill Ltd","i":"Textiles"},
+  "532661":{"n":"Alok Industries Ltd","i":"Textiles"},
+  "533273":{"n":"Nitin Spinners Ltd","i":"Textiles"},
+  "540048":{"n":"Welspun Enterprises Ltd","i":"Infrastructure"},
+  // ── BSE-Primary / BSE-Only Stocks ─────────────────────────────────────
+  "502180":{"n":"Bombay Burmah Trading Corp Ltd","i":"Conglomerate"},
+  "503101":{"n":"Bombay Oxygen Investments Ltd","i":"Holding Companies"},
+  "505537":{"n":"JK Tyre & Industries Ltd","i":"Auto Parts & Equipment"},
+  "511196":{"n":"Manba Finance Ltd","i":"Consumer Finance"},
+  "513220":{"n":"Randers Industries Ltd","i":"Textile Machinery"},
+  "524715":{"n":"Sun Pharmaceutical Industries Ltd","i":"Pharmaceuticals"},
+  "531340":{"n":"GKB Ophthalmics Ltd","i":"Healthcare Equipment"},
+  "531642":{"n":"Taneja Aerospace & Aviation Ltd","i":"Aerospace"},
+  "532699":{"n":"Royal Orchid Hotels Ltd","i":"Hotels"},
+  "532363":{"n":"Indraprastha Gas Ltd","i":"Gas Utilities"},
+  "533016":{"n":"Cantabil Retail India Ltd","i":"Retail"},
+  "533026":{"n":"CESC Ltd","i":"Utilities"},
+  "540716":{"n":"HUDCO (Housing & Urban Dev Corp)","i":"Housing Finance"},
+  "541403":{"n":"Bandhan Bank Ltd","i":"Banking Services"},
+  "543257":{"n":"Zomato Ltd","i":"Food Tech"},
+};
+
 // ── FULL NSE EQUITY LIST (fetched from NSE at login) ─────────────────────
 let nseStockList = {};   // symbol → {name, industry}
 let nseListLoaded = false;
@@ -692,18 +1027,32 @@ function getStockSuggestions(query) {
   // Layer 1 — full NSE equity list (all ~1800 EQ stocks)
   const combined = {};
   Object.keys(nseStockList).forEach(sym => {
-    combined[sym] = { name: nseStockList[sym].name, industry: '' };
+    combined[sym] = { name: nseStockList[sym].name, industry: '', isBse: false };
   });
-  // Layer 2 — curated list (adds industry info for ~150 popular stocks)
+  // Layer 2 — curated NSE list (adds industry info for ~150 popular stocks)
   Object.keys(NSE_STOCKS).forEach(sym => {
-    combined[sym] = { name: NSE_STOCKS[sym].n, industry: NSE_STOCKS[sym].i };
+    combined[sym] = { name: NSE_STOCKS[sym].n, industry: NSE_STOCKS[sym].i, isBse: false };
+  });
+  // Layer 2.5 — BSE stocks (BSE-only + stocks accessed via BSE scrip code).
+  // Name-dedup: skip if a non-numeric (NSE) symbol with the same company name
+  // already exists — this prevents Reliance showing as "RELIANCE" AND "500325".
+  const nseNameSet = new Set(
+    Object.values(combined).map(v => v.name.toLowerCase().replace(/\s+ltd\.?$|\s+limited\.?$/i,'').trim())
+  );
+  Object.keys(BSE_STOCKS).forEach(scrip => {
+    const bseName = BSE_STOCKS[scrip].n;
+    const nameKey = bseName.toLowerCase().replace(/\s+ltd\.?$|\s+limited\.?$/i,'').trim();
+    if (!nseNameSet.has(nameKey)) {
+      combined[scrip] = { name: bseName, industry: BSE_STOCKS[scrip].i, isBse: true };
+    }
   });
   // Layer 3 — live marketData (most accurate: real name + industry from Yahoo)
   Object.keys(marketData).forEach(sym => {
     const md = marketData[sym];
     if (md && md.name) combined[sym] = {
       name: md.name,
-      industry: md.industry || (combined[sym] || {}).industry || ''
+      industry: md.industry || (combined[sym] || {}).industry || '',
+      isBse: /^\d+$/.test(sym)
     };
   });
 
@@ -727,7 +1076,7 @@ function showSymbolSuggestions(query) {
   if (!suggestions.length || !query) { dd.style.display = 'none'; return; }
   dd.innerHTML = suggestions.map((s, i) =>
     `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
-      <span class="si-ticker">${s.sym}</span>
+      <span class="si-ticker">${s.sym}</span>${s.isBse ? '<span class="si-bse-badge">BSE</span>' : ''}
       <span class="si-name">${s.name}</span>
     </div>`
   ).join('');
