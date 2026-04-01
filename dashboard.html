@@ -2160,9 +2160,11 @@ async function refreshPrices() {
       if (d.sector           )    s.industry       = d.sector;
       if (d.change52w  != null)   s.change12w      = d.change52w;
       if (d.targetPrice!= null)   s.targetPrice    = d.targetPrice;
+      if (d.buyRecs    != null)   s.buyRecs        = d.buyRecs;
+      if (d.sellRecs   != null)   s.sellRecs       = d.sellRecs;
       if (d.name && !s.name  )    s.name           = d.name;
-      if (!s.signal && d.rec )    s.signal         = deriveSignal(d.rec);
-      if (!s.reason && s.name && s.industry && s.recommendation)
+      if (d.rec              )    s.signal         = deriveSignal(d.rec);
+      if (s.name && s.industry && s.recommendation)
         s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
     });
 
@@ -2198,6 +2200,8 @@ async function refreshPrices() {
             if (s.recommendation     )    upd.recommendation= s.recommendation;
             if (s.change12w    != null)   upd.change12w     = s.change12w;
             if (s.targetPrice  != null)   upd.targetPrice   = s.targetPrice;
+            if (s.buyRecs      != null)   upd.buyRecs       = s.buyRecs;
+            if (s.sellRecs     != null)   upd.sellRecs      = s.sellRecs;
             if (s.signal             )    upd.signal        = s.signal;
             if (s.reason             )    upd.reason        = s.reason;
             if (Object.keys(upd).length) {
