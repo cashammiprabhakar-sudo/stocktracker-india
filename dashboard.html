@@ -3204,24 +3204,38 @@ async function fetchPricesFromWorker(symbols) {
   if (!symbols.length) return {};
   if (!WORKER_URL) return {};
 
-  const result = {};
-  const BATCH  = 50;   // worker handles 50 symbols per request comfortably
+  // Smaller batches (20) run in PARALLEL to stay within Cloudflare's subrequest limit
+  // and avoid the 30-second Worker wall-time limit that was causing 63/116 failures.
+  const BATCH   = 20;
+  const TIMEOUT = 28000; // 28 s per batch (generous for slow Indian market APIs)
 
-  for (let i = 0; i < symbols.length; i += BATCH) {
-    const chunk = symbols.slice(i, i + BATCH);
+  async function fetchBatch(chunk, attempt) {
     try {
-      // encodeURIComponent each symbol so & in M&M, IL&FSENGG etc. don't break the URL
       const resp = await Promise.race([
         fetch(WORKER_URL + '?s=' + chunk.map(encodeURIComponent).join(',')),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 18000))
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), TIMEOUT))
       ]);
-      if (!resp.ok) continue;
-      const data = await resp.json();
-      Object.assign(result, data);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return await resp.json();
     } catch (e) {
-      console.warn('Worker fetch error (batch ' + (i/BATCH+1) + '):', e.message);
+      if (attempt === 1) {
+        // Retry once after a short delay — handles transient Worker cold-starts
+        await new Promise(r => setTimeout(r, 1500));
+        return fetchBatch(chunk, 2);
+      }
+      console.warn('Worker batch failed after retry:', chunk.join(','), e.message);
+      return {};
     }
   }
+
+  // Split into chunks and fire ALL in parallel
+  const chunks = [];
+  for (let i = 0; i < symbols.length; i += BATCH) chunks.push(symbols.slice(i, i + BATCH));
+
+  const batchResults = await Promise.all(chunks.map(chunk => fetchBatch(chunk, 1)));
+
+  const result = {};
+  batchResults.forEach(data => Object.assign(result, data));
   return result;
 }
 
@@ -3240,7 +3254,8 @@ async function refreshPrices() {
 
   try {
     const symbols = [...new Set(stocks.map(s => s.symbol))];
-    btn.textContent = `⏳ Fetching ${symbols.length} stocks…`;
+    const batchCount = Math.ceil(symbols.length / 20);
+    btn.textContent = `⏳ Fetching ${symbols.length} stocks (${batchCount} batches in parallel)…`;
 
     const data = await fetchPricesFromWorker(symbols);
 
@@ -3309,6 +3324,8 @@ async function refreshPrices() {
             if (s.sellRecs     != null)   upd.sellRecs      = s.sellRecs;
             if (s.signal             )    upd.signal        = s.signal;
             if (s.reason             )    upd.reason        = s.reason;
+            // Persist resolved company name (overwrites BSE numeric code placeholder)
+            if (s.name && s.name !== s.symbol && !/^\d{4,7}$/.test(s.name)) upd.name = s.name;
             if (Object.keys(upd).length) {
               // s.id = representative doc (oldest buy transaction for this symbol)
               bw.update(db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id), upd);
