@@ -111,6 +111,45 @@
     /* CSV SECTION */
     .csv-section{margin-top:28px;padding-top:24px;border-top:1px solid #eee}
     .csv-section h3{font-size:0.95rem;font-weight:700;margin-bottom:8px;color:#333}
+    /* Broker connector section */
+    .broker-section{margin-top:28px;padding-top:24px;border-top:1px solid #eee}
+    .broker-section h3{font-size:0.95rem;font-weight:700;margin-bottom:4px;color:#333}
+    .broker-section .section-sub{font-size:0.8rem;color:#888;margin-bottom:14px}
+    .broker-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:600px){.broker-cards{grid-template-columns:1fr}}
+    .broker-card{border:1px solid #e0e8f5;border-radius:12px;padding:18px 18px 14px;background:#f9fbff;position:relative;transition:box-shadow 0.2s}
+    .broker-card:hover{box-shadow:0 2px 12px rgba(21,101,192,0.1)}
+    .broker-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .broker-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:900;flex-shrink:0}
+    .broker-logo.zerodha{background:#387ed1;color:#fff}
+    .broker-logo.icici{background:#e2703a;color:#fff}
+    .broker-card-title{font-weight:700;font-size:0.95rem;color:#1a237e}
+    .broker-card-sub{font-size:0.75rem;color:#888;margin-top:1px}
+    .broker-field{margin-bottom:10px}
+    .broker-field label{display:block;font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px}
+    .broker-field input{width:100%;border:1px solid #d0d9e8;border-radius:6px;padding:7px 10px;font-size:0.82rem;font-family:monospace;box-sizing:border-box;background:#fff;color:#222}
+    .broker-field input:focus{outline:none;border-color:#1565c0}
+    .broker-btn{width:100%;padding:9px 0;border-radius:8px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;margin-top:6px;transition:all 0.2s}
+    .broker-btn.zerodha{background:#387ed1;color:#fff}
+    .broker-btn.zerodha:hover{background:#1565c0}
+    .broker-btn.icici{background:#e2703a;color:#fff}
+    .broker-btn.icici:hover{background:#bf5025}
+    .broker-btn:disabled{opacity:0.5;cursor:not-allowed}
+    .broker-status{font-size:0.78rem;padding:7px 10px;border-radius:6px;margin-top:8px;display:none}
+    .broker-status.info{background:#e3f2fd;color:#1565c0;display:block}
+    .broker-status.success{background:#e8f5e9;color:#2e7d32;display:block}
+    .broker-status.error{background:#ffebee;color:#c62828;display:block}
+    .broker-status.warn{background:#fff8e1;color:#e65100;display:block}
+    .broker-holdings-preview{margin-top:12px;max-height:220px;overflow-y:auto;border:1px solid #e0e8f5;border-radius:8px;display:none}
+    .broker-holdings-preview table{width:100%;border-collapse:collapse;font-size:0.78rem}
+    .broker-holdings-preview th{background:#e8f0fb;padding:6px 8px;text-align:left;font-weight:700;color:#1a237e;position:sticky;top:0}
+    .broker-holdings-preview td{padding:5px 8px;border-top:1px solid #f0f4f8;color:#333}
+    .broker-holdings-preview tr:hover td{background:#f5f8ff}
+    .broker-import-btn{display:none;width:100%;margin-top:8px;padding:10px 0;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;transition:background 0.2s}
+    .broker-import-btn:hover{background:#1b5e20}
+    .broker-step{display:inline-block;background:#1565c0;color:#fff;border-radius:50%;width:18px;height:18px;font-size:0.7rem;font-weight:700;text-align:center;line-height:18px;margin-right:5px;flex-shrink:0}
+    .broker-step-row{display:flex;align-items:flex-start;gap:0;margin-bottom:6px;font-size:0.8rem;color:#555}
+    .broker-steps{margin-bottom:12px}
     .csv-info{font-size:0.82rem;color:#666;line-height:1.6;margin-bottom:14px}
     .csv-info code{background:#f5f5f5;padding:2px 5px;border-radius:3px;font-size:0.8rem}
     .csv-drop{border:2px dashed #b0bec5;border-radius:8px;padding:28px;text-align:center;color:#888;cursor:pointer;transition:all 0.2s;background:#fafafa}
@@ -699,8 +738,85 @@
         </div>
         <div class="csv-status" id="csvStatus"></div>
       </div>
-    </div>
-  </div>
+
+      <!-- BROKER CONNECTORS -->
+      <div class="broker-section">
+        <h3>🏦 Import from Broker</h3>
+        <p class="section-sub">Connect your broker account to auto-import all holdings in one click. Your credentials stay in this browser tab only and are never stored.</p>
+        <div class="broker-cards">
+
+          <!-- ── Zerodha Kite Connect ── -->
+          <div class="broker-card" id="zerodhaCard">
+            <div class="broker-card-header">
+              <div class="broker-logo zerodha">Z</div>
+              <div>
+                <div class="broker-card-title">Zerodha Kite Connect</div>
+                <div class="broker-card-sub">OAuth 2.0 · NSE + BSE holdings</div>
+              </div>
+            </div>
+            <div class="broker-steps">
+              <div class="broker-step-row"><span class="broker-step">1</span>Enter your Kite API Key &amp; Secret below</div>
+              <div class="broker-step-row"><span class="broker-step">2</span>Click "Login with Zerodha" — approve in popup</div>
+              <div class="broker-step-row"><span class="broker-step">3</span>You'll be redirected back — click "Import Holdings"</div>
+            </div>
+            <div class="broker-field">
+              <label>API Key <span style="font-weight:400;color:#999">(from kite.trade/connect/apps)</span></label>
+              <input type="text" id="zApiKey" placeholder="e.g. xxxxxxxxxxxxxxxx" autocomplete="off"/>
+            </div>
+            <div class="broker-field">
+              <label>API Secret</label>
+              <input type="password" id="zApiSecret" placeholder="Your Kite API Secret" autocomplete="off"/>
+            </div>
+            <button class="broker-btn zerodha" id="zLoginBtn" onclick="zerodhaLogin()">🔐 Login with Zerodha</button>
+            <button class="broker-btn zerodha" id="zHoldingsBtn" onclick="zerodhaFetchHoldings()" style="display:none;margin-top:6px;background:#2e7d32">📥 Fetch My Holdings</button>
+            <div class="broker-status" id="zStatus"></div>
+            <div class="broker-holdings-preview" id="zHoldingsPreview">
+              <table><thead><tr><th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>LTP</th><th>P&amp;L</th></tr></thead>
+              <tbody id="zHoldingsTbody"></tbody></table>
+            </div>
+            <button class="broker-import-btn" id="zImportBtn" onclick="zerodhaImportHoldings()">✅ Import All Holdings to Fnikar</button>
+          </div>
+
+          <!-- ── ICICI Direct Breeze ── -->
+          <div class="broker-card" id="iciciCard">
+            <div class="broker-card-header">
+              <div class="broker-logo icici">I</div>
+              <div>
+                <div class="broker-card-title">ICICI Direct Breeze</div>
+                <div class="broker-card-sub">Session-based · NSE + BSE holdings</div>
+              </div>
+            </div>
+            <div class="broker-steps">
+              <div class="broker-step-row"><span class="broker-step">1</span>Enter App Key &amp; Secret (from Breeze portal)</div>
+              <div class="broker-step-row"><span class="broker-step">2</span>Click "Login with ICICI" — login in popup</div>
+              <div class="broker-step-row"><span class="broker-step">3</span>Copy the <code>apisession</code> value from redirect URL &amp; paste it below</div>
+            </div>
+            <div class="broker-field">
+              <label>App Key <span style="font-weight:400;color:#999">(from Breeze developer portal)</span></label>
+              <input type="text" id="iAppKey" placeholder="Your Breeze App Key" autocomplete="off"/>
+            </div>
+            <div class="broker-field">
+              <label>Secret Key</label>
+              <input type="password" id="iSecretKey" placeholder="Your Breeze Secret Key" autocomplete="off"/>
+            </div>
+            <button class="broker-btn icici" id="iLoginBtn" onclick="iciciLogin()">🔐 Login with ICICI Direct</button>
+            <div class="broker-field" id="iSessionField" style="display:none;margin-top:10px">
+              <label>API Session Token <span style="font-weight:400;color:#e65100">(paste from redirect URL)</span></label>
+              <input type="text" id="iApiSession" placeholder="Paste apisession value here" autocomplete="off"/>
+              <button class="broker-btn icici" style="margin-top:6px" onclick="iciciValidateSession()">✅ Validate &amp; Fetch Holdings</button>
+            </div>
+            <div class="broker-status" id="iStatus"></div>
+            <div class="broker-holdings-preview" id="iHoldingsPreview">
+              <table><thead><tr><th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>LTP</th><th>P&amp;L</th></tr></thead>
+              <tbody id="iHoldingsTbody"></tbody></table>
+            </div>
+            <button class="broker-import-btn" id="iImportBtn" onclick="iciciImportHoldings()">✅ Import All Holdings to Fnikar</button>
+          </div>
+
+        </div><!-- /.broker-cards -->
+      </div><!-- /.broker-section -->
+    </div><!-- /.add-panel -->
+  </div><!-- /#tabAdd -->
 </div>
 
 <!-- MOBILE BOTTOM NAVIGATION -->
@@ -3452,6 +3568,359 @@ function setCsvStatus(msg, type) {
   el.textContent = msg; el.className = 'csv-status ' + (type === 'info' ? 'success' : type);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BROKER CONNECTORS — Zerodha Kite Connect + ICICI Direct Breeze
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BROKER_WORKER = WORKER_URL; // same Cloudflare Worker, but POST for broker actions
+
+// Temporary in-session storage (never persisted to localStorage/Firebase)
+let _zHoldingsData  = null;   // Zerodha holdings array after fetch
+let _iHoldingsData  = null;   // ICICI holdings array after fetch
+
+// ── Zerodha helpers ───────────────────────────────────────────────────────
+
+function zStatus(msg, type) {
+  const el = document.getElementById('zStatus');
+  el.textContent = msg;
+  el.className = 'broker-status ' + type;
+}
+
+function zerodhaLogin() {
+  const apiKey = document.getElementById('zApiKey').value.trim();
+  if (!apiKey) { zStatus('Please enter your Kite API Key first.', 'error'); return; }
+
+  // Save api_key in sessionStorage so the post-redirect page can read it
+  sessionStorage.setItem('z_api_key', apiKey);
+
+  const loginUrl = `https://kite.zerodha.com/connect/login?v=3&api_key=${encodeURIComponent(apiKey)}`;
+  zStatus('Zerodha login page opened. After you approve, come back here and click "Fetch My Holdings".', 'info');
+
+  // Try to open in a popup; if blocked, open new tab
+  const popup = window.open(loginUrl, 'zerodha_login', 'width=900,height=640,scrollbars=yes');
+  if (!popup) window.open(loginUrl, '_blank');
+
+  // Show the fetch button — user will come back after redirect
+  document.getElementById('zHoldingsBtn').style.display = '';
+}
+
+async function zerodhaFetchHoldings() {
+  const apiKey    = document.getElementById('zApiKey').value.trim() || sessionStorage.getItem('z_api_key') || '';
+  const apiSecret = document.getElementById('zApiSecret').value.trim();
+  const reqToken  = sessionStorage.getItem('z_request_token') || '';
+
+  if (!apiKey)    { zStatus('API Key is required.', 'error'); return; }
+  if (!reqToken)  { zStatus('No request_token found. Please complete the Zerodha login flow first, then return to this page.', 'warn'); return; }
+  if (!apiSecret) { zStatus('API Secret is required to exchange the request token.', 'error'); return; }
+
+  zStatus('Exchanging request token…', 'info');
+  document.getElementById('zHoldingsBtn').disabled = true;
+
+  try {
+    // Step 1: Exchange request_token → access_token via Worker
+    const authRes = await fetch(BROKER_WORKER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'zerodha_auth', api_key: apiKey, request_token: reqToken, api_secret: apiSecret }),
+    });
+    const authData = await authRes.json();
+    if (authData.error) { zStatus('Token exchange failed: ' + authData.error, 'error'); document.getElementById('zHoldingsBtn').disabled = false; return; }
+
+    const accessToken = authData.access_token;
+    sessionStorage.removeItem('z_request_token'); // consume it
+    zStatus(`Logged in as ${authData.user_name || authData.user_id}. Fetching holdings…`, 'info');
+
+    // Step 2: Fetch holdings via Worker
+    const hRes = await fetch(BROKER_WORKER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'zerodha_holdings', api_key: apiKey, access_token: accessToken }),
+    });
+    const hData = await hRes.json();
+    if (hData.error) { zStatus('Holdings fetch failed: ' + hData.error, 'error'); document.getElementById('zHoldingsBtn').disabled = false; return; }
+
+    _zHoldingsData = hData.holdings;
+    zerodhaRenderPreview(_zHoldingsData, authData.user_name);
+  } catch (e) {
+    zStatus('Error: ' + e.message, 'error');
+  }
+  document.getElementById('zHoldingsBtn').disabled = false;
+}
+
+function zerodhaRenderPreview(holdings, userName) {
+  const tbody  = document.getElementById('zHoldingsTbody');
+  const preview = document.getElementById('zHoldingsPreview');
+  const importBtn = document.getElementById('zImportBtn');
+
+  if (!holdings || !holdings.length) {
+    zStatus('No holdings found in your Zerodha account (or all quantities are zero).', 'warn');
+    return;
+  }
+
+  tbody.innerHTML = holdings.map(h => {
+    const pnlColor = h.pnl >= 0 ? '#2e7d32' : '#c62828';
+    const pnlSign  = h.pnl >= 0 ? '+' : '';
+    return `<tr>
+      <td><strong>${h.symbol}</strong><br><span style="color:#888;font-size:0.72rem">${h.exchange}</span></td>
+      <td>${h.qty}</td>
+      <td>₹${h.avgCost.toFixed(2)}</td>
+      <td>₹${h.currentPrice.toFixed(2)}</td>
+      <td style="color:${pnlColor}">${pnlSign}₹${Math.round(h.pnl).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  preview.style.display = '';
+  importBtn.style.display = '';
+  zStatus(`✅ Found ${holdings.length} holdings for ${userName || 'your account'}. Review below and click Import.`, 'success');
+}
+
+async function zerodhaImportHoldings() {
+  if (!_zHoldingsData || !_zHoldingsData.length) { zStatus('No holdings to import.', 'error'); return; }
+  const btn = document.getElementById('zImportBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importing…';
+
+  let added = 0, skipped = 0;
+  for (const h of _zHoldingsData) {
+    if (!h.symbol || h.qty <= 0) { skipped++; continue; }
+    try {
+      // Check if symbol already exists
+      const existing = stocks.find(s => s.symbol === h.symbol);
+      if (existing) {
+        // Add a buy transaction to the existing stock
+        const txnRef = await db.collection('portfolios').doc(currentUser.uid)
+          .collection('stocks').doc(existing.id)
+          .collection('transactions').add({
+            transactionType: 'buy',
+            price: h.avgCost,
+            qty:   h.qty,
+            addedAt: firebase.firestore.Timestamp.now(),
+            source: 'zerodha_import',
+          });
+        added++;
+      } else {
+        // Create new stock document
+        const stockRef = await db.collection('portfolios').doc(currentUser.uid)
+          .collection('stocks').add({
+            symbol:   h.symbol,
+            name:     h.symbol,  // will be enriched on next price refresh
+            cost:     h.avgCost,
+            qty:      h.qty,
+            industry: '',
+            addedAt:  firebase.firestore.Timestamp.now(),
+            source:   'zerodha_import',
+          });
+        // Also write the transaction record
+        await stockRef.collection('transactions').add({
+          transactionType: 'buy',
+          price: h.avgCost,
+          qty:   h.qty,
+          addedAt: firebase.firestore.Timestamp.now(),
+          source: 'zerodha_import',
+        });
+        added++;
+      }
+    } catch (e) {
+      console.warn('Skipping', h.symbol, ':', e.message);
+      skipped++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✅ Import All Holdings to Fnikar';
+  zStatus(`✅ Imported ${added} holdings from Zerodha${skipped ? ` (${skipped} skipped)` : ''}.`, 'success');
+  showToast(`✅ ${added} Zerodha holdings imported!`, 'success');
+  // Refresh the portfolio view
+  setTimeout(() => { loadPortfolioWithExtras(); showTab('portfolio'); }, 1500);
+}
+
+// ── ICICI Direct Breeze helpers ────────────────────────────────────────────
+
+function iStatus(msg, type) {
+  const el = document.getElementById('iStatus');
+  el.textContent = msg;
+  el.className = 'broker-status ' + type;
+}
+
+function iciciLogin() {
+  const appKey = document.getElementById('iAppKey').value.trim();
+  if (!appKey) { iStatus('Please enter your Breeze App Key first.', 'error'); return; }
+
+  sessionStorage.setItem('i_app_key', appKey);
+
+  const loginUrl = `https://api.icicidirect.com/apiuser/login?api_key=${encodeURIComponent(appKey)}`;
+  iStatus('ICICI Direct login opened. After logging in, you\'ll be redirected. Copy the "apisession" value from the redirect URL and paste it in the field below.', 'info');
+
+  const popup = window.open(loginUrl, 'icici_login', 'width=900,height=640,scrollbars=yes');
+  if (!popup) window.open(loginUrl, '_blank');
+
+  // Show the session token input field
+  document.getElementById('iSessionField').style.display = '';
+}
+
+async function iciciValidateSession() {
+  const appKey    = document.getElementById('iAppKey').value.trim() || sessionStorage.getItem('i_app_key') || '';
+  const secretKey = document.getElementById('iSecretKey').value.trim();
+  const apiSession = document.getElementById('iApiSession').value.trim();
+
+  if (!appKey)    { iStatus('App Key is required.', 'error'); return; }
+  if (!secretKey) { iStatus('Secret Key is required.', 'error'); return; }
+  if (!apiSession){ iStatus('API Session Token is required. Paste it from the redirect URL.', 'error'); return; }
+
+  iStatus('Validating session…', 'info');
+
+  try {
+    // Step 1: Validate session
+    const sessRes = await fetch(BROKER_WORKER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'icici_session', app_key: appKey, api_session: apiSession }),
+    });
+    const sessData = await sessRes.json();
+    if (sessData.error) { iStatus('Session validation failed: ' + sessData.error, 'error'); return; }
+
+    iStatus(`Session valid for ${sessData.user_name || sessData.customer_id}. Fetching holdings…`, 'info');
+
+    // Step 2: Fetch holdings
+    const hRes = await fetch(BROKER_WORKER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'icici_holdings', app_key: appKey, api_session: apiSession, secret_key: secretKey }),
+    });
+    const hData = await hRes.json();
+    if (hData.error) { iStatus('Holdings fetch failed: ' + hData.error, 'error'); return; }
+
+    _iHoldingsData = hData.holdings;
+    iciciRenderPreview(_iHoldingsData, sessData.user_name);
+  } catch (e) {
+    iStatus('Error: ' + e.message, 'error');
+  }
+}
+
+function iciciRenderPreview(holdings, userName) {
+  const tbody  = document.getElementById('iHoldingsTbody');
+  const preview = document.getElementById('iHoldingsPreview');
+  const importBtn = document.getElementById('iImportBtn');
+
+  if (!holdings || !holdings.length) {
+    iStatus('No holdings found in your ICICI Direct account.', 'warn');
+    return;
+  }
+
+  tbody.innerHTML = holdings.map(h => {
+    const pnl = (h.currentPrice - h.avgCost) * h.qty;
+    const pnlColor = pnl >= 0 ? '#2e7d32' : '#c62828';
+    const pnlSign  = pnl >= 0 ? '+' : '';
+    return `<tr>
+      <td><strong>${h.symbol}</strong><br><span style="color:#888;font-size:0.72rem">${h.exchange}</span></td>
+      <td>${h.qty}</td>
+      <td>₹${h.avgCost.toFixed(2)}</td>
+      <td>₹${h.currentPrice.toFixed(2)}</td>
+      <td style="color:${pnlColor}">${pnlSign}₹${Math.round(pnl).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  preview.style.display = '';
+  importBtn.style.display = '';
+  iStatus(`✅ Found ${holdings.length} holdings for ${userName || 'your account'}. Review below and click Import.`, 'success');
+}
+
+async function iciciImportHoldings() {
+  if (!_iHoldingsData || !_iHoldingsData.length) { iStatus('No holdings to import.', 'error'); return; }
+  const btn = document.getElementById('iImportBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importing…';
+
+  let added = 0, skipped = 0;
+  for (const h of _iHoldingsData) {
+    if (!h.symbol || h.qty <= 0) { skipped++; continue; }
+    try {
+      const existing = stocks.find(s => s.symbol === h.symbol);
+      if (existing) {
+        await db.collection('portfolios').doc(currentUser.uid)
+          .collection('stocks').doc(existing.id)
+          .collection('transactions').add({
+            transactionType: 'buy',
+            price: h.avgCost,
+            qty:   h.qty,
+            addedAt: firebase.firestore.Timestamp.now(),
+            source: 'icici_import',
+          });
+        added++;
+      } else {
+        const stockRef = await db.collection('portfolios').doc(currentUser.uid)
+          .collection('stocks').add({
+            symbol:   h.symbol,
+            name:     h.symbol,
+            cost:     h.avgCost,
+            qty:      h.qty,
+            industry: '',
+            addedAt:  firebase.firestore.Timestamp.now(),
+            source:   'icici_import',
+          });
+        await stockRef.collection('transactions').add({
+          transactionType: 'buy',
+          price: h.avgCost,
+          qty:   h.qty,
+          addedAt: firebase.firestore.Timestamp.now(),
+          source: 'icici_import',
+        });
+        added++;
+      }
+    } catch (e) {
+      console.warn('Skipping', h.symbol, ':', e.message);
+      skipped++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✅ Import All Holdings to Fnikar';
+  iStatus(`✅ Imported ${added} holdings from ICICI Direct${skipped ? ` (${skipped} skipped)` : ''}.`, 'success');
+  showToast(`✅ ${added} ICICI Direct holdings imported!`, 'success');
+  setTimeout(() => { loadPortfolioWithExtras(); showTab('portfolio'); }, 1500);
+}
+
+// ── Check for broker OAuth callbacks on page load ──────────────────────────
+// Called from DOMContentLoaded; detects if Zerodha has redirected back with request_token
+function checkBrokerCallbacks() {
+  const params = new URLSearchParams(window.location.search);
+
+  // Zerodha redirect: ?request_token=xxx&action=login&status=success
+  const reqToken = params.get('request_token');
+  const status   = params.get('status');
+  if (reqToken && status === 'success') {
+    sessionStorage.setItem('z_request_token', reqToken);
+    // Clean URL without reloading
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    // Switch to Add tab and show the holdings fetch button
+    showTab('add');
+    const apiKey = sessionStorage.getItem('z_api_key') || '';
+    if (apiKey) document.getElementById('zApiKey').value = apiKey;
+    document.getElementById('zHoldingsBtn').style.display = '';
+    zStatus('✅ Zerodha login successful! Enter your API Secret and click "Fetch My Holdings".', 'success');
+    showToast('✅ Zerodha login successful — fetch your holdings now!', 'success');
+    return;
+  }
+
+  // ICICI redirect: ?apisession=xxx (typical Breeze callback)
+  const apiSession = params.get('apisession');
+  if (apiSession) {
+    sessionStorage.setItem('i_api_session', apiSession);
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    showTab('add');
+    const appKey = sessionStorage.getItem('i_app_key') || '';
+    if (appKey) document.getElementById('iAppKey').value = appKey;
+    document.getElementById('iApiSession').value = apiSession;
+    document.getElementById('iSessionField').style.display = '';
+    iStatus('✅ ICICI session token captured! Enter your Secret Key and click "Validate & Fetch Holdings".', 'success');
+    showToast('✅ ICICI Direct login successful — validate session now!', 'success');
+  }
+}
+
 // ── UI HELPERS ─────────────────────────────────────────────────────────────
 function showTab(tab) {
   document.getElementById('tabPortfolio').style.display  = tab==='portfolio'  ? '' : 'none';
@@ -4141,6 +4610,8 @@ async function loadPortfolioWithExtras() {
     const t = rawTransactions.find(t => t.symbol === s.symbol && t.notes);
     if (t) s.notes = t.notes;
   });
+  // Check if we're returning from a broker OAuth redirect (Zerodha / ICICI)
+  checkBrokerCallbacks();
 }
 
 // ── MARKET TICKER BAR ─────────────────────────────────────────────────────
