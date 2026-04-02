@@ -2404,7 +2404,7 @@ async function loadSharedMarketData() {
         if (md.sellRecs   != null && s.sellRecs     == null)   s.sellRecs     = md.sellRecs;
         if (md.signal          && !s.signal                 )  s.signal       = md.signal;
         if (md.reason          && !s.reason                 )  s.reason       = md.reason;
-        if (md.name            && !s.name                   )  s.name         = md.name;
+        if (md.name && (!s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name))) s.name = md.name;
       });
     });
     if (updated > 0) {
@@ -2508,7 +2508,10 @@ function deriveSignal(recKey) {
 function generateCommentary(name, industry, rec, pe, change52w) {
   if (!name) return '';
   const ind = (industry || '').toLowerCase();
-  const chg = change52w != null ? Math.round(change52w * 100) : null;
+  // change52w is stored as a percentage (e.g. 22.8 means 22.8%), already multiplied by 100 at source
+  const chgRaw = change52w != null ? Math.round(change52w) : null;
+  // Sanity cap: >500% or <-95% are almost certainly bad data from sparse Yahoo history
+  const chg = (chgRaw != null && Math.abs(chgRaw) <= 500) ? chgRaw : null;
   const chgStr = chg != null
     ? (chg >= 0 ? `up ${chg}% over the past year` : `down ${Math.abs(chg)}% over the past year`)
     : 'with mixed performance recently';
@@ -2955,7 +2958,7 @@ function populateRecFilter() {
   const sel = document.getElementById('filterRec');
   const cur = sel.value;
   sel.innerHTML = '<option value="">All Recommendations</option>' +
-    recs.map(r => `<option value="${r}"${r===cur?' selected':''}>${r.replace('strong_','').toUpperCase()}</option>`).join('');
+    recs.map(r => `<option value="${r}"${r===cur?' selected':''}>${r.replace(/_/g,' ').toUpperCase()}</option>`).join('');
 }
 
 // ── STOCK DETAIL CARD ──────────────────────────────────────────────────────
@@ -3260,7 +3263,8 @@ async function refreshPrices() {
       if (d.targetPrice!= null)   s.targetPrice    = d.targetPrice;
       if (d.buyRecs    != null)   s.buyRecs        = d.buyRecs;
       if (d.sellRecs   != null)   s.sellRecs       = d.sellRecs;
-      if (d.name && !s.name  )    s.name           = d.name;
+      // Update name if not set, or if name is still just the symbol/BSE-code placeholder
+      if (d.name && (!s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name))) s.name = d.name;
       if (d.rec              )    s.signal         = deriveSignal(d.rec);
       if (s.name && (s.industry || s.recommendation))
         s.reason = generateCommentary(s.name, s.industry, s.recommendation, s.pe, s.change12w);
