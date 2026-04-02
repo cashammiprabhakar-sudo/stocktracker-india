@@ -4845,7 +4845,7 @@ async function loadMarketTicker() {
 function startMarketTicker() {
   loadMarketTicker();
   if (_tickerInterval) clearInterval(_tickerInterval);
-  _tickerInterval = setInterval(loadMarketTicker, 120000);
+  _tickerInterval = setInterval(loadMarketTicker, 60000);
 }
 
 // openDetailCard is fully self-contained above — notes + dividends are wired in directly.
