@@ -342,53 +342,125 @@
     /* Give body bottom padding on mobile so content isn't hidden behind nav */
     @media(max-width:767px){
       body{padding-bottom:68px}
-      /* Compact ticker bar on mobile */
-      #tickerBar{padding:5px 10px;font-size:0.7rem;top:0}
-      /* Compact header */
-      .header{padding:10px 14px;position:sticky;top:28px}
-      .header h1{font-size:1rem}
-      .header-right{gap:6px}
-      .btn-logout{padding:5px 10px;font-size:0.78rem}
-      .btn-chg-pwd{display:none}/* hide on mobile — accessible via menu */
-      /* Main padding */
+
+      /* ── TICKER BAR: 2-row grid on mobile ── */
+      #tickerBar{
+        padding:5px 8px 4px;
+        overflow-x:hidden;
+        flex-wrap:wrap;
+        gap:0;
+        align-items:flex-start;
+        top:0;
+      }
+      .tick-lbl{
+        font-size:0.56rem;
+        padding:2px 5px;
+        background:#4caf50;
+        border-radius:3px;
+        color:#fff;
+        letter-spacing:0.8px;
+        align-self:flex-start;
+        margin-right:5px;
+        flex-shrink:0;
+        margin-top:2px;
+      }
+      /* Override inline display:inline-flex via !important */
+      #tickerItems{
+        display:grid!important;
+        grid-template-columns:repeat(5,1fr);
+        gap:2px 3px;
+        flex:1;
+        min-width:0;
+      }
+      .tick-item{
+        display:flex;
+        flex-direction:column;
+        gap:0;
+        padding:1px 2px;
+      }
+      .tick-name{font-size:0.54rem;color:#90caf9;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .tick-price{font-size:0.7rem;font-weight:700;color:#fff;line-height:1.3}
+      .tick-chg{font-size:0.62rem;font-weight:700;line-height:1.2}
+      .tick-time{
+        width:100%;
+        margin-left:0;
+        text-align:right;
+        font-size:0.56rem;
+        padding-top:2px;
+        color:#546e7a;
+      }
+
+      /* ── HEADER: not sticky on mobile (bottom nav handles nav) ── */
+      .header{padding:8px 12px;position:relative}
+      .header svg{width:100px!important;height:36px!important}
+      .header-right{gap:5px}
+      .btn-logout{padding:5px 10px;font-size:0.78rem;border-radius:6px}
+      .btn-chg-pwd{display:none}
+      .btn-manage-users{display:none}
+
+      /* ── MAIN layout ── */
       .main{padding:10px 10px 0}
-      /* Stats strip */
-      .stats-strip{gap:8px;margin-bottom:12px}
-      .stat-card{padding:10px 12px}
-      .stat-card .label{font-size:0.68rem}
-      .stat-card .value{font-size:1.1rem}
-      /* Hide desktop tabs on mobile */
+
+      /* ── STATS STRIP ── */
+      .stats-strip{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        margin-bottom:12px;
+      }
+      /* Make last stat card span full width on mobile */
+      .stats-strip .stat-card:last-child{grid-column:1 / -1}
+      .stat-card{
+        padding:10px 14px;
+        border-radius:10px;
+        border-left:3px solid #1565c0;
+        background:#fff;
+      }
+      .stat-card .label{font-size:0.65rem;letter-spacing:0.8px}
+      .stat-card .value{font-size:1.05rem;line-height:1.3}
+      .stat-card .stat-sub{font-size:0.7rem;margin-top:2px}
+
+      /* ── TABS hidden (use bottom nav) ── */
       .tabs{display:none}
-      /* Toast above bottom nav */
+
+      /* ── TOAST above bottom nav ── */
       .toast{bottom:78px;right:12px;left:12px;text-align:center;max-width:none}
-      /* Table toolbar compact */
+
+      /* ── TABLE TOOLBAR ── */
       .table-toolbar{padding:10px 12px;flex-wrap:wrap;gap:6px}
       .table-toolbar .title{font-size:0.88rem}
       .btn-refresh{padding:7px 12px;font-size:0.8rem}
       .btn-export{padding:6px 10px;font-size:0.78rem}
-      /* Filter bar stacked */
+
+      /* ── FILTER BAR stacked ── */
       .filter-bar{flex-direction:column;gap:7px;padding:10px 12px}
       .filter-bar input[type=text]{min-width:0;width:100%}
       .filter-bar select{width:100%;font-size:0.85rem}
-      /* Hide desktop table, show mobile cards */
+
+      /* ── HIDE DESKTOP TABLE ── */
       .table-scroll{display:none}
-      /* Detail modal full-screen bottom sheet on mobile */
+
+      /* ── DETAIL MODAL full-screen bottom sheet ── */
       .detail-modal-bg{padding:0;align-items:flex-end}
       .detail-card{border-radius:20px 20px 0 0;max-height:92vh;width:100%;max-width:100%}
-      /* Add form improvements */
+
+      /* ── ADD FORM ── */
       .add-panel{padding:16px}
       .add-panel h2{font-size:0.95rem;margin-bottom:14px}
       .form-group input,.form-group select{padding:12px 14px;font-size:1rem}
       .btn-add{width:100%;padding:14px;font-size:1rem;margin-top:14px}
       .txn-btn{padding:12px;font-size:0.92rem}
-      /* Global tab header stacked */
+
+      /* ── GLOBAL TAB ── */
       .global-header{flex-direction:column;gap:8px}
       .global-stats{gap:14px}
       .global-stat .g-value{font-size:0.95rem}
-      /* CSV section */
+
+      /* ── CSV SECTION ── */
       .csv-section{margin-top:20px;padding-top:16px}
       .csv-drop{padding:20px}
-      /* Analytics charts */
+
+      /* ── ANALYTICS CHARTS ── */
       .chart-panel{padding:14px}
       .chart-range-btns{gap:4px}
       .chart-range-btn{padding:5px 8px;font-size:0.74rem}
@@ -396,15 +468,16 @@
 
     /* ── BOTTOM NAVIGATION BAR ─────────────────────────────── */
     .mobile-bottom-nav{
-      display:none;/* hidden on desktop */
+      display:none;
       position:fixed;
       bottom:0;left:0;right:0;
       background:#fff;
       border-top:1px solid #e0e8f5;
       z-index:200;
-      box-shadow:0 -2px 12px rgba(0,0,0,0.1);
+      box-shadow:0 -3px 16px rgba(0,0,0,0.12);
       height:62px;
       align-items:stretch;
+      padding-bottom:env(safe-area-inset-bottom,0);
     }
     @media(max-width:767px){
       .mobile-bottom-nav{display:flex}
@@ -420,13 +493,22 @@
       border:none;
       cursor:pointer;
       padding:6px 4px;
-      color:#888;
-      transition:color 0.2s;
+      color:#9aa;
+      transition:color 0.18s;
       -webkit-tap-highlight-color:transparent;
+      position:relative;
     }
     .mob-nav-btn.active{color:#1565c0}
+    .mob-nav-btn.active::before{
+      content:'';
+      position:absolute;
+      top:0;left:20%;right:20%;
+      height:3px;
+      background:#1565c0;
+      border-radius:0 0 3px 3px;
+    }
     .mob-nav-icon{font-size:1.3rem;line-height:1}
-    .mob-nav-label{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+    .mob-nav-label{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
     .mob-nav-btn.active .mob-nav-label{color:#1565c0}
 
     /* ── MOBILE STOCK CARDS ───────────────────────────────── */
@@ -436,34 +518,45 @@
     }
     .mob-stock-card{
       background:#fff;
-      border-radius:12px;
-      padding:14px 16px;
+      border-radius:14px;
+      padding:14px 16px 12px;
       margin:0 0 10px;
-      box-shadow:0 1px 4px rgba(0,0,0,0.08);
+      box-shadow:0 1px 6px rgba(0,0,0,0.07);
+      border-left:3px solid #1565c0;
       cursor:pointer;
-      transition:box-shadow 0.15s;
+      transition:box-shadow 0.15s,transform 0.12s;
       -webkit-tap-highlight-color:transparent;
     }
-    .mob-stock-card:active{box-shadow:0 2px 8px rgba(0,0,0,0.15);transform:scale(0.99)}
-    .mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-    .mob-card-left{}
+    .mob-stock-card:active{box-shadow:0 3px 12px rgba(0,0,0,0.14);transform:scale(0.985)}
+    .mob-stock-card.sold-out{border-left-color:#ccc;opacity:0.7}
+    .mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+    .mob-card-left{flex:1;min-width:0}
     .mob-card-ticker{font-size:1rem;font-weight:800;color:#1565c0;letter-spacing:0.3px}
-    .mob-card-name{font-size:0.78rem;color:#666;margin-top:1px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .mob-card-right{text-align:right;flex-shrink:0}
-    .mob-card-price{font-size:1.05rem;font-weight:700;color:#222}
-    .mob-card-pnlpct{font-size:0.82rem;font-weight:700;margin-top:1px}
+    .mob-card-name{font-size:0.76rem;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+    .mob-card-right{text-align:right;flex-shrink:0;margin-left:10px}
+    .mob-card-price{font-size:1.08rem;font-weight:800;color:#0d2260}
+    .mob-card-pnlpct{font-size:0.82rem;font-weight:700;margin-top:2px}
     .mob-card-pnlpct.gain{color:#2e7d32}
     .mob-card-pnlpct.loss{color:#c62828}
-    .mob-card-bottom{display:flex;gap:10px;flex-wrap:wrap}
-    .mob-card-stat{display:flex;flex-direction:column;flex:1;min-width:80px}
-    .mob-card-stat-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.4px;color:#aaa;font-weight:600}
-    .mob-card-stat-value{font-size:0.82rem;font-weight:600;color:#333;margin-top:1px}
+    .mob-card-bottom{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px 4px}
+    .mob-card-stat{display:flex;flex-direction:column}
+    .mob-card-stat-label{font-size:0.58rem;text-transform:uppercase;letter-spacing:0.5px;color:#bbb;font-weight:700}
+    .mob-card-stat-value{font-size:0.82rem;font-weight:700;color:#333;margin-top:1px}
     .mob-card-stat-value.gain{color:#2e7d32}
     .mob-card-stat-value.loss{color:#c62828}
-    .mob-card-divider{height:1px;background:#f0f4f8;margin:8px 0}
-    .mob-card-industry{font-size:0.7rem;color:#999;margin-top:4px}
-    .mob-card-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:6px}
-    .mob-sold-badge{background:#f5f5f5;color:#999;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;font-style:italic}
+    .mob-card-divider{height:1px;background:#f0f4f8;margin:8px 0 6px}
+    .mob-card-industry{
+      display:inline-block;
+      font-size:0.64rem;color:#666;margin-top:3px;
+      background:#f0f4f8;padding:2px 7px;border-radius:10px;
+      font-weight:600;letter-spacing:0.2px;
+    }
+    .mob-card-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:8px}
+    .mob-sold-badge{background:#f5f5f5;color:#999;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:6px;font-style:italic}
+    /* Rec badge improvements on cards */
+    .mob-card-badges .rec-buy{font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid #c8e6c9}
+    .mob-card-badges .rec-hold{font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid #fff3cd}
+    .mob-card-badges .rec-sell{font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid #ffcdd2}
 
     /* ── MOBILE GLOBAL TAB CARDS ───────────────────────────── */
     .mob-global-card{
