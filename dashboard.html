@@ -390,8 +390,8 @@
         color:#546e7a;
       }
 
-      /* ── HEADER: not sticky on mobile (bottom nav handles nav) ── */
-      .header{padding:8px 12px;position:relative}
+      /* ── HEADER: static on mobile (bottom nav handles nav; top:32px must be cleared) ── */
+      .header{padding:8px 12px;position:static;top:auto}
       .header svg{width:100px!important;height:36px!important}
       .header-right{gap:5px}
       .btn-logout{padding:5px 10px;font-size:0.78rem;border-radius:6px}
@@ -1005,26 +1005,20 @@
         </div>
       </div>
       <div class="detail-section">
-        <h3>📊 Signal & Recommendation</h3>
+        <h3>📊 Analyst Recommendation</h3>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-          <span id="dc-signal" style="font-weight:600;font-size:0.92rem">—</span>
           <span id="dc-rec" class="detail-rec-badge">—</span>
+          <span id="dc-signal"></span>
         </div>
       </div>
       <div class="detail-section">
         <h3>💬 Commentary</h3>
         <div class="detail-commentary" id="dc-reason">—</div>
       </div>
-      <!-- DIVIDENDS LOG -->
-      <div class="div-log">
-        <h4>💰 Dividend Log</h4>
-        <div class="div-entry-form">
-          <div><label>Amount / Share (₹)</label><input type="number" id="divAmount" placeholder="e.g. 18.50" step="0.01" min="0"/></div>
-          <div><label>Shares (default: held qty)</label><input type="number" id="divQty" placeholder="auto" step="1" min="1"/></div>
-          <div><label>Date</label><input type="date" id="divDate"/></div>
-          <button class="btn-log-div" onclick="addDividend()">+ Log Dividend</button>
-        </div>
-        <div id="dc-divList"></div>
+      <!-- DIVIDENDS (auto-fetched 2025–2026) -->
+      <div class="div-log" id="dc-divSection">
+        <h4>💰 Dividends Received (2025 – 2026)</h4>
+        <div id="dc-divList"><span style="font-size:0.8rem;color:#aaa">Loading…</span></div>
         <div class="div-total" id="dc-divTotal" style="display:none"></div>
       </div>
       <!-- NOTES -->
@@ -3226,12 +3220,19 @@ function openDetailCard(symbol) {
   document.getElementById('dc-buyRecs').textContent = s.buyRecs != null ? s.buyRecs + ' analysts' : '—';
   document.getElementById('dc-sellRecs').textContent = s.sellRecs != null ? s.sellRecs + ' analysts' : '—';
 
+  // Show analyst count in signal span (not the redundant emoji signal which duplicates rec badge)
   const sigEl = document.getElementById('dc-signal');
-  sigEl.textContent = s.signal || '—';
-  sigEl.className = s.signal && s.signal.includes('▲') ? 'signal-up' : s.signal && s.signal.includes('▼') ? 'signal-down' : '';
+  if (s.buyRecs != null || s.sellRecs != null) {
+    sigEl.textContent = `${s.buyRecs ?? 0} buy · ${s.sellRecs ?? 0} sell`;
+    sigEl.className = 'di-label';
+    sigEl.style.fontSize = '0.82rem';
+    sigEl.style.color = '#888';
+  } else {
+    sigEl.textContent = '';
+  }
 
   const recEl = document.getElementById('dc-rec');
-  recEl.textContent = recNorm ? recNorm.replace('strong_','').toUpperCase() : '—';
+  recEl.textContent = recNorm ? recNorm.replace(/_/g, ' ').toUpperCase() : '—';
   recEl.className = 'detail-rec-badge ' + recClass;
 
   const reasonText = s.reason || (isUSStock(s.symbol) ? getUSStockCommentary(s) : 'No commentary available.');
@@ -4550,87 +4551,86 @@ function renderHeatmap() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ── FEATURE 2: DIVIDEND TRACKER ───────────────────────────────────────────
+// ── FEATURE 2: DIVIDEND TRACKER (auto-fetched from Yahoo Finance) ─────────
 // ═══════════════════════════════════════════════════════════════════════════
-let _dividends = [];       // all dividend records from Firestore
-let _activeDivSymbol = ''; // symbol open in detail card
+// _dividends: { "SYMBOL": [{ date: "2025-04-10", perShare: 18.0 }, ...] }
+let _dividends = {};
+let _activeDivSymbol = '';
 
+// Called from loadPortfolioWithExtras() — fetches in batches of 8
 async function loadDividends() {
-  if (!currentUser) return;
-  try {
-    const snap = await db.collection('portfolios').doc(currentUser.uid)
-      .collection('dividends').orderBy('date', 'asc').get();
-    _dividends = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) { _dividends = []; }
+  if (!currentUser || !WORKER_URL) return;
+  const owned = stocks.filter(s => s.qty > 0);
+  if (!owned.length) return;
+
+  const BATCH = 8;
+  for (let i = 0; i < owned.length; i += BATCH) {
+    const chunk = owned.slice(i, i + BATCH);
+    // Convert to Yahoo symbols (e.g. INFY → INFY.NS, 500113 → 500113.BO)
+    const yahooSyms = chunk.map(s => {
+      if (isUSStock(s.symbol) || isLSEStock(s.symbol)) return null; // skip non-Indian
+      return toYahoo(s.symbol); // adds .NS (or .BO via overrides)
+    }).filter(Boolean);
+    if (!yahooSyms.length) continue;
+
+    try {
+      const resp = await fetch(WORKER_URL + '?divs=' + yahooSyms.map(encodeURIComponent).join(','));
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      // data keys are base symbols (INFY, TCS etc. — .NS stripped by Worker)
+      Object.assign(_dividends, data);
+    } catch(e) { console.warn('Dividend fetch error:', e.message); }
+  }
   updateDividendStat();
 }
 
 function updateDividendStat() {
-  const total = _dividends.reduce((s, d) => s + (d.totalAmount || 0), 0);
   const divEl = document.getElementById('statDividends');
   const yldEl = document.getElementById('statDivYield');
   if (!divEl) return;
-  if (!_dividends.length) { divEl.textContent = '—'; if (yldEl) yldEl.textContent = ''; return; }
+  let total = 0;
+  stocks.filter(s => s.qty > 0).forEach(s => {
+    const recs = _dividends[s.symbol] || [];
+    recs.forEach(d => { total += d.perShare * (s.qty || 0); });
+  });
+  if (total === 0) { divEl.textContent = '—'; if (yldEl) yldEl.textContent = ''; return; }
   divEl.textContent = '₹' + fmt(total);
-  // Yield = total dividends / total invested × 100
-  const totalInvested = stocks.filter(s=>s.qty>0).reduce((s,st) => s + (st.avgCost||0)*(st.qty||0), 0);
-  if (yldEl && totalInvested > 0) yldEl.textContent = 'Yield: ' + (total/totalInvested*100).toFixed(2) + '%';
-}
-
-async function addDividend() {
-  const sym  = _activeDivSymbol;
-  const amt  = parseFloat(document.getElementById('divAmount').value);
-  const dateVal = document.getElementById('divDate').value;
-  const s    = stocks.find(x => x.symbol === sym);
-  if (!sym || !s)             { showToast('Open a stock detail card first.', 'error'); return; }
-  if (isNaN(amt) || amt <= 0) { showToast('Enter a valid amount per share.', 'error'); return; }
-  const qty  = parseInt(document.getElementById('divQty').value) || s.qty || 0;
-  const date = dateVal || new Date().toISOString().slice(0, 10);
-  const totalAmount = amt * qty;
-  try {
-    const doc = { symbol: sym, name: s.name||sym, amountPerShare: amt, qty, totalAmount, date,
-      addedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    const ref = await db.collection('portfolios').doc(currentUser.uid)
-      .collection('dividends').add(doc);
-    _dividends.push({ id: ref.id, ...doc });
-    document.getElementById('divAmount').value = '';
-    document.getElementById('divQty').value = '';
-    renderDivList(sym);
-    updateDividendStat();
-    showToast(`✅ Dividend logged: ₹${fmt(totalAmount)} for ${sym}`, 'success');
-  } catch(e) { showToast('Error saving dividend: ' + e.message, 'error'); }
-}
-
-async function deleteDividend(divId) {
-  if (!confirm('Remove this dividend entry?')) return;
-  try {
-    await db.collection('portfolios').doc(currentUser.uid)
-      .collection('dividends').doc(divId).delete();
-    _dividends = _dividends.filter(d => d.id !== divId);
-    renderDivList(_activeDivSymbol);
-    updateDividendStat();
-    showToast('Dividend entry removed.', 'success');
-  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  const totalInvested = stocks.filter(s => s.qty > 0)
+    .reduce((sum, s) => sum + (s.avgCost || 0) * (s.qty || 0), 0);
+  if (yldEl && totalInvested > 0)
+    yldEl.textContent = 'Yield: ' + (total / totalInvested * 100).toFixed(2) + '%';
 }
 
 function renderDivList(symbol) {
-  const list   = document.getElementById('dc-divList');
-  const totEl  = document.getElementById('dc-divTotal');
+  const list  = document.getElementById('dc-divList');
+  const totEl = document.getElementById('dc-divTotal');
   if (!list) return;
-  const divs   = _dividends.filter(d => d.symbol === symbol);
-  if (!divs.length) {
-    list.innerHTML = '<div style="font-size:0.8rem;color:#aaa;padding:4px 0">No dividends logged yet.</div>';
+  const s    = stocks.find(x => x.symbol === symbol);
+  const qty  = s?.qty || 0;
+  const recs = _dividends[symbol];
+
+  if (!recs) {
+    // Still loading or not yet fetched
+    list.innerHTML = '<div style="font-size:0.8rem;color:#aaa;padding:4px 0">Fetching dividend data…</div>';
     if (totEl) totEl.style.display = 'none';
     return;
   }
-  const total  = divs.reduce((s, d) => s + (d.totalAmount || 0), 0);
-  list.innerHTML = divs.map(d =>
+  if (!recs.length) {
+    list.innerHTML = '<div style="font-size:0.8rem;color:#aaa;padding:4px 0">No dividends paid in 2025–2026.</div>';
+    if (totEl) totEl.style.display = 'none';
+    return;
+  }
+  const total = recs.reduce((sum, d) => sum + d.perShare * qty, 0);
+  list.innerHTML = recs.map(d =>
     `<div class="div-item">
-       <span>₹${d.amountPerShare}/share × ${d.qty} = <strong>₹${fmt(d.totalAmount)}</strong></span>
-       <span>${d.date}&nbsp;<button class="div-del" onclick="deleteDividend('${d.id}')">✕</button></span>
+       <span>₹${d.perShare}/share × ${qty} shares</span>
+       <span><strong>₹${fmt(d.perShare * qty)}</strong>&nbsp;&nbsp;${d.date}</span>
      </div>`
   ).join('');
-  if (totEl) { totEl.textContent = `Total dividends: ₹${fmt(total)}`; totEl.style.display = ''; }
+  if (totEl && total > 0) {
+    totEl.textContent = `Total received: ₹${fmt(total)}`;
+    totEl.style.display = '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4881,8 +4881,10 @@ async function loadMarketTicker() {
   const itemsEl = document.getElementById('tickerItems');
   const timeEl  = document.getElementById('tickerTime');
   try {
+    // Cache-bust every 10s during market hours so Cloudflare serves fresh data
+    const cb = isMarketOpen() ? '&_t=' + Math.floor(Date.now() / 10000) : '';
     const resp = await Promise.race([
-      fetch(WORKER_URL + '?market=1'),
+      fetch(WORKER_URL + '?market=1' + cb),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
     ]);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -4937,10 +4939,27 @@ async function loadMarketTicker() {
 }
 
 // Start ticker on load and refresh every 2 minutes
+// Returns true when NSE/BSE is open (9:15 AM – 3:30 PM IST, Mon–Fri)
+function isMarketOpen() {
+  const IST_MS = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(Date.now() + new Date().getTimezoneOffset() * 60000 + IST_MS);
+  const day = ist.getDay(); // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false;
+  const mins = ist.getHours() * 60 + ist.getMinutes();
+  return mins >= 9 * 60 + 15 && mins < 15 * 60 + 30;
+}
+
 function startMarketTicker() {
   loadMarketTicker();
-  if (_tickerInterval) clearInterval(_tickerInterval);
-  _tickerInterval = setInterval(loadMarketTicker, 60000);
+  function scheduleNext() {
+    if (_tickerInterval) clearTimeout(_tickerInterval);
+    // 5 s during market hours, 2 min when market is closed
+    _tickerInterval = setTimeout(async () => {
+      await loadMarketTicker();
+      scheduleNext();
+    }, isMarketOpen() ? 5000 : 120000);
+  }
+  scheduleNext();
 }
 
 // openDetailCard is fully self-contained above — notes + dividends are wired in directly.
