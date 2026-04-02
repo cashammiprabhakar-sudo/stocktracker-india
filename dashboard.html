@@ -4631,8 +4631,81 @@ async function loadPortfolioWithExtras() {
     const t = rawTransactions.find(t => t.symbol === s.symbol && t.notes);
     if (t) s.notes = t.notes;
   });
+  // Auto-resolve BSE numeric codes → real company names (runs in background, non-blocking)
+  resolveUnnamedStocks();
   // Check if we're returning from a broker OAuth redirect (Zerodha / ICICI)
   checkBrokerCallbacks();
+}
+
+/**
+ * Finds stocks whose name is still the raw BSE numeric code (e.g. "100113"),
+ * fetches real company names via the Worker, then saves them to Firestore.
+ * Runs silently in the background on every portfolio load.
+ */
+async function resolveUnnamedStocks() {
+  if (!WORKER_URL) return;
+
+  // Identify stocks whose stored name is still a BSE code placeholder
+  const needsName = stocks.filter(s =>
+    !s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name)
+  );
+  if (!needsName.length) return;
+
+  const syms = [...new Set(needsName.map(s => s.symbol))];
+  console.log(`[Fnikar] Resolving names for ${syms.length} unnamed BSE stock(s):`, syms.join(', '));
+
+  let data = {};
+  try {
+    data = await fetchPricesFromWorker(syms);
+  } catch (e) {
+    console.warn('[Fnikar] Name resolution fetch failed:', e.message);
+    return;
+  }
+
+  let resolved = 0;
+  const bw = db.batch();
+  let batchHasUpdates = false;
+
+  stocks.forEach(s => {
+    const isUnnamed = !s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name);
+    if (!isUnnamed) return;
+
+    const d = data[s.symbol];
+    const newName = d?.name || '';
+    if (!newName || newName === s.symbol || /^\d{4,7}$/.test(newName)) return; // API gave no name either
+
+    s.name = newName;
+    if (d.price  != null && s.currentPrice == null) s.currentPrice = d.price;
+    if (d.sector && !s.industry) s.industry = d.sector;
+    resolved++;
+
+    // Persist resolved name (and any bonus price data) to Firestore
+    const upd = { name: newName };
+    if (d.price  != null) { upd.currentPrice = d.price; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+    if (d.sector && !s.industry) upd.industry = d.sector;
+    if (s.id) {
+      bw.update(
+        db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
+        upd
+      );
+      batchHasUpdates = true;
+    }
+  });
+
+  if (batchHasUpdates) {
+    try { await bw.commit(); }
+    catch (e) { console.warn('[Fnikar] Name persistence failed (non-critical):', e.message); }
+  }
+
+  if (resolved > 0) {
+    renderTable();
+    if (typeof renderMobileCards === 'function') renderMobileCards();
+    updateStats();
+    showToast(`✅ Resolved company names for ${resolved} BSE stock${resolved > 1 ? 's' : ''}`, 'success');
+    console.log(`[Fnikar] Resolved ${resolved} names.`);
+  } else if (syms.length > 0) {
+    console.warn('[Fnikar] Worker returned no names for:', syms.join(', '), '— will retry on next price refresh.');
+  }
 }
 
 // ── MARKET TICKER BAR ─────────────────────────────────────────────────────
