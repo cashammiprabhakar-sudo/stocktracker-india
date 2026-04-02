@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Fnikar &mdash; Login</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#1565c0 0%,#0d47a1 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
@@ -68,8 +69,32 @@
 </head>
 <body>
 <div class="logo">
-  <h1>&#128200; Fnikar</h1>
-  <p>NSE &amp; BSE Portfolio Intelligence</p>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" width="198" height="72" style="display:block;margin:0 auto 6px">
+    <defs>
+      <linearGradient id="lg_ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#00e5d4;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+      </linearGradient>
+      <linearGradient id="lg_arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#00c6b8;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+      </linearGradient>
+      <clipPath id="lg_circleClip"><circle cx="40" cy="40" r="34"/></clipPath>
+    </defs>
+    <circle cx="40" cy="40" r="37" fill="none" stroke="url(#lg_ringGrad)" stroke-width="5"/>
+    <circle cx="40" cy="40" r="32" fill="rgba(255,255,255,0.13)"/>
+    <polyline points="18,50 27,38 35,44 44,28 53,35 62,22" fill="none" stroke="url(#lg_arrowGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#lg_circleClip)"/>
+    <circle cx="27" cy="38" r="2.2" fill="#00e5d4"/>
+    <circle cx="44" cy="28" r="2.2" fill="#00e5d4"/>
+    <circle cx="62" cy="22" r="2.2" fill="#fff"/>
+    <line x1="30" y1="56" x2="56" y2="24" stroke="url(#lg_arrowGrad)" stroke-width="3" stroke-linecap="round" clip-path="url(#lg_circleClip)"/>
+    <polyline points="47,22 57,23 56,33" fill="none" stroke="url(#lg_arrowGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#lg_circleClip)"/>
+    <line x1="60" y1="55" x2="60" y2="47" stroke="#00e5d4" stroke-width="2" stroke-linecap="round" clip-path="url(#lg_circleClip)"/>
+    <polyline points="57,50 60,47 63,50" fill="none" stroke="#00e5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#lg_circleClip)"/>
+    <text x="88" y="38" font-family="'Segoe UI',Arial,sans-serif" font-weight="800" font-size="24" fill="#ffffff" letter-spacing="2">FNIKAR</text>
+    <text x="88" y="54" font-family="'Segoe UI',Arial,sans-serif" font-weight="400" font-size="7.5" fill="rgba(255,255,255,0.78)" letter-spacing="1.2">REAL-TIME PORTFOLIO TRACKING &amp; ANALYSIS</text>
+  </svg>
+  <p style="margin-top:4px;opacity:0.8;font-size:0.88rem">NSE &amp; BSE Portfolio Intelligence</p>
 </div>
 
 <div class="card" id="authCard">

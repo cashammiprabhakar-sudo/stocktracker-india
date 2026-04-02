@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Fnikar"/>
   <meta name="theme-color" content="#1565c0"/>
   <meta name="mobile-web-app-capable" content="yes"/>
+  <link rel="icon" type="image/svg+xml" href="logo.svg"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
@@ -492,7 +493,33 @@
 </div>
 
 <div class="header">
-  <h1>📈 Fnikar</h1>
+  <a href="#" style="display:inline-flex;align-items:center;text-decoration:none">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" width="132" height="48" style="display:block">
+      <defs>
+        <linearGradient id="hdr_ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#00e5d4;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+        </linearGradient>
+        <linearGradient id="hdr_arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#00c6b8;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+        </linearGradient>
+        <clipPath id="hdr_circleClip"><circle cx="40" cy="40" r="34"/></clipPath>
+      </defs>
+      <circle cx="40" cy="40" r="37" fill="none" stroke="url(#hdr_ringGrad)" stroke-width="5"/>
+      <circle cx="40" cy="40" r="32" fill="rgba(255,255,255,0.12)"/>
+      <polyline points="18,50 27,38 35,44 44,28 53,35 62,22" fill="none" stroke="url(#hdr_arrowGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#hdr_circleClip)"/>
+      <circle cx="27" cy="38" r="2.2" fill="#00e5d4"/>
+      <circle cx="44" cy="28" r="2.2" fill="#00e5d4"/>
+      <circle cx="62" cy="22" r="2.2" fill="#fff"/>
+      <line x1="30" y1="56" x2="56" y2="24" stroke="url(#hdr_arrowGrad)" stroke-width="3" stroke-linecap="round" clip-path="url(#hdr_circleClip)"/>
+      <polyline points="47,22 57,23 56,33" fill="none" stroke="url(#hdr_arrowGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#hdr_circleClip)"/>
+      <line x1="60" y1="55" x2="60" y2="47" stroke="#00e5d4" stroke-width="2" stroke-linecap="round" clip-path="url(#hdr_circleClip)"/>
+      <polyline points="57,50 60,47 63,50" fill="none" stroke="#00e5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#hdr_circleClip)"/>
+      <text x="88" y="38" font-family="'Segoe UI',Arial,sans-serif" font-weight="800" font-size="24" fill="#ffffff" letter-spacing="2">FNIKAR</text>
+      <text x="88" y="54" font-family="'Segoe UI',Arial,sans-serif" font-weight="400" font-size="7.5" fill="rgba(255,255,255,0.8)" letter-spacing="1.2">REAL-TIME PORTFOLIO TRACKING &amp; ANALYSIS</text>
+    </svg>
+  </a>
   <div class="header-right">
     <span class="user-name" id="userName"></span>
     <span id="adminLink" style="display:none"><a href="admin.html" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;text-decoration:none;margin-right:6px">⚙ Admin</a></span>
@@ -985,6 +1012,28 @@ const ADMIN_EMAIL = "cashammiprabhakar@gmail.com";
 // Set this to your Cloudflare Worker URL after deploying cloudflare-worker.js
 // Example: "https://fnikar-prices.YOUR-NAME.workers.dev"
 const WORKER_URL = 'https://fnikar-prices.cashammiprabhakar.workers.dev';
+
+// ── Static BSE Code → Company Name lookup (for your specific portfolio) ─────
+// Resolves numeric BSE codes to real names instantly, without an API call.
+// Add more entries here if you add new BSE-code stocks to your portfolio.
+const BSE_CODE_NAMES = {
+  '100113': 'Steel Authority of India Ltd.',       // SAIL
+  '100312': 'Oil & Natural Gas Corporation Ltd.',  // ONGC
+  '500285': 'SpiceJet Ltd.',
+  '500314': 'Oriental Hotels Ltd.',
+  '500400': 'Tata Power Company Ltd.',
+  '513262': 'Steel Strips Wheels Ltd.',
+  '524715': 'Sun Pharmaceutical Industries Ltd.',
+  '531340': 'Bervin Investment & Leasing Ltd.',
+  '532281': 'HCL Technologies Ltd.',
+  '532699': 'Royal Orchid Hotels Ltd.',
+  '533248': 'Gujarat Pipavav Port Ltd.',
+  '538567': 'Gulf Oil Lubricants India Ltd.',
+  '538666': 'Sharda Cropchem Ltd.',
+  '540124': 'GNA Axles Ltd.',
+  '543300': 'Sona BLW Precision Forgings Ltd.',
+  '544289': 'NTPC Green Energy Ltd.',
+};
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── NSE STOCK MASTER LIST (symbol → name, industry) ──────────────────────
@@ -4643,68 +4692,89 @@ async function loadPortfolioWithExtras() {
  * Runs silently in the background on every portfolio load.
  */
 async function resolveUnnamedStocks() {
-  if (!WORKER_URL) return;
-
-  // Identify stocks whose stored name is still a BSE code placeholder
+  // Identify stocks whose stored name is still a BSE numeric code placeholder
   const needsName = stocks.filter(s =>
     !s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name)
   );
   if (!needsName.length) return;
 
-  const syms = [...new Set(needsName.map(s => s.symbol))];
-  console.log(`[Fnikar] Resolving names for ${syms.length} unnamed BSE stock(s):`, syms.join(', '));
-
-  let data = {};
-  try {
-    data = await fetchPricesFromWorker(syms);
-  } catch (e) {
-    console.warn('[Fnikar] Name resolution fetch failed:', e.message);
-    return;
-  }
-
-  let resolved = 0;
   const bw = db.batch();
   let batchHasUpdates = false;
+  let resolvedFromTable = 0;
+  const stillNeedsAPI = [];
 
-  stocks.forEach(s => {
-    const isUnnamed = !s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name);
-    if (!isUnnamed) return;
+  // ── Pass 1: Resolve instantly from hardcoded BSE_CODE_NAMES lookup ──────
+  needsName.forEach(s => {
+    const knownName = BSE_CODE_NAMES[s.symbol];
+    if (!knownName) { stillNeedsAPI.push(s); return; }
 
-    const d = data[s.symbol];
-    const newName = d?.name || '';
-    if (!newName || newName === s.symbol || /^\d{4,7}$/.test(newName)) return; // API gave no name either
+    s.name = knownName;
+    resolvedFromTable++;
 
-    s.name = newName;
-    if (d.price  != null && s.currentPrice == null) s.currentPrice = d.price;
-    if (d.sector && !s.industry) s.industry = d.sector;
-    resolved++;
-
-    // Persist resolved name (and any bonus price data) to Firestore
-    const upd = { name: newName };
-    if (d.price  != null) { upd.currentPrice = d.price; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
-    if (d.sector && !s.industry) upd.industry = d.sector;
     if (s.id) {
       bw.update(
         db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
-        upd
+        { name: knownName }
       );
       batchHasUpdates = true;
     }
   });
 
+  if (resolvedFromTable > 0) {
+    console.log(`[Fnikar] Resolved ${resolvedFromTable} names from lookup table.`);
+    renderTable();
+    if (typeof renderMobileCards === 'function') renderMobileCards();
+  }
+
+  // ── Pass 2: Try the Worker API for any remaining unnamed codes ────────────
+  if (stillNeedsAPI.length > 0 && WORKER_URL) {
+    const syms = [...new Set(stillNeedsAPI.map(s => s.symbol))];
+    console.log(`[Fnikar] Fetching names via API for:`, syms.join(', '));
+
+    let data = {};
+    try { data = await fetchPricesFromWorker(syms); }
+    catch (e) { console.warn('[Fnikar] Name API fetch failed:', e.message); }
+
+    let resolvedFromAPI = 0;
+    stocks.forEach(s => {
+      const isUnnamed = !s.name || s.name === s.symbol || /^\d{4,7}$/.test(s.name);
+      if (!isUnnamed) return;
+      const d = data[s.symbol];
+      const newName = d?.name || '';
+      if (!newName || newName === s.symbol || /^\d{4,7}$/.test(newName)) return;
+
+      s.name = newName;
+      if (d.price  != null && s.currentPrice == null) s.currentPrice = d.price;
+      if (d.sector && !s.industry) s.industry = d.sector;
+      resolvedFromAPI++;
+
+      if (s.id) {
+        const upd = { name: newName };
+        if (d.price  != null) { upd.currentPrice = d.price; upd.priceUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+        if (d.sector && !s.industry) upd.industry = d.sector;
+        bw.update(
+          db.collection('portfolios').doc(currentUser.uid).collection('stocks').doc(s.id),
+          upd
+        );
+        batchHasUpdates = true;
+      }
+    });
+
+    if (resolvedFromAPI > 0) {
+      renderTable();
+      if (typeof renderMobileCards === 'function') renderMobileCards();
+    }
+  }
+
+  // ── Persist all name updates to Firestore in one batch ───────────────────
   if (batchHasUpdates) {
     try { await bw.commit(); }
     catch (e) { console.warn('[Fnikar] Name persistence failed (non-critical):', e.message); }
   }
 
-  if (resolved > 0) {
-    renderTable();
-    if (typeof renderMobileCards === 'function') renderMobileCards();
-    updateStats();
-    showToast(`✅ Resolved company names for ${resolved} BSE stock${resolved > 1 ? 's' : ''}`, 'success');
-    console.log(`[Fnikar] Resolved ${resolved} names.`);
-  } else if (syms.length > 0) {
-    console.warn('[Fnikar] Worker returned no names for:', syms.join(', '), '— will retry on next price refresh.');
+  const totalResolved = resolvedFromTable + (needsName.length - stillNeedsAPI.length - (needsName.length - resolvedFromTable));
+  if (resolvedFromTable > 0) {
+    showToast(`✅ Resolved ${resolvedFromTable} BSE stock name${resolvedFromTable > 1 ? 's' : ''}`, 'success');
   }
 }
 
@@ -4784,5 +4854,112 @@ function startMarketTicker() {
 <div style="text-align:center;padding:12px 0 8px;color:#888;font-size:0.78rem;">
   Support: <a href="mailto:admin@fnikar.com" style="color:#1976d2;">admin@fnikar.com</a>
 </div>
+
+<!-- SEBI CONSENT MODAL (one-time, stored in localStorage) -->
+<div id="sebiConsentOverlay" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(10,20,50,0.82);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+">
+  <div style="
+    background:#fff;
+    border-radius:18px;
+    max-width:540px;
+    width:100%;
+    box-shadow:0 24px 64px rgba(0,0,0,0.45);
+    overflow:hidden;
+    animation:consentSlideIn 0.35s cubic-bezier(.4,0,.2,1);
+  ">
+    <!-- Modal header with gradient -->
+    <div style="background:linear-gradient(135deg,#0d2260 0%,#1565c0 60%,#00c6b8 100%);padding:28px 28px 20px;text-align:center">
+      <!-- Inline SVG Logo -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" width="176" height="64" style="display:block;margin:0 auto 6px">
+        <defs>
+          <linearGradient id="cm_ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00e5d4;stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+          </linearGradient>
+          <linearGradient id="cm_arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#00c6b8;stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+          </linearGradient>
+          <clipPath id="cm_circleClip"><circle cx="40" cy="40" r="34"/></clipPath>
+        </defs>
+        <circle cx="40" cy="40" r="37" fill="none" stroke="url(#cm_ringGrad)" stroke-width="5"/>
+        <circle cx="40" cy="40" r="32" fill="rgba(255,255,255,0.12)"/>
+        <polyline points="18,50 27,38 35,44 44,28 53,35 62,22" fill="none" stroke="url(#cm_arrowGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#cm_circleClip)"/>
+        <circle cx="27" cy="38" r="2.2" fill="#00e5d4"/>
+        <circle cx="44" cy="28" r="2.2" fill="#00e5d4"/>
+        <circle cx="62" cy="22" r="2.2" fill="#fff"/>
+        <line x1="30" y1="56" x2="56" y2="24" stroke="url(#cm_arrowGrad)" stroke-width="3" stroke-linecap="round" clip-path="url(#cm_circleClip)"/>
+        <polyline points="47,22 57,23 56,33" fill="none" stroke="url(#cm_arrowGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#cm_circleClip)"/>
+        <line x1="60" y1="55" x2="60" y2="47" stroke="#00e5d4" stroke-width="2" stroke-linecap="round" clip-path="url(#cm_circleClip)"/>
+        <polyline points="57,50 60,47 63,50" fill="none" stroke="#00e5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#cm_circleClip)"/>
+        <text x="88" y="38" font-family="'Segoe UI',Arial,sans-serif" font-weight="800" font-size="24" fill="#ffffff" letter-spacing="2">FNIKAR</text>
+        <text x="88" y="54" font-family="'Segoe UI',Arial,sans-serif" font-weight="400" font-size="7.5" fill="rgba(255,255,255,0.75)" letter-spacing="1.2">REAL-TIME PORTFOLIO TRACKING &amp; ANALYSIS</text>
+      </svg>
+    </div>
+    <!-- Modal body -->
+    <div style="padding:24px 28px 28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:1.3rem">⚠️</span>
+        <h2 style="font-size:1.05rem;font-weight:700;color:#0d2260">SEBI Disclaimer &amp; Important Notice</h2>
+      </div>
+      <p style="font-size:0.82rem;color:#444;line-height:1.7;margin-bottom:12px">
+        Fnikar is a <strong>personal portfolio tracking tool only</strong>. It does <strong>not provide investment advice</strong>, and does <strong>not independently recommend the purchase or sale of any security</strong>. All analyst recommendations, ratings, price targets, and signals displayed on this platform are sourced exclusively from <strong>SEBI-registered research analysts and brokerages</strong> and are presented purely for informational and tracking purposes.
+      </p>
+      <p style="font-size:0.82rem;color:#444;line-height:1.7;margin-bottom:16px">
+        Investments in securities markets are subject to market risks. Please read all related documents carefully before investing. Past performance is not indicative of future results. Users are solely responsible for their own investment decisions. Fnikar and its operators are <strong>not SEBI-registered investment advisors</strong> and do not hold any SEBI registration.
+      </p>
+      <p style="font-size:0.75rem;color:#888;margin-bottom:20px">
+        For any queries, write to <a href="mailto:admin@fnikar.com" style="color:#1565c0">admin@fnikar.com</a>
+      </p>
+      <button onclick="acceptSebiConsent()" style="
+        width:100%;
+        padding:14px;
+        background:linear-gradient(135deg,#0d2260,#1565c0);
+        color:#fff;
+        border:none;
+        border-radius:10px;
+        font-size:0.97rem;
+        font-weight:700;
+        cursor:pointer;
+        letter-spacing:0.5px;
+        transition:opacity 0.2s;
+      " onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        ✅ I Understand &amp; Accept
+      </button>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes consentSlideIn {
+  from { opacity:0; transform:translateY(28px) scale(0.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+</style>
+<script>
+(function(){
+  const CONSENT_KEY = 'fnikar_sebi_consent_v1';
+  function acceptSebiConsent() {
+    localStorage.setItem(CONSENT_KEY, '1');
+    const el = document.getElementById('sebiConsentOverlay');
+    if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.style.display = 'none', 300); }
+  }
+  window.acceptSebiConsent = acceptSebiConsent;
+  // Show modal if not yet accepted
+  window.addEventListener('DOMContentLoaded', function() {
+    if (!localStorage.getItem(CONSENT_KEY)) {
+      const el = document.getElementById('sebiConsentOverlay');
+      if (el) { el.style.display = 'flex'; }
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
