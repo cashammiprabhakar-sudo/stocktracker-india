@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Fnikar"/>
-  <meta name="theme-color" content="#1565c0"/>
+  <meta name="theme-color" content="#0077B5"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
   <link rel="icon" type="image/svg+xml" href="logo.svg"/>
@@ -15,21 +15,21 @@
   <link rel="manifest" href="manifest.json"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#222}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f3f2ef;min-height:100vh;color:#222}
     /* MARKET TICKER BAR */
-    #tickerBar{background:#0d1b2a;color:#e8f4fd;padding:6px 16px;display:flex;align-items:center;gap:16px;overflow-x:auto;white-space:nowrap;font-size:0.76rem;position:sticky;top:0;z-index:110;scrollbar-width:none}
+    #tickerBar{background:#1d2226;color:#e8f4fd;padding:6px 16px;display:flex;align-items:center;gap:16px;overflow-x:auto;white-space:nowrap;font-size:0.76rem;position:sticky;top:0;z-index:110;scrollbar-width:none}
     #tickerBar::-webkit-scrollbar{display:none}
-    .tick-lbl{font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:#90caf9;flex-shrink:0;margin-right:4px}
+    .tick-lbl{font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:#70b5d8;flex-shrink:0;margin-right:4px}
     .tick-sep{width:1px;height:16px;background:rgba(255,255,255,0.15);flex-shrink:0}
     .tick-item{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:0 2px}
-    .tick-name{color:#90caf9;font-size:0.7rem}
+    .tick-name{color:#70b5d8;font-size:0.7rem}
     .tick-price{font-weight:700;color:#fff}
     .tick-chg{font-size:0.7rem;font-weight:600}
     .tick-chg.up{color:#69f0ae}
     .tick-chg.dn{color:#ff5252}
     .tick-time{margin-left:auto;font-size:0.65rem;color:#546e7a;flex-shrink:0}
     /* HEADER */
-    .header{background:#1565c0;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:32px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+    .header{background:#0077B5;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:32px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
     .header h1{font-size:1.1rem;font-weight:700}
     .header-right{display:flex;align-items:center;gap:12px}
     .user-name{font-size:0.82rem;opacity:0.85;display:none}
@@ -43,26 +43,26 @@
     @media(min-width:700px){.stats-strip{grid-template-columns:repeat(5,1fr)}}
     .stat-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
     .stat-card .label{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px}
-    .stat-card .value{font-size:1.25rem;font-weight:700;color:#1565c0}
+    .stat-card .value{font-size:1.25rem;font-weight:700;color:#0077B5}
     .stat-card .value.gain{color:#2e7d32}
     .stat-card .value.loss{color:#c62828}
     /* TABS */
     .tabs{display:flex;gap:4px;margin-bottom:16px}
     .tab{padding:9px 18px;background:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;color:#666;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:all 0.2s}
-    .tab.active{background:#1565c0;color:#fff}
+    .tab.active{background:#0077B5;color:#fff}
     /* TABLE CONTAINER */
     .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.09);overflow:hidden}
     .table-toolbar{padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e8edf2}
     .table-toolbar .title{font-weight:700;font-size:0.95rem;flex:1}
-    .btn-refresh{background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.2s}
-    .btn-refresh:hover{background:#0d47a1}
+    .btn-refresh{background:#0077B5;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.2s}
+    .btn-refresh:hover{background:#004182}
     .btn-refresh:disabled{background:#90a4ae;cursor:not-allowed}
     .refresh-note{font-size:0.75rem;color:#888}
     .table-scroll{overflow-x:auto}
     table{width:100%;border-collapse:collapse;font-size:0.82rem}
-    thead th{background:#f5f8ff;color:#444;font-weight:700;padding:10px 10px;text-align:left;border-bottom:2px solid #e0e8f5;white-space:nowrap;position:sticky;top:0}
-    tbody tr{border-bottom:1px solid #f0f4f8;transition:background 0.1s}
-    tbody tr:hover{background:#fafbff}
+    thead th{background:#eef3f8;color:#444;font-weight:700;padding:10px 10px;text-align:left;border-bottom:2px solid #e0e8f5;white-space:nowrap;position:sticky;top:0}
+    tbody tr{border-bottom:1px solid #f3f2ef;transition:background 0.1s}
+    tbody tr:hover{background:#f8f9fa}
     td{padding:9px 10px;vertical-align:middle;white-space:nowrap}
     td.company{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
     td.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -87,7 +87,7 @@
     .form-group{display:flex;flex-direction:column;gap:5px}
     .form-group label{font-size:0.78rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.4px}
     .form-group input, .form-group select{padding:10px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.92rem;outline:none;transition:border-color 0.2s}
-    .form-group input:focus, .form-group select:focus{border-color:#1565c0}
+    .form-group input:focus, .form-group select:focus{border-color:#0077B5}
     .form-hint{font-size:0.74rem;color:#999;margin-top:2px}
     .btn-add{background:#2e7d32;color:#fff;border:none;padding:11px 24px;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:10px}
     .btn-add:hover{background:#1b5e20}
@@ -98,7 +98,7 @@
     .txn-btn.buy.active{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32}
     .txn-btn.sell.active{background:#ffebee;border-color:#c62828;color:#c62828}
     /* TRANSACTION BADGE */
-    .txn-badge{display:inline-block;background:#e3f2fd;color:#1565c0;border-radius:10px;padding:1px 7px;font-size:0.72rem;font-weight:600;margin-left:5px;vertical-align:middle}
+    .txn-badge{display:inline-block;background:#e8f3f9;color:#0077B5;border-radius:10px;padding:1px 7px;font-size:0.72rem;font-weight:600;margin-left:5px;vertical-align:middle}
     /* SELL ROW HIGHLIGHT */
     tr.sold-out td{opacity:0.55;text-decoration:line-through}
     /* TRANSACTION HISTORY IN DETAIL CARD */
@@ -127,37 +127,37 @@
     .broker-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:900;flex-shrink:0}
     .broker-logo.zerodha{background:#387ed1;color:#fff}
     .broker-logo.icici{background:#e2703a;color:#fff}
-    .broker-card-title{font-weight:700;font-size:0.95rem;color:#1a237e}
+    .broker-card-title{font-weight:700;font-size:0.95rem;color:#004182}
     .broker-card-sub{font-size:0.75rem;color:#888;margin-top:1px}
     .broker-field{margin-bottom:10px}
     .broker-field label{display:block;font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px}
     .broker-field input{width:100%;border:1px solid #d0d9e8;border-radius:6px;padding:7px 10px;font-size:0.82rem;font-family:monospace;box-sizing:border-box;background:#fff;color:#222}
-    .broker-field input:focus{outline:none;border-color:#1565c0}
+    .broker-field input:focus{outline:none;border-color:#0077B5}
     .broker-btn{width:100%;padding:9px 0;border-radius:8px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;margin-top:6px;transition:all 0.2s}
     .broker-btn.zerodha{background:#387ed1;color:#fff}
-    .broker-btn.zerodha:hover{background:#1565c0}
+    .broker-btn.zerodha:hover{background:#0077B5}
     .broker-btn.icici{background:#e2703a;color:#fff}
     .broker-btn.icici:hover{background:#bf5025}
     .broker-btn:disabled{opacity:0.5;cursor:not-allowed}
     .broker-status{font-size:0.78rem;padding:7px 10px;border-radius:6px;margin-top:8px;display:none}
-    .broker-status.info{background:#e3f2fd;color:#1565c0;display:block}
+    .broker-status.info{background:#e8f3f9;color:#0077B5;display:block}
     .broker-status.success{background:#e8f5e9;color:#2e7d32;display:block}
     .broker-status.error{background:#ffebee;color:#c62828;display:block}
     .broker-status.warn{background:#fff8e1;color:#e65100;display:block}
     .broker-holdings-preview{margin-top:12px;max-height:220px;overflow-y:auto;border:1px solid #e0e8f5;border-radius:8px;display:none}
     .broker-holdings-preview table{width:100%;border-collapse:collapse;font-size:0.78rem}
-    .broker-holdings-preview th{background:#e8f0fb;padding:6px 8px;text-align:left;font-weight:700;color:#1a237e;position:sticky;top:0}
-    .broker-holdings-preview td{padding:5px 8px;border-top:1px solid #f0f4f8;color:#333}
-    .broker-holdings-preview tr:hover td{background:#f5f8ff}
+    .broker-holdings-preview th{background:#e8f0fb;padding:6px 8px;text-align:left;font-weight:700;color:#004182;position:sticky;top:0}
+    .broker-holdings-preview td{padding:5px 8px;border-top:1px solid #f3f2ef;color:#333}
+    .broker-holdings-preview tr:hover td{background:#eef3f8}
     .broker-import-btn{display:none;width:100%;margin-top:8px;padding:10px 0;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;transition:background 0.2s}
     .broker-import-btn:hover{background:#1b5e20}
-    .broker-step{display:inline-block;background:#1565c0;color:#fff;border-radius:50%;width:18px;height:18px;font-size:0.7rem;font-weight:700;text-align:center;line-height:18px;margin-right:5px;flex-shrink:0}
+    .broker-step{display:inline-block;background:#0077B5;color:#fff;border-radius:50%;width:18px;height:18px;font-size:0.7rem;font-weight:700;text-align:center;line-height:18px;margin-right:5px;flex-shrink:0}
     .broker-step-row{display:flex;align-items:flex-start;gap:0;margin-bottom:6px;font-size:0.8rem;color:#555}
     .broker-steps{margin-bottom:12px}
     .csv-info{font-size:0.82rem;color:#666;line-height:1.6;margin-bottom:14px}
     .csv-info code{background:#f5f5f5;padding:2px 5px;border-radius:3px;font-size:0.8rem}
     .csv-drop{border:2px dashed #b0bec5;border-radius:8px;padding:28px;text-align:center;color:#888;cursor:pointer;transition:all 0.2s;background:#fafafa}
-    .csv-drop:hover,.csv-drop.dragover{border-color:#1565c0;background:#e3f2fd;color:#1565c0}
+    .csv-drop:hover,.csv-drop.dragover{border-color:#0077B5;background:#e8f3f9;color:#0077B5}
     .csv-drop input[type=file]{display:none}
     .csv-status{margin-top:10px;font-size:0.85rem;padding:10px 14px;border-radius:7px;display:none}
     .csv-status.success{background:#e8f5e9;color:#2e7d32;display:block}
@@ -170,7 +170,7 @@
     /* LOADING */
     .overlay{position:fixed;inset:0;background:rgba(255,255,255,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;display:none}
     .overlay.show{display:flex}
-    .spinner{width:40px;height:40px;border:4px solid #e3e8f0;border-top:4px solid #1565c0;border-radius:50%;animation:spin 0.8s linear infinite}
+    .spinner{width:40px;height:40px;border:4px solid #e3e8f0;border-top:4px solid #0077B5;border-radius:50%;animation:spin 0.8s linear infinite}
     .overlay-msg{margin-top:14px;font-size:0.9rem;color:#555}
     @keyframes spin{to{transform:rotate(360deg)}}
     .price-loading{opacity:0.4}
@@ -178,19 +178,19 @@
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
     .modal-bg.show{display:flex}
     .modal-box{background:#fff;border-radius:14px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
-    .modal-box h2{font-size:1rem;font-weight:700;margin-bottom:20px;color:#1565c0}
+    .modal-box h2{font-size:1rem;font-weight:700;margin-bottom:20px;color:#0077B5}
     .modal-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
     .modal-field label{font-size:0.78rem;font-weight:600;color:#555;text-transform:uppercase}
     .modal-field input{padding:10px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.92rem;outline:none}
-    .modal-field input:focus{border-color:#1565c0}
-    .pwd-rules{font-size:0.75rem;color:#777;background:#f5f8ff;border-radius:6px;padding:10px 12px;margin-bottom:14px;line-height:1.8}
+    .modal-field input:focus{border-color:#0077B5}
+    .pwd-rules{font-size:0.75rem;color:#777;background:#eef3f8;border-radius:6px;padding:10px 12px;margin-bottom:14px;line-height:1.8}
     .pwd-rules span{display:block}
     .pwd-rules .ok{color:#2e7d32}
     .pwd-rules .fail{color:#aaa}
     .modal-btns{display:flex;gap:10px;margin-top:4px}
-    .btn-modal-save{flex:1;background:#1565c0;color:#fff;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
-    .btn-modal-save:hover{background:#0d47a1}
-    .btn-modal-cancel{flex:1;background:#f0f4f8;color:#444;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
+    .btn-modal-save{flex:1;background:#0077B5;color:#fff;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
+    .btn-modal-save:hover{background:#004182}
+    .btn-modal-cancel{flex:1;background:#f3f2ef;color:#444;border:none;padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer}
     .btn-chg-pwd{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;margin-right:6px}
     .btn-manage-users{background:rgba(255,200,0,0.22);border:1px solid rgba(255,220,0,0.45);color:#fff;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;margin-right:6px;font-weight:600}
     .btn-manage-users:hover{background:rgba(255,200,0,0.35)}
@@ -198,15 +198,15 @@
     .mu-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;align-items:center;justify-content:center;padding:16px}
     .mu-modal-bg.show{display:flex}
     .mu-box{background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,0.22)}
-    .mu-header{background:#1565c0;color:#fff;padding:18px 22px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center}
+    .mu-header{background:#0077B5;color:#fff;padding:18px 22px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center}
     .mu-header h2{font-size:1rem;font-weight:700;margin:0}
-    .mu-tabs{display:flex;gap:0;padding:0 16px;background:#f5f8ff;border-bottom:2px solid #e0e8f5}
+    .mu-tabs{display:flex;gap:0;padding:0 16px;background:#eef3f8;border-bottom:2px solid #e0e8f5}
     .mu-tab{padding:10px 18px;font-size:0.85rem;font-weight:600;color:#888;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
-    .mu-tab.active{color:#1565c0;border-bottom-color:#1565c0}
+    .mu-tab.active{color:#0077B5;border-bottom-color:#0077B5}
     .mu-body{overflow-y:auto;flex:1;padding:16px}
     .mu-user-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1px solid #e8edf2;margin-bottom:10px;background:#fff}
-    .mu-user-row:hover{background:#fafbff}
-    .mu-avatar{width:38px;height:38px;border-radius:50%;background:#e3f2fd;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:#1565c0;flex-shrink:0}
+    .mu-user-row:hover{background:#f8f9fa}
+    .mu-avatar{width:38px;height:38px;border-radius:50%;background:#e8f3f9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:#0077B5;flex-shrink:0}
     .mu-info{flex:1;min-width:0}
     .mu-info .mu-name{font-weight:600;font-size:0.88rem;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .mu-info .mu-email{font-size:0.77rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -216,8 +216,8 @@
     .mu-badge.pending{background:#fff3e0;color:#e65100}
     .mu-badge.superadmin{background:#ede7f6;color:#6200ea}
     .mu-btn{border:none;padding:7px 13px;border-radius:7px;font-size:0.8rem;font-weight:600;cursor:pointer;flex-shrink:0}
-    .mu-btn.grant{background:#e3f2fd;color:#1565c0}
-    .mu-btn.grant:hover{background:#bbdefb}
+    .mu-btn.grant{background:#e8f3f9;color:#0077B5}
+    .mu-btn.grant:hover{background:#b0d8f5}
     .mu-btn.revoke{background:#fff8e1;color:#e65100}
     .mu-btn.revoke:hover{background:#ffe0b2}
     .mu-btn.approve{background:#e8f5e9;color:#2e7d32}
@@ -227,19 +227,19 @@
     .mu-empty{text-align:center;padding:32px;color:#aaa;font-size:0.88rem}
     .mu-loading{text-align:center;padding:32px;color:#999;font-size:0.88rem}
     /* FILTER BAR */
-    .filter-bar{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #e8edf2;background:#fafbff}
+    .filter-bar{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #e8edf2;background:#f8f9fa}
     .filter-bar input[type=text]{padding:7px 12px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.85rem;outline:none;min-width:180px;flex:1}
-    .filter-bar input[type=text]:focus{border-color:#1565c0}
+    .filter-bar input[type=text]:focus{border-color:#0077B5}
     .filter-bar select{padding:7px 10px;border:1.5px solid #dde3ec;border-radius:7px;font-size:0.85rem;outline:none;cursor:pointer;background:#fff}
-    .filter-bar select:focus{border-color:#1565c0}
+    .filter-bar select:focus{border-color:#0077B5}
     .filter-count{font-size:0.78rem;color:#888;white-space:nowrap}
-    .btn-clear-filter{background:#f0f4f8;border:none;border-radius:6px;padding:7px 12px;font-size:0.82rem;cursor:pointer;color:#555;white-space:nowrap}
+    .btn-clear-filter{background:#f3f2ef;border:none;border-radius:6px;padding:7px 12px;font-size:0.82rem;cursor:pointer;color:#555;white-space:nowrap}
     .btn-clear-filter:hover{background:#e0e7f0}
     /* SORTABLE HEADERS */
     thead th.sortable{cursor:pointer;user-select:none}
     thead th.sortable:hover{background:#eef2ff}
     .sort-arrow{font-size:0.7rem;margin-left:3px;opacity:0.4}
-    .sort-arrow.active{opacity:1;color:#1565c0}
+    .sort-arrow.active{opacity:1;color:#0077B5}
     /* 12W CHANGE */
     .chg-up{color:#2e7d32;font-weight:600}
     .chg-dn{color:#c62828;font-weight:600}
@@ -249,13 +249,13 @@
     .detail-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:none;align-items:center;justify-content:center;padding:16px}
     .detail-modal-bg.show{display:flex}
     .detail-card{background:#fff;border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2)}
-    .detail-card-header{background:#1565c0;color:#fff;padding:18px 20px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:flex-start}
+    .detail-card-header{background:#0077B5;color:#fff;padding:18px 20px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:flex-start}
     .detail-card-header h2{font-size:1.05rem;font-weight:700;margin-bottom:2px}
     .detail-card-header p{font-size:0.82rem;opacity:0.85}
     .detail-close{background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .detail-body{padding:20px}
     .detail-section{margin-bottom:18px}
-    .detail-section h3{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#888;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f4f8}
+    .detail-section h3{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#888;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f3f2ef}
     .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media(min-width:480px){.detail-grid{grid-template-columns:1fr 1fr 1fr}}
     .detail-item{background:#f8faff;border-radius:8px;padding:10px 12px}
@@ -268,11 +268,11 @@
 
     /* AUTOCOMPLETE DROPDOWN */
     .sym-wrap{position:relative}
-    .sym-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #1565c0;border-top:none;border-radius:0 0 8px 8px;z-index:999;max-height:400px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
-    .sym-item{padding:9px 13px;cursor:pointer;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #f0f4f8}
+    .sym-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #0077B5;border-top:none;border-radius:0 0 8px 8px;z-index:999;max-height:400px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+    .sym-item{padding:9px 13px;cursor:pointer;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #f3f2ef}
     .sym-item:last-child{border-bottom:none}
-    .sym-item:hover,.sym-item.active{background:#eef4ff}
-    .sym-item .si-ticker{font-weight:700;font-size:0.88rem;color:#1565c0}
+    .sym-item:hover,.sym-item.active{background:#e8f3f9}
+    .sym-item .si-ticker{font-weight:700;font-size:0.88rem;color:#0077B5}
     .sym-item .si-name{font-size:0.78rem;color:#666}
     /* ANALYTICS TAB */
     .analytics-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
@@ -281,8 +281,8 @@
     .chart-panel h3{font-size:0.9rem;font-weight:700;color:#333;margin-bottom:4px}
     .chart-panel .chart-sub{font-size:0.76rem;color:#888;margin-bottom:14px}
     .chart-range-btns{display:flex;gap:6px;margin-bottom:14px}
-    .chart-range-btn{background:#f0f4f8;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;color:#555}
-    .chart-range-btn.active{background:#1565c0;color:#fff}
+    .chart-range-btn{background:#f3f2ef;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;color:#555}
+    .chart-range-btn.active{background:#0077B5;color:#fff}
     .chart-empty{text-align:center;padding:40px 20px;color:#aaa;font-size:0.85rem}
     /* TARGET PRICE ALERTS */
     .tgt-hit{background:#e8f5e9!important}.tgt-near{background:#fffde7!important}
@@ -293,8 +293,8 @@
     .notes-section{margin-top:14px;padding-top:14px;border-top:1px solid #eee}
     .notes-section h4{font-size:0.85rem;font-weight:700;color:#555;margin-bottom:8px}
     .notes-textarea{width:100%;border:1.5px solid #dde3ec;border-radius:7px;padding:10px 12px;font-size:0.85rem;resize:vertical;min-height:72px;font-family:inherit;outline:none;box-sizing:border-box}
-    .notes-textarea:focus{border-color:#1565c0}
-    .btn-save-notes{background:#1565c0;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:6px}
+    .notes-textarea:focus{border-color:#0077B5}
+    .btn-save-notes{background:#0077B5;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:6px}
     .btn-save-notes:disabled{background:#90a4ae;cursor:not-allowed}
     /* DIVIDENDS */
     .div-log{margin-top:14px;padding-top:14px;border-top:1px solid #eee}
@@ -312,12 +312,12 @@
     .global-stats{display:flex;gap:20px;flex-wrap:wrap}
     .global-stat{display:flex;flex-direction:column;align-items:center}
     .global-stat .g-label{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#888}
-    .global-stat .g-value{font-size:1.05rem;font-weight:700;color:#1565c0}
+    .global-stat .g-value{font-size:1.05rem;font-weight:700;color:#0077B5}
     .global-stat .g-value.gain{color:#2e7d32} .global-stat .g-value.loss{color:#c62828}
     .global-fx-note{font-size:0.72rem;color:#888;margin-top:4px}
     /* EXPORT BUTTON */
-    .btn-export{background:#fff;border:1.5px solid #1565c0;color:#1565c0;padding:7px 14px;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:5px}
-    .btn-export:hover{background:#e3f2fd}
+    .btn-export{background:#fff;border:1.5px solid #0077B5;color:#0077B5;padding:7px 14px;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:5px}
+    .btn-export:hover{background:#e8f3f9}
     /* STATS STRIP EXTENDED */
     .stat-card .stat-sub{font-size:0.72rem;color:#888;margin-top:2px}
     /* HEATMAP TILES */
@@ -326,9 +326,9 @@
     .hm-sym{font-size:0.72rem;font-weight:800;color:#fff;line-height:1.2;word-break:break-all}
     .hm-pct{font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.88);margin-top:2px}
     /* MOVERS LIST */
-    .mover-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f4f8;cursor:pointer}
+    .mover-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f3f2ef;cursor:pointer}
     .mover-row:last-child{border-bottom:none}
-    .mover-sym{font-weight:700;font-size:0.85rem;color:#1565c0}
+    .mover-sym{font-weight:700;font-size:0.85rem;color:#0077B5}
     .mover-name{font-size:0.72rem;color:#888;margin-top:1px}
     .mover-pct{font-size:0.9rem;font-weight:700}
     @media(max-width:767px){
@@ -378,7 +378,7 @@
         gap:0;
         padding:1px 2px;
       }
-      .tick-name{font-size:0.54rem;color:#90caf9;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .tick-name{font-size:0.54rem;color:#70b5d8;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .tick-price{font-size:0.7rem;font-weight:700;color:#fff;line-height:1.3}
       .tick-chg{font-size:0.62rem;font-weight:700;line-height:1.2}
       .tick-time{
@@ -413,7 +413,7 @@
       .stat-card{
         padding:10px 14px;
         border-radius:10px;
-        border-left:3px solid #1565c0;
+        border-left:3px solid #0077B5;
         background:#fff;
       }
       .stat-card .label{font-size:0.65rem;letter-spacing:0.8px}
@@ -498,18 +498,18 @@
       -webkit-tap-highlight-color:transparent;
       position:relative;
     }
-    .mob-nav-btn.active{color:#1565c0}
+    .mob-nav-btn.active{color:#0077B5}
     .mob-nav-btn.active::before{
       content:'';
       position:absolute;
       top:0;left:20%;right:20%;
       height:3px;
-      background:#1565c0;
+      background:#0077B5;
       border-radius:0 0 3px 3px;
     }
     .mob-nav-icon{font-size:1.3rem;line-height:1}
     .mob-nav-label{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
-    .mob-nav-btn.active .mob-nav-label{color:#1565c0}
+    .mob-nav-btn.active .mob-nav-label{color:#0077B5}
 
     /* ── MOBILE STOCK CARDS ───────────────────────────────── */
     .mobile-card-list{display:none}
@@ -522,7 +522,7 @@
       padding:14px 16px 12px;
       margin:0 0 10px;
       box-shadow:0 1px 6px rgba(0,0,0,0.07);
-      border-left:3px solid #1565c0;
+      border-left:3px solid #0077B5;
       cursor:pointer;
       transition:box-shadow 0.15s,transform 0.12s;
       -webkit-tap-highlight-color:transparent;
@@ -531,10 +531,10 @@
     .mob-stock-card.sold-out{border-left-color:#ccc;opacity:0.7}
     .mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
     .mob-card-left{flex:1;min-width:0}
-    .mob-card-ticker{font-size:1rem;font-weight:800;color:#1565c0;letter-spacing:0.3px}
+    .mob-card-ticker{font-size:1rem;font-weight:800;color:#0077B5;letter-spacing:0.3px}
     .mob-card-name{font-size:0.76rem;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
     .mob-card-right{text-align:right;flex-shrink:0;margin-left:10px}
-    .mob-card-price{font-size:1.08rem;font-weight:800;color:#0d2260}
+    .mob-card-price{font-size:1.08rem;font-weight:800;color:#004182}
     .mob-card-pnlpct{font-size:0.82rem;font-weight:700;margin-top:2px}
     .mob-card-pnlpct.gain{color:#2e7d32}
     .mob-card-pnlpct.loss{color:#c62828}
@@ -544,11 +544,11 @@
     .mob-card-stat-value{font-size:0.82rem;font-weight:700;color:#333;margin-top:1px}
     .mob-card-stat-value.gain{color:#2e7d32}
     .mob-card-stat-value.loss{color:#c62828}
-    .mob-card-divider{height:1px;background:#f0f4f8;margin:8px 0 6px}
+    .mob-card-divider{height:1px;background:#f3f2ef;margin:8px 0 6px}
     .mob-card-industry{
       display:inline-block;
       font-size:0.64rem;color:#666;margin-top:3px;
-      background:#f0f4f8;padding:2px 7px;border-radius:10px;
+      background:#f3f2ef;padding:2px 7px;border-radius:10px;
       font-weight:600;letter-spacing:0.2px;
     }
     .mob-card-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:8px}
@@ -571,6 +571,106 @@
     @media(max-width:767px){
       .admin-link-mobile{display:flex;gap:8px;align-items:center}
     }
+  
+    /* ═══ LINKEDIN THEME ENHANCEMENTS ═══════════════════════════════════════ */
+    /* Gradient header */
+    .header{
+      background: linear-gradient(135deg, #0077B5 0%, #004182 100%) !important;
+      box-shadow: 0 2px 12px rgba(0,65,130,0.25) !important;
+    }
+    /* Ticker bar — polished dark strip */
+    #tickerBar{
+      background: linear-gradient(90deg, #1d2226 0%, #0a1628 100%) !important;
+      border-bottom: 2px solid #0077B5;
+      padding: 7px 18px !important;
+    }
+    .tick-name{ color: #8fbfdb !important; font-size: 0.66rem !important; }
+    .tick-price{ color: #ffffff !important; font-size: 0.82rem !important; font-weight: 700 !important; }
+    .tick-chg{ font-size: 0.72rem !important; font-weight: 700 !important; }
+    .tick-item{
+      padding: 3px 8px !important;
+      border-radius: 5px;
+      border-left: 1px solid rgba(255,255,255,0.07);
+      gap: 3px !important;
+    }
+    /* Stat cards — left accent border, subtle shadow */
+    .stat-card{
+      border-left: 3px solid #0077B5;
+      border-radius: 8px !important;
+      box-shadow: 0 2px 8px rgba(0,119,181,0.08) !important;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .stat-card:hover{ box-shadow: 0 4px 16px rgba(0,119,181,0.15) !important; transform: translateY(-1px); }
+    .stat-card .value{ color: #0077B5 !important; font-size: 1.3rem !important; }
+    /* Table — cleaner LinkedIn style */
+    .table-wrap{ border-radius: 10px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important; }
+    thead th{ background: #eef3f8 !important; color: #0077B5 !important; font-size: 0.78rem !important; letter-spacing: 0.3px; }
+    thead th.sortable:hover{ background: #dceef8 !important; }
+    tbody tr:hover{ background: #f0f8ff !important; }
+    td{ font-size: 0.83rem !important; }
+    /* Tabs — LinkedIn pill style */
+    .tab{
+      border-radius: 20px !important;
+      padding: 8px 20px !important;
+      font-weight: 600;
+      border: 1.5px solid transparent;
+    }
+    .tab:hover{ border-color: #0077B5; color: #0077B5; }
+    .tab.active{ background: #0077B5 !important; color: #fff !important; border-color: #0077B5; }
+    /* Buttons */
+    .btn-refresh{ background: #0077B5 !important; border-radius: 20px !important; padding: 8px 20px !important; font-weight: 700 !important; letter-spacing: 0.2px; }
+    .btn-refresh:hover{ background: #004182 !important; }
+    .btn-export{ border-color: #0077B5 !important; color: #0077B5 !important; border-radius: 20px !important; }
+    .btn-export:hover{ background: #e8f3f9 !important; }
+    .btn-add{ border-radius: 20px !important; font-weight: 700 !important; }
+    /* Recommendation badges — rounder */
+    .rec-buy{ border-radius: 12px !important; font-size: 0.75rem !important; }
+    .rec-hold{ border-radius: 12px !important; font-size: 0.75rem !important; }
+    .rec-sell{ border-radius: 12px !important; font-size: 0.75rem !important; }
+    /* Detail card header */
+    .detail-card-header{ background: linear-gradient(135deg, #0077B5 0%, #004182 100%) !important; }
+    .mu-header{ background: linear-gradient(135deg, #0077B5 0%, #004182 100%) !important; }
+    /* Modal */
+    .modal-box h2{ color: #0077B5 !important; }
+    /* Form focus */
+    .form-group input:focus, .form-group select:focus{ border-color: #0077B5 !important; box-shadow: 0 0 0 3px rgba(0,119,181,0.12); }
+    /* Autocomplete */
+    .sym-dropdown{ border-color: #0077B5 !important; }
+    .sym-item:hover,.sym-item.active{ background: #e8f3f9 !important; }
+    .sym-item .si-ticker{ color: #0077B5 !important; }
+    /* Chart range buttons */
+    .chart-range-btn.active{ background: #0077B5 !important; }
+    /* Movers */
+    .mover-sym{ color: #0077B5 !important; }
+    /* Filter bar */
+    .filter-bar input[type=text]:focus, .filter-bar select:focus{ border-color: #0077B5 !important; }
+    /* Broker cards */
+    .broker-card:hover{ box-shadow: 0 2px 12px rgba(0,119,181,0.15) !important; }
+    .broker-card-title{ color: #004182 !important; }
+    .broker-btn.zerodha{ background: #0077B5 !important; }
+    .broker-btn.zerodha:hover{ background: #004182 !important; }
+    /* Sort arrow active */
+    .sort-arrow.active{ color: #0077B5 !important; }
+    /* Mu tab active */
+    .mu-tab.active{ color: #0077B5 !important; border-bottom-color: #0077B5 !important; }
+    /* Notes save */
+    .btn-save-notes{ background: #0077B5 !important; border-radius: 16px !important; }
+    /* Dividend log button */
+    .btn-log-div{ border-radius: 16px !important; }
+    /* Ticker time */
+    .tick-time{ font-size: 0.62rem !important; color: #6b7c8c !important; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.1); margin-left: 6px; }
+    /* Mobile bottom nav if present */
+    @media(max-width:767px){
+      .header{ padding: 10px 14px !important; }
+      .stat-card{ border-left-width: 3px; }
+    }
+    /* Scrollbar styling (webkit) */
+    ::-webkit-scrollbar{ width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track{ background: #f3f2ef; }
+    ::-webkit-scrollbar-thumb{ background: #b0c4d8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover{ background: #0077B5; }
+    /* ═══════════════════════════════════════════════════════════════════════ */
+
   </style>
 <!-- SheetJS for Excel support -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -594,11 +694,11 @@
       <defs>
         <linearGradient id="hdr_ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#00e5d4;stop-opacity:1"/>
-          <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#70b5d8;stop-opacity:1"/>
         </linearGradient>
         <linearGradient id="hdr_arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" style="stop-color:#00c6b8;stop-opacity:1"/>
-          <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#70b5d8;stop-opacity:1"/>
         </linearGradient>
         <clipPath id="hdr_circleClip"><circle cx="40" cy="40" r="34"/></clipPath>
       </defs>
@@ -851,7 +951,7 @@
           Supports NSE symbols (HDFCBANK), BSE numeric codes (533155), US stocks (AAPL), and LSE stocks (SHEL.L).
         </div>
         <div style="margin-bottom:12px">
-          <button onclick="downloadCsvTemplate()" style="background:#1565c0;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer">
+          <button onclick="downloadCsvTemplate()" style="background:#0077B5;color:#fff;border:none;padding:8px 16px;border-radius:7px;font-size:0.85rem;font-weight:600;cursor:pointer">
             📥 Download Excel Template (.xlsx)
           </button>
         </div>
@@ -2343,7 +2443,7 @@ function showSymbolSuggestions(query) {
   if (!suggestions.length) { dd.style.display = 'none'; return; }
   dd.innerHTML = suggestions.map((s, i) => {
     const flag  = s.isUS ? '🇺🇸 ' : s.isBse ? '<span style="font-size:0.65rem;color:#888;margin-right:3px">BSE</span>' : '';
-    const badge = s.isUS ? '<span style="font-size:0.65rem;color:#1565c0;margin-left:4px">USD</span>' : '';
+    const badge = s.isUS ? '<span style="font-size:0.65rem;color:#0077B5;margin-left:4px">USD</span>' : '';
     return `<div class="sym-item" data-idx="${i}" onmousedown="selectSymbol('${s.sym}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}')">
       <span class="si-ticker">${flag}${s.sym}</span>
       <span class="si-name">${s.name}${badge}${s.industry ? ' <span style="color:#888;font-size:0.72rem">· '+s.industry+'</span>' : ''}</span>
@@ -2939,7 +3039,7 @@ function renderTable() {
       ? `<span class="txn-badge">${txnBuys}B${txnSells>0?' '+txnSells+'S':''}</span>` : '';
     const qtyDisp  = isSoldOut
       ? `<span style="color:#bbb;font-style:italic">Sold</span>`
-      : `${s.qty}${txnBuys>1?`<span style="font-size:0.72rem;color:#1565c0;margin-left:3px">avg</span>`:''}`;
+      : `${s.qty}${txnBuys>1?`<span style="font-size:0.72rem;color:#0077B5;margin-left:3px">avg</span>`:''}`;
     const xFlag = isUSStock(s.symbol) ? ' 🇺🇸' : isLSEStock(s.symbol) ? ' 🇬🇧' : '';
     return `<tr onclick="openDetailCard('${s.symbol}')" title="Click for full details" style="${isSoldOut?'opacity:0.6':''}">
       <td onclick="event.stopPropagation()">${i+1}</td>
@@ -4369,7 +4469,7 @@ function renderPerformanceChart() {
         x: { ticks: { font: { size: 10 }, maxTicksLimit: 8 }, grid: { display: false } },
         y: {
           ticks: { font: { size: 10 }, callback: v => '₹' + (v >= 100000 ? (v/100000).toFixed(1)+'L' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v) },
-          grid: { color: '#f0f4f8' },
+          grid: { color: '#f3f2ef' },
         },
       },
     },
@@ -4380,8 +4480,8 @@ function renderPerformanceChart() {
 // ── FEATURE 5: SECTOR BREAKDOWN PIE CHART ────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 const SECTOR_COLORS = [
-  '#1565c0','#2e7d32','#c62828','#e65100','#6a1b9a','#00838f',
-  '#558b2f','#ad1457','#4527a0','#ef6c00','#00695c','#283593',
+  '#0077B5','#2e7d32','#c62828','#e65100','#6a1b9a','#00838f',
+  '#558b2f','#ad1457','#4527a0','#ef6c00','#00695c','#004182',
   '#1b5e20','#b71c1c','#4a148c','#006064','#33691e',
 ];
 
@@ -4933,7 +5033,48 @@ async function loadMarketTicker() {
       timeEl.textContent = 'Updated ' + now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
     }
   } catch(e) {
-    console.warn('Market ticker error:', e.message);
+    console.warn('Market ticker worker failed:', e.message, '— trying Firestore fallback');
+    // ── Firestore fallback: GitHub Actions stores fresh commodity+index data daily ──
+    // This is the "out of box" fix: server-side yfinance (no IP blocking) writes
+    // to sharedMarketData/__marketTicker__ each day; we read it here as backup.
+    try {
+      if (typeof db !== 'undefined') {
+        const tickerDoc = await db.collection('sharedMarketData').doc('__marketTicker__').get();
+        if (tickerDoc.exists) {
+          const data = tickerDoc.data();
+          // Render using same logic as worker response
+          const ORDER = ['NIFTY','SENSEX','USDINR','DXY','GOLD','SILVER','CRUDE','SP500','NASDAQ'];
+          const LABELS = {
+            NIFTY:'Nifty 50', SENSEX:'Sensex', USDINR:'USD/INR', DXY:'USD Index',
+            GOLD:'Gold (10g)', SILVER:'Silver (kg)', CRUDE:'Crude Oil', SP500:'S&P 500', NASDAQ:'NASDAQ'
+          };
+          const FALLBACK_PREFIX = { NIFTY:'', SENSEX:'', USDINR:'₹', DXY:'', GOLD:'₹', SILVER:'₹', CRUDE:'$', SP500:'', NASDAQ:'' };
+          const DECIMALS = { USDINR:2, DXY:2, CRUDE:2, SP500:0, NASDAQ:0, NIFTY:0, SENSEX:0, GOLD:0, SILVER:0 };
+          let html = '';
+          for (const key of ORDER) {
+            const d = data[key];
+            if (!d || d.price == null) continue;
+            const price  = d.price;
+            const pct    = d.changePct != null ? d.changePct : null;
+            const isUp   = pct != null ? pct >= 0 : null;
+            const pctStr = pct != null ? (isUp ? '▲' : '▼') + Math.abs(pct).toFixed(2) + '%' : '';
+            const color  = isUp === null ? '#ccc' : isUp ? '#4caf50' : '#f44336';
+            const prefix = d.prefix || FALLBACK_PREFIX[key] || '';
+            const dec    = DECIMALS[key] ?? 2;
+            const priceStr = prefix + (price >= 10000
+              ? price.toLocaleString('en-IN', {maximumFractionDigits:0})
+              : price >= 100 ? price.toLocaleString('en-IN', {maximumFractionDigits:dec}) : price.toFixed(dec));
+            html += `<span class="tick-item"><span class="tick-name">${LABELS[key]}</span><span class="tick-price">${priceStr}</span>${pctStr ? `<span class="tick-chg" style="color:${color}">${pctStr}</span>` : ''}</span>`;
+          }
+          if (itemsEl) itemsEl.innerHTML = html || '<span style="color:#aaa">No market data</span>';
+          if (timeEl) {
+            const upd = data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date();
+            timeEl.textContent = 'Cached ' + upd.toLocaleDateString('en-IN', {day:'numeric',month:'short'});
+          }
+          return;
+        }
+      }
+    } catch(fe) { console.warn('Firestore ticker fallback failed:', fe.message); }
     if (itemsEl) itemsEl.innerHTML = '<span style="color:#888">Market data unavailable</span>';
   }
 }
@@ -4966,7 +5107,7 @@ function startMarketTicker() {
 
 </script>
 <div style="text-align:center;padding:12px 0 8px;color:#888;font-size:0.78rem;">
-  Support: <a href="mailto:admin@fnikar.com" style="color:#1976d2;">admin@fnikar.com</a>
+  Support: <a href="mailto:admin@fnikar.com" style="color:#0077B5;">admin@fnikar.com</a>
 </div>
 
 <!-- SEBI CONSENT MODAL (one-time, stored in localStorage) -->
@@ -4989,17 +5130,17 @@ function startMarketTicker() {
     animation:consentSlideIn 0.35s cubic-bezier(.4,0,.2,1);
   ">
     <!-- Modal header with gradient -->
-    <div style="background:linear-gradient(135deg,#0d2260 0%,#1565c0 60%,#00c6b8 100%);padding:28px 28px 20px;text-align:center">
+    <div style="background:linear-gradient(135deg,#004182 0%,#0077B5 60%,#00c6b8 100%);padding:28px 28px 20px;text-align:center">
       <!-- Inline SVG Logo -->
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" width="176" height="64" style="display:block;margin:0 auto 6px">
         <defs>
           <linearGradient id="cm_ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style="stop-color:#00e5d4;stop-opacity:1"/>
-            <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:#70b5d8;stop-opacity:1"/>
           </linearGradient>
           <linearGradient id="cm_arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
             <stop offset="0%" style="stop-color:#00c6b8;stop-opacity:1"/>
-            <stop offset="100%" style="stop-color:#90caf9;stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:#70b5d8;stop-opacity:1"/>
           </linearGradient>
           <clipPath id="cm_circleClip"><circle cx="40" cy="40" r="34"/></clipPath>
         </defs>
@@ -5021,7 +5162,7 @@ function startMarketTicker() {
     <div style="padding:24px 28px 28px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
         <span style="font-size:1.3rem">⚠️</span>
-        <h2 style="font-size:1.05rem;font-weight:700;color:#0d2260">SEBI Disclaimer &amp; Important Notice</h2>
+        <h2 style="font-size:1.05rem;font-weight:700;color:#004182">SEBI Disclaimer &amp; Important Notice</h2>
       </div>
       <p style="font-size:0.82rem;color:#444;line-height:1.7;margin-bottom:12px">
         Fnikar is a <strong>personal portfolio tracking tool only</strong>. It does <strong>not provide investment advice</strong>, and does <strong>not independently recommend the purchase or sale of any security</strong>. All analyst recommendations, ratings, price targets, and signals displayed on this platform are sourced exclusively from <strong>SEBI-registered research analysts and brokerages</strong> and are presented purely for informational and tracking purposes.
@@ -5030,12 +5171,12 @@ function startMarketTicker() {
         Investments in securities markets are subject to market risks. Please read all related documents carefully before investing. Past performance is not indicative of future results. Users are solely responsible for their own investment decisions. Fnikar and its operators are <strong>not SEBI-registered investment advisors</strong> and do not hold any SEBI registration.
       </p>
       <p style="font-size:0.75rem;color:#888;margin-bottom:20px">
-        For any queries, write to <a href="mailto:admin@fnikar.com" style="color:#1565c0">admin@fnikar.com</a>
+        For any queries, write to <a href="mailto:admin@fnikar.com" style="color:#0077B5">admin@fnikar.com</a>
       </p>
       <button onclick="acceptSebiConsent()" style="
         width:100%;
         padding:14px;
-        background:linear-gradient(135deg,#0d2260,#1565c0);
+        background:linear-gradient(135deg,#004182,#0077B5);
         color:#fff;
         border:none;
         border-radius:10px;
