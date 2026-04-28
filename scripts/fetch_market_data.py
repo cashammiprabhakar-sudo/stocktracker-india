@@ -835,7 +835,8 @@ def write_to_firestore(stocks_data: dict, generated_at: str) -> int:
             print(f"    Batch {i // batch_size + 1}: wrote {len(chunk)} docs ({written}/{len(symbols)} total)")
 
         # Write meta document with timestamp and coverage stats
-        db.collection("sharedMarketData").document("__meta__").set({
+        # NOTE: Firestore reserves doc IDs wrapped in __ (e.g. __meta__) — use _meta instead
+        db.collection("sharedMarketData").document("_meta").set({
             "updatedAt":    fstore.SERVER_TIMESTAMP,
             "generatedAt":  generated_at,
             "stockCount":   len(symbols),
@@ -847,6 +848,83 @@ def write_to_firestore(stocks_data: dict, generated_at: str) -> int:
     except Exception as e:
         print(f"  ✗ Firestore write failed: {e}")
         return 0
+
+
+def fetch_market_ticker_data() -> dict:
+    """Fetch live prices for Gold, Silver, Crude, Nifty, S&P 500, NASDAQ, DXY, USD/INR
+    using yfinance (server-side — no IP blocking issues unlike Cloudflare Workers).
+    Returns prices in INR for commodities, native currency for indices."""
+    TROY_OZ_G = 31.1035  # 1 troy oz = 31.1035 grams
+    TICKER_SYMS = {
+        "GOLD":   "GC=F",
+        "SILVER": "SI=F",
+        "CRUDE":  "CL=F",
+        "NIFTY":  "^NSEI",
+        "SENSEX": "^BSESN",
+        "SP500":  "^GSPC",
+        "NASDAQ": "^IXIC",
+        "DXY":    "DX-Y.NYB",
+        "USDINR": "USDINR=X",
+    }
+    result = {}
+    for key, sym in TICKER_SYMS.items():
+        try:
+            t = yf.Ticker(sym)
+            fi = t.fast_info
+            price = getattr(fi, "last_price", None)
+            prev  = getattr(fi, "previous_close", None)
+            if not price:
+                info  = t.info or {}
+                price = info.get("regularMarketPrice") or info.get("currentPrice")
+                prev  = info.get("regularMarketPreviousClose") or info.get("previousClose")
+            if price:
+                change = safe_float(price - prev) if prev else None
+                pct    = safe_float((price - prev) / prev * 100) if prev else None
+                result[key] = {"price": safe_float(price), "change": change, "changePct": pct}
+                print(f"  ✓ {key:8} ({sym:12}): {price:.4f}")
+            else:
+                print(f"  ✗ {key:8} ({sym:12}): no price data")
+        except Exception as e:
+            print(f"  ✗ {key:8} ({sym:12}): {e}")
+
+    # Convert Gold and Silver from USD/troy-oz → INR (per 10g for gold, per kg for silver)
+    usdinr_rate = (result.get("USDINR") or {}).get("price") or 84.5
+    print(f"  USD/INR rate used for conversion: {usdinr_rate}")
+    for key, mult, unit in [("GOLD", 10, "/10g"), ("SILVER", 1000, "/kg")]:
+        if key in result and result[key].get("price"):
+            p_usd    = result[key]["price"]
+            prev_usd = p_usd - (result[key].get("change") or 0)
+            p_inr    = round((p_usd / TROY_OZ_G) * mult * usdinr_rate)
+            prev_inr = round((prev_usd / TROY_OZ_G) * mult * usdinr_rate)
+            result[key]["price"]     = p_inr
+            result[key]["change"]    = p_inr - prev_inr
+            result[key]["changePct"] = safe_float((p_inr - prev_inr) / prev_inr * 100) if prev_inr else None
+            result[key]["unit"]      = unit
+            result[key]["currency"]  = "INR"
+            print(f"  ✓ {key} converted → ₹{p_inr:,} {unit}")
+
+    return result
+
+
+def write_market_ticker_to_firestore(ticker_data: dict):
+    """Write market ticker data to Firestore sharedMarketData/_marketTicker."""
+    sa_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+    if not sa_json:
+        print("  ⚠ FIREBASE_SERVICE_ACCOUNT not set — skipping market ticker write.")
+        return
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, firestore as fs, firestore as fstore
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(json.loads(sa_json))
+            firebase_admin.initialize_app(cred)
+        db = fs.client()
+        db.collection("sharedMarketData").document("_marketTicker").set(
+            {**ticker_data, "updatedAt": fstore.SERVER_TIMESTAMP}, merge=True
+        )
+        print(f"  ✓ sharedMarketData/_marketTicker written ({len(ticker_data)} keys).")
+    except Exception as e:
+        print(f"  ✗ Market ticker Firestore write failed: {e}")
 
 
 def main():
@@ -961,94 +1039,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# ── MARKET TICKER: commodities + global indices ───────────────────────────────
-def fetch_market_ticker_data():
-    """
-    Fetches Gold, Silver, Crude, Nifty, Sensex, S&P 500, NASDAQ, USD Index,
-    USD/INR via yfinance (server-side — no CORS or IP blocking issues).
-    Converts Gold/Silver from USD/troy-oz → INR per 10g / per kg.
-    Returns a dict ready to be stored in Firestore and read by the dashboard.
-    """
-    TROY_OZ_G = 31.1035
-
-    TICKER_SYMS = {
-        "GOLD":   "GC=F",      # Comex Gold Futures   (USD / troy oz)
-        "SILVER": "SI=F",      # Comex Silver Futures (USD / troy oz)
-        "CRUDE":  "CL=F",      # WTI Crude Futures    (USD / barrel)
-        "NIFTY":  "^NSEI",     # Nifty 50
-        "SENSEX": "^BSESN",    # BSE Sensex
-        "SP500":  "^GSPC",     # S&P 500
-        "NASDAQ": "^IXIC",     # NASDAQ Composite
-        "DXY":    "DX-Y.NYB",  # US Dollar Index
-        "USDINR": "USDINR=X",  # USD / INR spot
-    }
-
-    result = {}
-    for key, sym in TICKER_SYMS.items():
-        try:
-            t = yf.Ticker(sym)
-            # fast_info is lighter than .info — ideal for price-only fetches
-            fi = t.fast_info
-            price = getattr(fi, "last_price", None)
-            prev  = getattr(fi, "previous_close", None)
-            if not price:
-                info  = t.info or {}
-                price = info.get("regularMarketPrice") or info.get("currentPrice")
-                prev  = info.get("regularMarketPreviousClose") or info.get("previousClose")
-            if price:
-                change = safe_float(price - prev)        if prev  else None
-                pct    = safe_float((price - prev) / prev * 100) if prev else None
-                result[key] = {
-                    "price":     safe_float(price),
-                    "change":    change,
-                    "changePct": pct,
-                }
-                print(f"  ✓ {key:8} ({sym:12}): {price:.2f}")
-            else:
-                print(f"  ✗ {key:8} ({sym:12}): no price returned")
-        except Exception as e:
-            print(f"  ✗ {key:8} ({sym:12}): {e}")
-
-    # Convert Gold & Silver: USD/oz → INR / 10g and INR / kg
-    usdinr_rate = (result.get("USDINR") or {}).get("price") or 84.5
-    for key, mult, unit in [("GOLD", 10, "/10g"), ("SILVER", 1000, "/kg")]:
-        if key in result and result[key].get("price"):
-            p_usd      = result[key]["price"]
-            prev_usd   = p_usd - (result[key].get("change") or 0)
-            p_inr      = round((p_usd   / TROY_OZ_G) * mult * usdinr_rate)
-            prev_inr   = round((prev_usd / TROY_OZ_G) * mult * usdinr_rate)
-            result[key]["price"]     = p_inr
-            result[key]["change"]    = p_inr - prev_inr
-            result[key]["changePct"] = safe_float((p_inr - prev_inr) / prev_inr * 100) if prev_inr else None
-            result[key]["unit"]      = unit
-            result[key]["currency"]  = "INR"
-            print(f"  ↳ {key} converted to INR: ₹{p_inr:,}{unit}")
-
-    return result
-
-
-def write_market_ticker_to_firestore(ticker_data: dict):
-    """
-    Writes market ticker data to sharedMarketData/__marketTicker__ in Firestore.
-    The dashboard reads this as a reliable fallback when the Cloudflare Worker fails.
-    """
-    sa_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
-    if not sa_json:
-        print("  FIREBASE_SERVICE_ACCOUNT not set — skipping market ticker Firestore write.")
-        return
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore as fs, firestore as fstore
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(json.loads(sa_json))
-            firebase_admin.initialize_app(cred)
-        db = fs.client()
-        db.collection("sharedMarketData").document("__marketTicker__").set(
-            {**ticker_data, "updatedAt": fstore.SERVER_TIMESTAMP},
-            merge=True,
-        )
-        print(f"  ✓ sharedMarketData/__marketTicker__ written ({len(ticker_data)} keys).")
-    except Exception as e:
-        print(f"  ✗ Market ticker Firestore write failed: {e}")
